@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <PackageReference Include="Volo.Abp.Validation" />
+    <PackageReference Include="Volo.Abp.Identity.Domain.Shared" />
+    <PackageReference Include="Volo.Abp.OpenIddict.Domain.Shared" />
   </ItemGroup>
 </Project>

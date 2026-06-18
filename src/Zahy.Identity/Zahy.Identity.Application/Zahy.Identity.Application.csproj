@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <PackageReference Include="Volo.Abp.Ddd.Application" />
+    <PackageReference Include="Volo.Abp.Identity.Application" />
+    <PackageReference Include="Volo.Abp.PermissionManagement.Application" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Zahy.Identity.Domain\Zahy.Identity.Domain.csproj" />

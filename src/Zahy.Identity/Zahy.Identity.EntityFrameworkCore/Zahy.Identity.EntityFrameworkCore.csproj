@@ -1,6 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <PackageReference Include="Volo.Abp.EntityFrameworkCore" />
+    <PackageReference Include="Volo.Abp.Identity.EntityFrameworkCore" />
+    <PackageReference Include="Volo.Abp.OpenIddict.EntityFrameworkCore" />
+    <PackageReference Include="Volo.Abp.PermissionManagement.EntityFrameworkCore" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Zahy.Identity.Domain\Zahy.Identity.Domain.csproj" />

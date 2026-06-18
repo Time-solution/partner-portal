@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <PackageReference Include="Volo.Abp.AspNetCore.Mvc" />
+    <PackageReference Include="Volo.Abp.Identity.HttpApi" />
+    <PackageReference Include="Volo.Abp.PermissionManagement.HttpApi" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Zahy.Identity.Application.Contracts\Zahy.Identity.Application.Contracts.csproj" />

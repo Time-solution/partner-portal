@@ -1,0 +1,35 @@
+using Volo.Abp.Authorization.Permissions;
+
+namespace Zahy.Identity.Permissions;
+
+public class ZahyPermissionDefinitionProvider : PermissionDefinitionProvider
+{
+    public override void Define(IPermissionDefinitionContext context)
+    {
+        var group = context.AddGroup(ZahyPermissions.GroupName);
+
+        var catalog = group.AddPermission(ZahyPermissions.Catalog.Default);
+        catalog.AddChild(ZahyPermissions.Catalog.Read);
+        catalog.AddChild(ZahyPermissions.Catalog.Write);
+
+        var orders = group.AddPermission(ZahyPermissions.Orders.Default);
+        orders.AddChild(ZahyPermissions.Orders.Read);
+
+        var inventory = group.AddPermission(ZahyPermissions.Inventory.Default);
+        inventory.AddChild(ZahyPermissions.Inventory.Write);
+
+        var webhooks = group.AddPermission(ZahyPermissions.Webhooks.Default);
+        webhooks.AddChild(ZahyPermissions.Webhooks.Manage);
+
+        var payouts = group.AddPermission(ZahyPermissions.Payouts.Default);
+        payouts.AddChild(ZahyPermissions.Payouts.Read);
+
+        var partners = group.AddPermission(ZahyPermissions.Partners.Default);
+        partners.AddChild(ZahyPermissions.Partners.Manage);
+
+        var roles = group.AddPermission(ZahyPermissions.Roles.Default);
+        roles.AddChild(ZahyPermissions.Roles.Manage);
+
+        group.AddPermission(ZahyPermissions.Admin);
+    }
+}

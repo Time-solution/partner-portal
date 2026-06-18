@@ -2,6 +2,8 @@
   <ItemGroup>
     <PackageReference Include="Volo.Abp.Ddd.Application.Contracts" />
     <PackageReference Include="Volo.Abp.Authorization" />
+    <PackageReference Include="Volo.Abp.Identity.Application.Contracts" />
+    <PackageReference Include="Volo.Abp.PermissionManagement.Application.Contracts" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Zahy.Identity.Domain.Shared\Zahy.Identity.Domain.Shared.csproj" />

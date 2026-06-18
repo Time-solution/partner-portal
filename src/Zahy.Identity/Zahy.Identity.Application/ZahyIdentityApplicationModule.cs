@@ -1,12 +1,16 @@
 using Volo.Abp.Application;
+using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
+using Volo.Abp.PermissionManagement;
 
 namespace Zahy.Identity;
 
 [DependsOn(
     typeof(ZahyIdentityDomainModule),
     typeof(ZahyIdentityApplicationContractsModule),
-    typeof(AbpDddApplicationModule)
+    typeof(AbpDddApplicationModule),
+    typeof(AbpIdentityApplicationModule),
+    typeof(AbpPermissionManagementApplicationModule)
 )]
 public class ZahyIdentityApplicationModule : AbpModule
 {

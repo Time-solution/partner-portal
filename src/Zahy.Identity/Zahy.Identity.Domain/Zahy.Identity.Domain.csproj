@@ -1,6 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <PackageReference Include="Volo.Abp.Ddd.Domain" />
+    <PackageReference Include="Volo.Abp.Identity.Domain" />
+    <PackageReference Include="Volo.Abp.OpenIddict.Domain" />
+    <PackageReference Include="Volo.Abp.PermissionManagement.Domain" />
+    <PackageReference Include="Volo.Abp.PermissionManagement.Domain.Identity" />
+    <PackageReference Include="Volo.Abp.PermissionManagement.Domain.OpenIddict" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Zahy.Identity.Domain.Shared\Zahy.Identity.Domain.Shared.csproj" />

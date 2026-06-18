@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTranslator, type Lang } from "@/lib/i18n";
+import { useAuth } from "@/features/auth/AuthContext";
 
 interface LoginScreenProps {
   lang: Lang;
@@ -19,13 +20,15 @@ interface LoginScreenProps {
 
 export function LoginScreen({ lang }: LoginScreenProps) {
   const t = useTranslator(lang);
+  const { signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
 
@@ -34,9 +37,20 @@ export function LoginScreen({ lang }: LoginScreenProps) {
       return;
     }
 
-    // Skeleton only: real auth goes through OpenIddict (OIDC) against Zahy.Identity.
+    // Owned login: validate credentials against Zahy.Identity (establishing the
+    // ABP cookie), then complete the OIDC Authorization Code + PKCE flow. On
+    // success the browser navigates to the authorize endpoint and back.
     setSubmitting(true);
-    window.setTimeout(() => setSubmitting(false), 900);
+    const result = await signIn({
+      userName: email.trim(),
+      password,
+      rememberMe,
+    });
+
+    if (!result.success) {
+      setSubmitting(false);
+      setError(result.requiresTwoFactor ? t("errorTwoFactor") : t("errorInvalid"));
+    }
   }
 
   return (
@@ -123,6 +137,8 @@ export function LoginScreen({ lang }: LoginScreenProps) {
                 <input
                   type="checkbox"
                   name="remember"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
                   className="h-4 w-4 rounded border-input text-primary accent-[var(--primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
                 {t("rememberMe")}
