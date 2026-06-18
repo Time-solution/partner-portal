@@ -40,7 +40,9 @@
     <Project Path="src\Zahy.Commission\Zahy.Commission.HttpApi\Zahy.Commission.HttpApi.csproj" />
   </Folder>
   <Project Path="src\Zahy.HttpApi.Host\Zahy.HttpApi.Host.csproj" />
+  <Project Path="src\Zahy.DbMigrator\Zahy.DbMigrator.csproj" />
   <Folder Name="/test/">
     <Project Path="test\Zahy.Identity.Tests\Zahy.Identity.Tests.csproj" />
+    <Project Path="test\Zahy.PartnerPlatform.Tests\Zahy.PartnerPlatform.Tests.csproj" />
   </Folder>
 </Solution>

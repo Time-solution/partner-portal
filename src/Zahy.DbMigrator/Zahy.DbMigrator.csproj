@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RunWorkingDirectory>$(MSBuildProjectDirectory)</RunWorkingDirectory>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Volo.Abp.Autofac" />
+    <PackageReference Include="Volo.Abp.EntityFrameworkCore.SqlServer" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Zahy.Identity\Zahy.Identity.EntityFrameworkCore\Zahy.Identity.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\Zahy.Identity\Zahy.Identity.Application.Contracts\Zahy.Identity.Application.Contracts.csproj" />
+    <ProjectReference Include="..\Zahy.PartnerPlatform\Zahy.PartnerPlatform.EntityFrameworkCore\Zahy.PartnerPlatform.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\Zahy.PartnerPlatform\Zahy.PartnerPlatform.Application.Contracts\Zahy.PartnerPlatform.Application.Contracts.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="appsettings.Development.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>

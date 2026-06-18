@@ -2,6 +2,7 @@
   <ItemGroup>
     <PackageReference Include="Volo.Abp.Ddd.Application" />
     <PackageReference Include="Volo.Abp.Identity.Application" />
+    <PackageReference Include="Volo.Abp.Identity.AspNetCore" />
     <PackageReference Include="Volo.Abp.PermissionManagement.Application" />
   </ItemGroup>
   <ItemGroup>

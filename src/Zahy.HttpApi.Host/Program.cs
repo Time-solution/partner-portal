@@ -6,11 +6,9 @@ using Volo.Abp.Autofac;
 using Zahy;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Host.UseAutofac();
 
-await builder.AddApplicationAsync<ZahyHostModule>(options =>
-{
-    options.UseAutofac();
-});
+await builder.AddApplicationAsync<ZahyHostModule>();
 
 var app = builder.Build();
 await app.InitializeApplicationAsync();

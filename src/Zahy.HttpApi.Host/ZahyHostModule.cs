@@ -1,17 +1,23 @@
 using System;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.CookiePolicy;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenIddict.Server;
+using OpenIddict.Validation.AspNetCore;
 using Volo.Abp;
 using Volo.Abp.AspNetCore.Mvc;
 using Volo.Abp.Autofac;
+using Volo.Abp.BackgroundWorkers;
+using Volo.Abp.Data;
 using Volo.Abp.EntityFrameworkCore;
 using Volo.Abp.EntityFrameworkCore.SqlServer;
 using Volo.Abp.Identity.AspNetCore;
 using Volo.Abp.Modularity;
 using Volo.Abp.OpenIddict;
+using Volo.Abp.Uow;
 using Zahy.Identity;
 using Zahy.PartnerPlatform;
 using Zahy.Webhooks;
@@ -22,10 +28,10 @@ namespace Zahy;
 
 [DependsOn(
     typeof(AbpAutofacModule),
+    typeof(AbpBackgroundWorkersModule),
     typeof(AbpAspNetCoreMvcModule),
     typeof(AbpEntityFrameworkCoreSqlServerModule),
     typeof(AbpOpenIddictAspNetCoreModule),
-    typeof(AbpIdentityAspNetCoreModule),
     typeof(ZahyIdentityApplicationModule),
     typeof(ZahyIdentityEntityFrameworkCoreModule),
     typeof(ZahyIdentityHttpApiModule),
@@ -59,6 +65,16 @@ public class ZahyHostModule : AbpModule
             serverBuilder.SetRefreshTokenLifetime(TimeSpan.FromDays(14));
         });
 
+        // Same host acts as IdP + resource server; validation uses the local server.
+        PreConfigure<OpenIddictBuilder>(builder =>
+        {
+            builder.AddValidation(options =>
+            {
+                options.UseLocalServer();
+                options.UseAspNetCore();
+            });
+        });
+
         // Signing/encryption keys: dev uses an auto-generated (gitignored) cert;
         // production keys come from the secret store / config — never committed.
         if (!hostingEnvironment.IsDevelopment())
@@ -89,6 +105,30 @@ public class ZahyHostModule : AbpModule
             options.UseSqlServer();
         });
 
+        Configure<AbpDbConnectionOptions>(options =>
+        {
+            options.ConnectionStrings.Default = configuration.GetConnectionString("Default");
+        });
+
+        // API-only host: disable background workers (OpenIddict token cleanup NRE without full infra).
+        Configure<AbpBackgroundWorkerOptions>(options =>
+        {
+            options.IsEnabled = false;
+        });
+
+        // Cross-origin SPA (http://localhost:5173) → API cookie (https://localhost:44300).
+        context.Services.Configure<CookiePolicyOptions>(options =>
+        {
+            options.MinimumSameSitePolicy = SameSiteMode.None;
+            options.Secure = CookieSecurePolicy.Always;
+        });
+
+        context.Services.ConfigureApplicationCookie(options =>
+        {
+            options.Cookie.SameSite = SameSiteMode.None;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        });
+
         var corsOrigins = (configuration["App:CorsOrigins"] ?? "http://localhost:5173")
             .Split(",", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
@@ -110,9 +150,11 @@ public class ZahyHostModule : AbpModule
         var app = context.GetApplicationBuilder();
 
         app.UseRouting();
+        app.UseCookiePolicy();
         app.UseCors();
         app.UseAuthentication();
         app.UseAbpOpenIddictValidation();
+        app.UseUnitOfWork();
         app.UseAuthorization();
         app.UseConfiguredEndpoints();
     }

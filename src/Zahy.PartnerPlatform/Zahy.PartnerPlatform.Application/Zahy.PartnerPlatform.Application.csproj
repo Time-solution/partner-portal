@@ -1,9 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <PackageReference Include="Volo.Abp.Ddd.Application" />
+    <PackageReference Include="Volo.Abp.Validation" />
+    <PackageReference Include="Volo.Abp.Authorization" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Zahy.PartnerPlatform.Domain\Zahy.PartnerPlatform.Domain.csproj" />
     <ProjectReference Include="..\Zahy.PartnerPlatform.Application.Contracts\Zahy.PartnerPlatform.Application.Contracts.csproj" />
+    <ProjectReference Include="..\..\Zahy.Identity\Zahy.Identity.Domain\Zahy.Identity.Domain.csproj" />
+    <ProjectReference Include="..\..\Zahy.Identity\Zahy.Identity.Domain.Shared\Zahy.Identity.Domain.Shared.csproj" />
   </ItemGroup>
 </Project>

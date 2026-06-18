@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <ItemGroup>
     <PackageReference Include="Volo.Abp.Autofac" />
+    <PackageReference Include="Volo.Abp.BackgroundWorkers" />
     <PackageReference Include="Volo.Abp.AspNetCore.Mvc" />
     <PackageReference Include="Volo.Abp.EntityFrameworkCore.SqlServer" />
     <PackageReference Include="Volo.Abp.OpenIddict.AspNetCore" />

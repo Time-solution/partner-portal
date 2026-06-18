@@ -12,6 +12,7 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 import { useTranslator, type Lang } from "@/lib/i18n";
 import { adminNav, filterNavByPermissions } from "./nav";
+import { PartnersPage } from "./PartnersPage";
 
 const SESSION_IDLE_MS = 15 * 60 * 1000; // 15 minutes of inactivity
 
@@ -110,15 +111,19 @@ export function AdminShell({ lang, toggleLang, theme, toggleTheme }: AdminShellP
             <span className="font-medium text-foreground">{user?.name ?? user?.username}</span>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>{activeItem ? t(activeItem.labelKey as never) : ""}</CardTitle>
-              <CardDescription>{t("comingSoon")}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">{t("sectionPlaceholder")}</p>
-            </CardContent>
-          </Card>
+          {activeItem?.key === "partners" ? (
+            <PartnersPage lang={lang} />
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>{activeItem ? t(activeItem.labelKey as never) : ""}</CardTitle>
+                <CardDescription>{t("comingSoon")}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">{t("sectionPlaceholder")}</p>
+              </CardContent>
+            </Card>
+          )}
         </main>
       </div>
     </div>

@@ -2,4 +2,7 @@
   <ItemGroup>
     <PackageReference Include="Volo.Abp.Validation" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Zahy.Identity\Zahy.Identity.Domain.Shared\Zahy.Identity.Domain.Shared.csproj" />
+  </ItemGroup>
 </Project>
