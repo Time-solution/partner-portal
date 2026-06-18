@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Volo.Abp.Ddd.Application" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Zahy.Webhooks.Domain\Zahy.Webhooks.Domain.csproj" />
+    <ProjectReference Include="..\Zahy.Webhooks.Application.Contracts\Zahy.Webhooks.Application.Contracts.csproj" />
+  </ItemGroup>
+</Project>

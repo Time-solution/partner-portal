@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Volo.Abp.Ddd.Application" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Zahy.OrderLedger.Domain\Zahy.OrderLedger.Domain.csproj" />
+    <ProjectReference Include="..\Zahy.OrderLedger.Application.Contracts\Zahy.OrderLedger.Application.Contracts.csproj" />
+  </ItemGroup>
+</Project>

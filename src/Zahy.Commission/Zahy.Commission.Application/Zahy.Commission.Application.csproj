@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Volo.Abp.Ddd.Application" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Zahy.Commission.Domain\Zahy.Commission.Domain.csproj" />
+    <ProjectReference Include="..\Zahy.Commission.Application.Contracts\Zahy.Commission.Application.Contracts.csproj" />
+  </ItemGroup>
+</Project>

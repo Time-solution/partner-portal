@@ -1,0 +1,67 @@
+# Zahy Partner Platform — Cursor Project Rules
+
+> Place at the repo root as `.cursorrules`, or as `.cursor/rules/zahy-partner-platform.md`.
+> Owned by the Architect. Changes go through a PR like code.
+> These rules apply to every AI-assisted change in this repository.
+
+---
+
+## 1. What this project is
+
+- **Zahy** is a multi-tenant SaaS commerce platform on **.NET / ABP Framework**. Core Zahy's existing frontend is **Angular** and stays Angular.
+- This repo is the **Partner Platform** (physically separate): an **ABP API-only backend** (no built-in UI) plus a **React frontend** (Vite + TypeScript + Tailwind + shadcn/ui) that consumes the ABP REST APIs and OpenIddict (OIDC).
+- We are also building an **owned Identity layer**, connected to core Zahy. Do not rewrite existing core-Zahy Angular code.
+- KSA market: ZATCA e-invoicing, SAR currency, Arabic (RTL) + English. Data is hosted **inside Saudi Arabia**.
+
+## 2. Ownership reality — READ BEFORE TOUCHING ANYTHING
+
+- **Owned source (safe to build on):** Catalog, Theming, CmsKit, EInvoicing.ZatcaFatoora, Payments.
+- **Compiled third-party packages (makookapp) — DO NOT modify, fork, or decompile:** Commerce, Promotions, Shipping.Oto, Tajer.Abp.OpenIddict, Tajer.Legacy.
+- All interaction with the compiled packages is **outside-in**: through their public services, owned **contracts/interfaces (Anti-Corruption Layer)**, read-only data reads, or webhooks. Never reach into their internals.
+
+## 3. Hard guardrails (never violate)
+
+1. **Never** edit, fork, or decompile the compiled makookapp packages.
+2. **Never** put secrets, tokens, API keys, or connection strings in code or commits. Use the secret store / environment config. (Legacy exposed secrets must be remediated — do not copy them around.)
+3. **Never** write directly to Commerce database tables. Reads are **read-only via CDC**; writes go through **owned services / contracts**.
+4. **Integration between components and partners uses WEBHOOKS, not an internal event bus.** Signed (HMAC), with outbox + retries + dead-letter + logs.
+5. **Tenant isolation** is enforced on every data access. A user or partner never sees another tenant's / partner's data.
+6. **Money code** (commission, ledger, payouts) is **append-only and idempotent**; never mutate ledger rows in place.
+
+## 4. Architecture conventions
+
+- **Modular monolith**: one physical SQL Server DB, schema / DbContext per module. Don't split DBs per module.
+- **Tenancy**: shared DB + `TenantId` by default; per-tenant DB supported for large clients. Partner aggregates are **host-level** (cross-tenant).
+- **Identity**: single Identity Provider = ABP Identity + OpenIddict. Users → Authorization Code + PKCE. Partner systems → Client-Credentials + scopes. Short access tokens (~30 min) + rotating refresh. Design must allow **MFA as a future step-up**.
+- **Order capture**: from closed Commerce via **read-only SQL Server CDC → owned Order Ledger** (idempotent on order id + version). Swappable to native webhooks later.
+- **Inventory**: owned **Catalog is the source of truth**; a 3PL that holds stock feeds physical on-hand back via two-way reconciliation.
+- **Partner connectors**: one unified interface, one adapter per partner — three sub-types: **aggregator** (Jahez, HungerStation), **3PL fulfilment** (Salasa), **carrier** (Oto). Per-merchant credential vault.
+- **POS**: the Web POS lives in **core Zahy (Angular)**; this Partner Platform integrates with it. Inbound delivery orders reach the POS by **short-interval polling (~10–15s) + per-order SLA countdown + audible alert** (Jahez has a 5-minute accept window). De-duplicate on poll.
+
+## 5. Naming (confirm at repo setup, then keep consistent)
+
+- New owned modules: `Zahy.*` (e.g. `Zahy.Identity`, `Zahy.PartnerPlatform`, `Zahy.Webhooks`, `Zahy.OrderLedger`, `Zahy.Commission`). Confirm against existing `App.*` / `Tajer.*` conventions before first commit.
+- Follow ABP layering: Domain / Domain.Shared / Application / Application.Contracts / EntityFrameworkCore / HttpApi.
+
+## 6. How to work (plan-then-build)
+
+1. **State context**: which module + which SRS/SDD requirement ID you are implementing.
+2. **Read-only first**: when touching shared or unfamiliar code, run a read-only audit and report findings before changing anything.
+3. **Plan**: produce a short plan and wait for review before writing code.
+4. **Small diffs**: one purpose per change; keep it reviewable.
+5. **Tests in the same change**: unit + integration; idempotency tests for webhook/CDC handlers.
+6. **Stop for review**: never assume merge. Summarise what changed.
+
+## 7. Frontend rules
+
+- **React + Vite + TypeScript + Tailwind + shadcn/ui** for this Partner Platform frontend. RTL-correct Arabic + English parity. Permission-gated routes against the IdP (OIDC).
+- Use the agreed design tokens (CSS variables / Tailwind theme). No server-side business logic in the UI. Consume ABP REST APIs; never embed secrets.
+- Accessibility and RTL are part of Done, not an afterthought.
+
+## 8. Definition of Done (for any change)
+
+- Meets the linked acceptance criteria; tests written and passing; reviewed (Architect for identity / security / contracts / money); CI green; no secrets; docs/ADR updated; deployed to staging.
+
+## 9. When unsure
+
+- If a request conflicts with these rules or with the design documents, **stop and flag it** rather than guessing. The documents (BRD / Architecture / SRS / SDD) are the source of truth.

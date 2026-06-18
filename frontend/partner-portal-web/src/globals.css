@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===========================================================================
+   Zahy Partner Platform — Design Tokens (single source of truth)
+   Brand palette never referenced directly by components; components use the
+   SEMANTIC tokens below (mapped in tailwind.config.ts). No hardcoded hex
+   anywhere outside this file.
+   =========================================================================== */
+
+:root {
+  /* ----- Brand palette ---------------------------------------------------- */
+  --brand-primary: #0e5c63;
+  --brand-primary-dark: #0a464c;
+  --brand-primary-light: #d9eaec;
+  --brand-accent: #13a89e;
+
+  /* ----- Neutrals --------------------------------------------------------- */
+  --neutral-900: #1a1a1a;
+  --neutral-600: #555555;
+  --neutral-200: #e3e8e9;
+  --neutral-50: #f2f7f8;
+
+  /* ----- Status ----------------------------------------------------------- */
+  --success: #2e7d4f;
+  --warning: #b5791a; /* SLA countdown */
+  --danger: #b23a2e;
+
+  /* ----- Semantic tokens (LIGHT) ----------------------------------------- */
+  --background: var(--neutral-50);
+  --foreground: var(--neutral-900);
+  --surface: #ffffff;
+  --surface-foreground: var(--neutral-900);
+  --muted: var(--neutral-200);
+  --muted-foreground: var(--neutral-600);
+  --border: var(--neutral-200);
+  --input: var(--neutral-200);
+  --ring: var(--brand-accent);
+
+  --primary: var(--brand-primary);
+  --primary-hover: var(--brand-primary-dark);
+  --primary-foreground: #ffffff;
+
+  --accent: var(--brand-accent);
+  --accent-foreground: #ffffff;
+  --accent-subtle: var(--brand-primary-light);
+
+  --success-color: var(--success);
+  --warning-color: var(--warning);
+  --danger-color: var(--danger);
+  --danger-foreground: #ffffff;
+
+  --radius: 0.625rem;
+}
+
+.dark {
+  /* ----- Semantic tokens (DARK) ------------------------------------------ */
+  --background: var(--neutral-900);
+  --foreground: var(--neutral-50);
+  --surface: #232a2b;
+  --surface-foreground: var(--neutral-50);
+  --muted: #2e3636;
+  --muted-foreground: #aab4b5;
+  --border: #2e3636;
+  --input: #2e3636;
+  --ring: var(--brand-accent);
+
+  /* Filled primary keeps white text — #ffffff on --brand-primary = 7.7:1 (AA) */
+  --primary: var(--brand-primary);
+  --primary-hover: var(--brand-accent);
+  --primary-foreground: #ffffff;
+
+  --accent: var(--brand-accent);
+  --accent-foreground: #06211f;
+  --accent-subtle: #103e42;
+
+  --danger-color: #e06557; /* lighter danger for AA on dark surfaces */
+  --danger-foreground: #1a1a1a;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+}

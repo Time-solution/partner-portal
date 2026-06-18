@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <ItemGroup>
+    <PackageReference Include="Volo.Abp.Autofac" />
+    <PackageReference Include="Volo.Abp.AspNetCore.Mvc" />
+    <PackageReference Include="Volo.Abp.EntityFrameworkCore.SqlServer" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Zahy.Identity\Zahy.Identity.Application\Zahy.Identity.Application.csproj" />
+    <ProjectReference Include="..\Zahy.Identity\Zahy.Identity.EntityFrameworkCore\Zahy.Identity.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\Zahy.Identity\Zahy.Identity.HttpApi\Zahy.Identity.HttpApi.csproj" />
+    <ProjectReference Include="..\Zahy.PartnerPlatform\Zahy.PartnerPlatform.Application\Zahy.PartnerPlatform.Application.csproj" />
+    <ProjectReference Include="..\Zahy.PartnerPlatform\Zahy.PartnerPlatform.EntityFrameworkCore\Zahy.PartnerPlatform.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\Zahy.PartnerPlatform\Zahy.PartnerPlatform.HttpApi\Zahy.PartnerPlatform.HttpApi.csproj" />
+    <ProjectReference Include="..\Zahy.Webhooks\Zahy.Webhooks.Application\Zahy.Webhooks.Application.csproj" />
+    <ProjectReference Include="..\Zahy.Webhooks\Zahy.Webhooks.EntityFrameworkCore\Zahy.Webhooks.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\Zahy.Webhooks\Zahy.Webhooks.HttpApi\Zahy.Webhooks.HttpApi.csproj" />
+    <ProjectReference Include="..\Zahy.OrderLedger\Zahy.OrderLedger.Application\Zahy.OrderLedger.Application.csproj" />
+    <ProjectReference Include="..\Zahy.OrderLedger\Zahy.OrderLedger.EntityFrameworkCore\Zahy.OrderLedger.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\Zahy.OrderLedger\Zahy.OrderLedger.HttpApi\Zahy.OrderLedger.HttpApi.csproj" />
+    <ProjectReference Include="..\Zahy.Commission\Zahy.Commission.Application\Zahy.Commission.Application.csproj" />
+    <ProjectReference Include="..\Zahy.Commission\Zahy.Commission.EntityFrameworkCore\Zahy.Commission.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\Zahy.Commission\Zahy.Commission.HttpApi\Zahy.Commission.HttpApi.csproj" />
+  </ItemGroup>
+</Project>
