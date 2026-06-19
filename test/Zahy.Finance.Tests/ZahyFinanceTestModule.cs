@@ -4,8 +4,10 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Volo.Abp;
 using Volo.Abp.Autofac;
+using Volo.Abp.Auditing;
 using Volo.Abp.Authorization;
 using Volo.Abp.EntityFrameworkCore;
 using Volo.Abp.EntityFrameworkCore.Sqlite;
@@ -30,6 +32,8 @@ public class ZahyFinanceTestModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
+        Configure<AbpAuditingOptions>(options => options.IsEnabled = false);
+
         var sqliteConnection = CreateDatabaseAndGetConnection();
 
         Configure<AbpDbContextOptions>(options =>
@@ -73,6 +77,12 @@ public class ZahyFinanceIntegrationTestModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
+        context.Services.AddAlwaysAllowAuthorization();
+
+        var recordingLoggerProvider = new RecordingLoggerProvider();
+        context.Services.AddSingleton(recordingLoggerProvider);
+        context.Services.AddLogging(logging => logging.AddProvider(recordingLoggerProvider));
+
         context.Services.Replace(ServiceDescriptor.Singleton<ICurrentPartner, TestCurrentPartnerAccessor>());
         context.Services.AddSingleton<TestCurrentPartner>();
     }

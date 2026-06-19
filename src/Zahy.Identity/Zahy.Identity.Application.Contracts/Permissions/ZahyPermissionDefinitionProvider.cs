@@ -30,6 +30,9 @@ public class ZahyPermissionDefinitionProvider : PermissionDefinitionProvider
         var roles = group.AddPermission(ZahyPermissions.Roles.Default);
         roles.AddChild(ZahyPermissions.Roles.Manage);
 
+        var finance = group.AddPermission(ZahyPermissions.Finance.Default);
+        finance.AddChild(ZahyPermissions.Finance.KycReview);
+
         group.AddPermission(ZahyPermissions.Admin);
     }
 }

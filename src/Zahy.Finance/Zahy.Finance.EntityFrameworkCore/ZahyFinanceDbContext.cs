@@ -102,8 +102,16 @@ public class ZahyFinanceDbContext : AbpDbContext<ZahyFinanceDbContext>
             b.ConfigureByConvention();
 
             b.Property(x => x.EntityKind).IsRequired();
+            b.Property(x => x.Version).IsRequired();
             b.Property(x => x.SubmittedAt).IsRequired();
+            b.Property(x => x.ProtectedLegalNameAr).IsRequired().HasMaxLength(FinanceKycConsts.MaxProtectedFieldLength);
+            b.Property(x => x.ProtectedLegalNameEn).IsRequired().HasMaxLength(FinanceKycConsts.MaxProtectedFieldLength);
+            b.Property(x => x.ProtectedCommercialRegistrationNumber).IsRequired().HasMaxLength(FinanceKycConsts.MaxProtectedFieldLength);
+            b.Property(x => x.ProtectedVatNumber).IsRequired().HasMaxLength(FinanceKycConsts.MaxProtectedFieldLength);
+            b.Property(x => x.ProtectedIban).IsRequired().HasMaxLength(FinanceKycConsts.MaxProtectedFieldLength);
+            b.Property(x => x.ProtectedLegalAddress).IsRequired().HasMaxLength(FinanceKycConsts.MaxProtectedFieldLength);
 
+            b.HasIndex(x => new { x.EntityKind, x.EntityId, x.Version }).IsUnique();
             b.HasIndex(x => new { x.EntityKind, x.EntityId });
         });
 
@@ -114,8 +122,16 @@ public class ZahyFinanceDbContext : AbpDbContext<ZahyFinanceDbContext>
 
             b.Property(x => x.EntityKind).IsRequired();
             b.Property(x => x.Status).IsRequired();
+            b.Property(x => x.ReviewNotes).HasMaxLength(FinanceKycConsts.MaxReviewNotesLength);
+            b.Property(x => x.VerifiedLegalNameAr).HasMaxLength(FinanceKycConsts.MaxLegalNameLength);
+            b.Property(x => x.VerifiedLegalNameEn).HasMaxLength(FinanceKycConsts.MaxLegalNameLength);
+            b.Property(x => x.VerifiedCommercialRegistrationNumber).HasMaxLength(FinanceKycConsts.MaxCrNumberLength);
+            b.Property(x => x.VerifiedVatNumber).HasMaxLength(FinanceKycConsts.MaxVatNumberLength);
+            b.Property(x => x.VerifiedIban).HasMaxLength(FinanceKycConsts.MaxIbanLength);
+            b.Property(x => x.VerifiedLegalAddress).HasMaxLength(FinanceKycConsts.MaxAddressLength);
 
             b.HasIndex(x => new { x.EntityKind, x.EntityId, x.Status });
+            b.HasIndex(x => x.KycSubmissionId).IsUnique();
         });
     }
 }

@@ -36,4 +36,18 @@ public static class FinanceErrorCodes
     public const string AccountNotActive = Namespace + ":003";
     public const string InvalidPosting = Namespace + ":004";
     public const string AccessDenied = Namespace + ":005";
+    public const string IllegalKycTransition = Namespace + ":006";
+    public const string KycVerificationNotFound = Namespace + ":007";
+    public const string KycSubmissionNotFound = Namespace + ":008";
+}
+
+public static class FinanceKycConsts
+{
+    public const int MaxLegalNameLength = 256;
+    public const int MaxCrNumberLength = 32;
+    public const int MaxVatNumberLength = 32;
+    public const int MaxIbanLength = 34;
+    public const int MaxAddressLength = 512;
+    public const int MaxReviewNotesLength = 2000;
+    public const int MaxProtectedFieldLength = 2048;
 }

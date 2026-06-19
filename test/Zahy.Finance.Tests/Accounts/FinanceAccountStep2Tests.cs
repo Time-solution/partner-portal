@@ -197,9 +197,25 @@ public class FinanceAccountStep2Tests : ZahyFinanceTestBase
 
     private async Task SeedVerifiedPartnerKycAsync(Guid partnerId)
     {
+        var protector = GetRequiredService<IKycFieldProtector>();
         var submissionId = _guidGenerator.Create();
         await _kycSubmissionRepository.InsertAsync(
-            new KycSubmission(submissionId, KycEntityKind.Partner, partnerId, DateTime.UtcNow),
+            KycSubmission.Create(
+                submissionId,
+                KycEntityKind.Partner,
+                partnerId,
+                version: 1,
+                submittedByUserId: null,
+                submittedAt: DateTime.UtcNow,
+                new ProtectedKycFieldBundle
+                {
+                    LegalNameAr = protector.Protect("Test Partner AR"),
+                    LegalNameEn = protector.Protect("Test Partner EN"),
+                    CommercialRegistrationNumber = protector.Protect("1010999999"),
+                    VatNumber = protector.Protect("300099999999999"),
+                    Iban = protector.Protect("SA0380000000608010167519"),
+                    LegalAddress = protector.Protect("Riyadh")
+                }),
             autoSave: true);
 
         await _kycVerificationRepository.InsertAsync(

@@ -51,6 +51,12 @@ public static class ZahyPermissions
         public const string Manage = Default + ".Manage";
     }
 
+    public static class Finance
+    {
+        public const string Default = GroupName + ".Finance";
+        public const string KycReview = Default + ".KycReview";
+    }
+
     /// <summary>Platform-wide administration (super power).</summary>
     public const string Admin = GroupName + ".Admin";
 
@@ -66,6 +72,7 @@ public static class ZahyPermissions
             Payouts.Read,
             Partners.Manage,
             Roles.Manage,
+            Finance.KycReview,
             Admin
         };
     }

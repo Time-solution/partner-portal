@@ -17,5 +17,11 @@ public class ZahyFinanceApplicationModule : AbpModule
         context.Services.AddTransient<IFinanceAccountQueryService, FinanceAccountService>();
         context.Services.AddTransient<FinancePostingIngestionService>();
         context.Services.AddTransient<FinanceAccessGuard>();
+        context.Services.AddTransient<IKycFieldProtector, DevAppLayerKycFieldProtector>();
+        context.Services.AddTransient<IKycSubmissionService, KycSubmissionService>();
+        context.Services.AddTransient<IKycVerificationService, KycVerificationService>();
+        context.Services.AddTransient<IKycCanonicalProfileProvider, KycCanonicalProfileProvider>();
+        context.Services.AddTransient<IFinanceDocumentKycBlockBuilder, FinanceDocumentKycBlockBuilder>();
+        context.Services.Configure<FinanceKycProtectionOptions>(_ => { });
     }
 }

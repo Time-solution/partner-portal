@@ -44,7 +44,8 @@ public static class ZahyRoleRegistry
             permissions: new[]
             {
                 ZahyPermissions.Payouts.Read,
-                ZahyPermissions.Orders.Read
+                ZahyPermissions.Orders.Read,
+                ZahyPermissions.Finance.KycReview
             },
             assignableRoles: Array.Empty<string>()),
 
