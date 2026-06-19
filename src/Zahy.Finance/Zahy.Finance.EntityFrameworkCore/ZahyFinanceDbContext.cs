@@ -169,6 +169,16 @@ public class ZahyFinanceDbContext : AbpDbContext<ZahyFinanceDbContext>
 
             b.HasIndex(x => x.IdempotencyKey).IsUnique();
             b.HasIndex(x => new { x.AccountKind, x.AccountId });
+
+            b.HasQueryFilter(x =>
+                (!IsPartnerFilterEnabled ||
+                 CurrentPartnerId == null ||
+                 (x.AccountKind == FinanceAccountKind.Partner && x.EntityId == CurrentPartnerId) ||
+                 x.AccountKind != FinanceAccountKind.Partner) &&
+                (!IsTenantFilterEnabled ||
+                 FinanceCurrentTenantId == null ||
+                 (x.AccountKind == FinanceAccountKind.Merchant && x.EntityId == FinanceCurrentTenantId) ||
+                 x.AccountKind != FinanceAccountKind.Merchant));
         });
 
         builder.Entity<InvoiceNumberSequence>(b =>

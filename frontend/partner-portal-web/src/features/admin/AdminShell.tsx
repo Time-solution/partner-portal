@@ -12,6 +12,7 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 import { useTranslator, type Lang } from "@/lib/i18n";
 import { adminNav, filterNavByPermissions } from "./nav";
+import { AccountBillingPage } from "./AccountBillingPage";
 import { PartnersPage } from "./PartnersPage";
 
 const SESSION_IDLE_MS = 15 * 60 * 1000; // 15 minutes of inactivity
@@ -113,6 +114,8 @@ export function AdminShell({ lang, toggleLang, theme, toggleTheme }: AdminShellP
 
           {activeItem?.key === "partners" ? (
             <PartnersPage lang={lang} />
+          ) : activeItem?.key === "payouts" ? (
+            <AccountBillingPage lang={lang} />
           ) : (
             <Card>
               <CardHeader>

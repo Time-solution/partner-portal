@@ -46,5 +46,9 @@ public class ZahyFinanceApplicationModule : AbpModule
         context.Services.AddTransient<IInvoiceTrigger, BillingChargeInvoiceTrigger>();
         context.Services.AddTransient<IFinanceAccountStatusService, FinanceAccountStatusService>();
         context.Services.AddTransient<IMerchantOperationalStatusService, MerchantOperationalStatusService>();
+        context.Services.AddTransient<FinancePortalReadService>();
+        context.Services.AddTransient<FinanceDocumentDownloadService>();
+        context.Services.AddTransient<IFinancePartnerPortalAppService, FinancePartnerPortalAppService>();
+        context.Services.AddTransient<IFinanceMerchantPortalAppService, FinanceMerchantPortalAppService>();
     }
 }

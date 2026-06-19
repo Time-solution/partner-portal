@@ -69,6 +69,22 @@ public class FinanceInvoiceGenerationService : ApplicationService, IFinanceInvoi
     }
 
     [UnitOfWork]
+    public virtual Task<FinanceInvoiceGenerationResult> RegenerateInvoiceByIdempotencyAsync(
+        FinanceAccountKind accountKind,
+        Guid entityId,
+        string idempotencyKey,
+        CancellationToken cancellationToken = default) =>
+        GenerateInternalAsync(
+            accountKind,
+            entityId,
+            entityId,
+            idempotencyKey,
+            periodFrom: null,
+            periodTo: null,
+            sourceRowId: null,
+            cancellationToken);
+
+    [UnitOfWork]
     public virtual Task<FinanceInvoiceGenerationResult> TryGenerateForBillingChargeAsync(
         FinanceBillingInvoiceTriggerContext context,
         CancellationToken cancellationToken = default)

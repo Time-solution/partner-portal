@@ -31,6 +31,12 @@ public interface IFinanceInvoiceGenerationService
     Task<FinanceInvoiceGenerationResult> TryGenerateForBillingChargeAsync(
         FinanceBillingInvoiceTriggerContext context,
         CancellationToken cancellationToken = default);
+
+    Task<FinanceInvoiceGenerationResult> RegenerateInvoiceByIdempotencyAsync(
+        FinanceAccountKind accountKind,
+        Guid entityId,
+        string idempotencyKey,
+        CancellationToken cancellationToken = default);
 }
 
 public interface IFinanceInvoiceNumberAllocator

@@ -52,6 +52,7 @@
     <Project Path="src\Zahy.Finance\Zahy.Finance.Application.Contracts\Zahy.Finance.Application.Contracts.csproj" />
     <Project Path="src\Zahy.Finance\Zahy.Finance.Application\Zahy.Finance.Application.csproj" />
     <Project Path="src\Zahy.Finance\Zahy.Finance.EntityFrameworkCore\Zahy.Finance.EntityFrameworkCore.csproj" />
+    <Project Path="src\Zahy.Finance\Zahy.Finance.HttpApi\Zahy.Finance.HttpApi.csproj" />
   </Folder>
   <Project Path="src\Zahy.HttpApi.Host\Zahy.HttpApi.Host.csproj" />
   <Project Path="src\Zahy.DbMigrator\Zahy.DbMigrator.csproj" />

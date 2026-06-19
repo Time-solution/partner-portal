@@ -64,4 +64,24 @@ public class FinanceAccessGuard : DomainService
 
         throw new AbpAuthorizationException("Merchant access denied.");
     }
+
+    public Task<Guid> GetRequiredPartnerIdAsync()
+    {
+        if (_currentPartner.Id == null)
+        {
+            throw new AbpAuthorizationException("Partner context is required.");
+        }
+
+        return Task.FromResult(_currentPartner.Id.Value);
+    }
+
+    public Task<Guid> GetRequiredTenantIdAsync()
+    {
+        if (_currentTenant.Id == null)
+        {
+            throw new AbpAuthorizationException("Merchant context is required.");
+        }
+
+        return Task.FromResult(_currentTenant.Id.Value);
+    }
 }
