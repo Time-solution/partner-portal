@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
@@ -9,6 +10,7 @@ using Volo.Abp.DependencyInjection;
 using Volo.Abp.Guids;
 using Volo.Abp.Identity;
 using Volo.Abp.MultiTenancy;
+using Zahy.Identity.Partners;
 using Zahy.Identity.Roles;
 
 namespace Zahy.Identity.Seed;
@@ -25,6 +27,9 @@ public class ZahyDevIdentityDataSeedContributor : IDataSeedContributor, ITransie
 
     /// <summary>Fixed tenant id for the dev merchant user (no Saas module required).</summary>
     private static readonly Guid DevMerchantTenantId = Guid.Parse("11111111-1111-1111-1111-111111111001");
+
+    /// <summary>Must match <c>FinanceConsts.DevPartnerId</c>.</summary>
+    private static readonly Guid DevPartnerId = Guid.Parse("22222222-2222-2222-2222-222222222001");
 
     private readonly IdentityUserManager _userManager;
     private readonly IIdentityUserRepository _userRepository;
@@ -59,6 +64,7 @@ public class ZahyDevIdentityDataSeedContributor : IDataSeedContributor, ITransie
         await EnsureDevUserAsync("admin", "admin@zahy.dev", tenantId: null, ZahyRoles.PlatformSuperAdmin, "Dev Platform SuperAdmin");
 
         await EnsureDevUserAsync("partner", "partner@zahy.dev", tenantId: null, ZahyRoles.PartnerOwner, "Dev Partner Owner");
+        await EnsureDevPartnerClaimAsync("partner");
 
         using (_currentTenant.Change(DevMerchantTenantId))
         {
@@ -115,6 +121,33 @@ public class ZahyDevIdentityDataSeedContributor : IDataSeedContributor, ITransie
         if (!await _userManager.IsInRoleAsync(user, roleName))
         {
             (await _userManager.AddToRoleAsync(user, roleName)).CheckErrors();
+        }
+    }
+
+    private async Task EnsureDevPartnerClaimAsync(string userName)
+    {
+        var normalizedName = _userManager.NormalizeName(userName);
+        var user = await _userRepository.FindByNormalizedUserNameAsync(normalizedName);
+        if (user == null)
+        {
+            return;
+        }
+
+        var existing = user.Claims.FirstOrDefault(c => c.ClaimType == ZahyClaimTypes.PartnerId);
+        if (existing == null)
+        {
+            (await _userManager.AddClaimAsync(user, PartnerIdentityClaims.CreatePartnerIdClaim(DevPartnerId)))
+                .CheckErrors();
+            return;
+        }
+
+        if (existing.ClaimValue != DevPartnerId.ToString("D"))
+        {
+            (await _userManager.RemoveClaimAsync(
+                user,
+                new System.Security.Claims.Claim(existing.ClaimType, existing.ClaimValue!))).CheckErrors();
+            (await _userManager.AddClaimAsync(user, PartnerIdentityClaims.CreatePartnerIdClaim(DevPartnerId)))
+                .CheckErrors();
         }
     }
 

@@ -28,13 +28,13 @@ import { useTranslator, type Lang } from "@/lib/i18n";
 const PAGE_SIZE = 20;
 
 const ACCOUNT_STATUS: Record<number, FinanceAccountStatus> = {
-  1: "Open",
-  2: "Suspended",
-  3: "Closed",
+  1: "Pending",
+  2: "Active",
+  3: "Suspended",
+  4: "Closed",
 };
 
 const KYC_STATUS: Record<number, KycVerificationStatus> = {
-  0: "None",
   1: "Submitted",
   2: "UnderReview",
   3: "Verified",
@@ -47,11 +47,11 @@ const DOCUMENT_KIND: Record<number, FinanceDocumentKind> = {
 };
 
 function normalizeAccountStatus(raw: FinanceAccountStatus | number): FinanceAccountStatus {
-  return typeof raw === "number" ? (ACCOUNT_STATUS[raw] ?? "Open") : raw;
+  return typeof raw === "number" ? (ACCOUNT_STATUS[raw] ?? "Pending") : raw;
 }
 
 function normalizeKycStatus(raw: KycVerificationStatus | number): KycVerificationStatus {
-  return typeof raw === "number" ? (KYC_STATUS[raw] ?? "None") : raw;
+  return typeof raw === "number" ? (KYC_STATUS[raw] ?? "Submitted") : raw;
 }
 
 function normalizeDocumentKind(raw: FinanceDocumentKind | number): FinanceDocumentKind {
@@ -107,7 +107,8 @@ export function AccountBillingPage({ lang }: AccountBillingPageProps) {
     (status: FinanceAccountStatus | number) => {
       const normalized = normalizeAccountStatus(status);
       const map: Record<FinanceAccountStatus, string> = {
-        Open: t("billingStatusOpen" as never),
+        Pending: t("billingStatusPending" as never),
+        Active: t("billingStatusActive" as never),
         Suspended: t("billingStatusSuspended" as never),
         Closed: t("billingStatusClosed" as never),
       };
@@ -120,7 +121,6 @@ export function AccountBillingPage({ lang }: AccountBillingPageProps) {
     (status: KycVerificationStatus | number) => {
       const normalized = normalizeKycStatus(status);
       const map: Record<KycVerificationStatus, string> = {
-        None: t("billingKycNone" as never),
         Submitted: t("billingKycSubmitted" as never),
         UnderReview: t("billingKycUnderReview" as never),
         Verified: t("billingKycVerified" as never),

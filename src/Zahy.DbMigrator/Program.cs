@@ -15,6 +15,7 @@ using Zahy.PartnerPlatform.EntityFrameworkCore;
 using Zahy.Webhooks;
 using Zahy.Connectors;
 using Zahy.Commission;
+using Zahy.Finance;
 
 namespace Zahy.DbMigrator;
 
@@ -28,7 +29,12 @@ namespace Zahy.DbMigrator;
     typeof(ZahyWebhooksEntityFrameworkCoreModule),
     typeof(ZahyOrderLedgerEntityFrameworkCoreModule),
     typeof(ZahyConnectorsEntityFrameworkCoreModule),
-    typeof(ZahyCommissionEntityFrameworkCoreModule)
+    typeof(ZahyCommissionEntityFrameworkCoreModule),
+    typeof(ZahyCommissionApplicationModule),
+    typeof(ZahyFinanceEntityFrameworkCoreModule),
+    typeof(ZahyFinanceApplicationModule),
+    typeof(ZahyFinanceCommissionModule),
+    typeof(ZahyFinanceApplicationContractsModule)
 )]
 public class DbMigratorModule : AbpModule
 {
@@ -95,6 +101,10 @@ public class DbMigratorHostedService : IHostedService
         var commissionMigrator = application.ServiceProvider.GetRequiredService<IZahyCommissionDbSchemaMigrator>();
         await commissionMigrator.MigrateAsync();
         Console.WriteLine("Commission migrations applied.");
+
+        var financeMigrator = application.ServiceProvider.GetRequiredService<IZahyFinanceDbSchemaMigrator>();
+        await financeMigrator.MigrateAsync();
+        Console.WriteLine("Finance migrations applied.");
 
         await application.ServiceProvider.GetRequiredService<IDataSeeder>().SeedAsync();
         Console.WriteLine("Standard data seed completed (includes dev test users when Development + Zahy:DevSeed:Enabled=true).");

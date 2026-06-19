@@ -21,6 +21,10 @@
     <ProjectReference Include="..\Zahy.OrderLedger\Zahy.OrderLedger.EntityFrameworkCore\Zahy.OrderLedger.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\Zahy.Connectors\Zahy.Connectors.EntityFrameworkCore\Zahy.Connectors.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\Zahy.Commission\Zahy.Commission.EntityFrameworkCore\Zahy.Commission.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\Zahy.Commission\Zahy.Commission.Application\Zahy.Commission.Application.csproj" />
+    <ProjectReference Include="..\Zahy.Finance\Zahy.Finance.EntityFrameworkCore\Zahy.Finance.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\Zahy.Finance\Zahy.Finance.Application\Zahy.Finance.Application.csproj" />
+    <ProjectReference Include="..\Zahy.Finance\Zahy.Finance.Application.Contracts\Zahy.Finance.Application.Contracts.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="appsettings.json">

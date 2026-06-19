@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.CookiePolicy;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using OpenIddict.Server;
 using OpenIddict.Validation.AspNetCore;
@@ -24,6 +25,7 @@ using Zahy.Webhooks;
 using Zahy.OrderLedger;
 using Zahy.Commission;
 using Zahy.Connectors;
+using Zahy.Finance;
 
 namespace Zahy;
 
@@ -51,7 +53,11 @@ namespace Zahy;
     typeof(ZahyCommissionApplicationModule),
     typeof(ZahyCommissionOrderLedgerModule),
     typeof(ZahyCommissionEntityFrameworkCoreModule),
-    typeof(ZahyCommissionHttpApiModule)
+    typeof(ZahyCommissionHttpApiModule),
+    typeof(ZahyFinanceApplicationModule),
+    typeof(ZahyFinanceCommissionModule),
+    typeof(ZahyFinanceEntityFrameworkCoreModule),
+    typeof(ZahyFinanceHttpApiModule)
 )]
 public class ZahyHostModule : AbpModule
 {
@@ -114,6 +120,8 @@ public class ZahyHostModule : AbpModule
         {
             options.ConnectionStrings.Default = configuration.GetConnectionString("Default");
         });
+
+        context.Services.Replace(ServiceDescriptor.Transient<IFinanceInvoiceNumberAllocator, SqlServerFinanceInvoiceNumberAllocatorAdapter>());
 
         // API-only host: disable background workers (OpenIddict token cleanup NRE without full infra).
         Configure<AbpBackgroundWorkerOptions>(options =>

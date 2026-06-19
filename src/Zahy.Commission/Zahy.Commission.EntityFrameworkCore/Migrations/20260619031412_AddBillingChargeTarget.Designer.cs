@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Volo.Abp.EntityFrameworkCore;
 using Zahy.Commission;
@@ -12,9 +13,11 @@ using Zahy.Commission;
 namespace Zahy.Commission.EntityFrameworkCore.Migrations
 {
     [DbContext(typeof(ZahyCommissionDbContext))]
-    partial class ZahyCommissionDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260619031412_AddBillingChargeTarget")]
+    partial class AddBillingChargeTarget
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

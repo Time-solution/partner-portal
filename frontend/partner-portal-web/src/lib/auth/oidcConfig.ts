@@ -1,7 +1,7 @@
 const DEFAULT_AUTHORITY = "https://localhost:44300";
 const DEFAULT_CLIENT_ID = "zahy-partner-web";
 const DEFAULT_SCOPE =
-  "openid profile email roles offline_access catalog:read orders:read partners:manage";
+  "openid profile email roles offline_access catalog:read catalog:write orders:read inventory:write webhooks:manage payouts:read";
 
 const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:5173";
 

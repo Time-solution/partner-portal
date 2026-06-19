@@ -2,13 +2,8 @@ import { userManager } from "./auth/userManager";
 import { apiBaseUrl } from "./auth/oidcConfig";
 import type { PagedResult } from "./api";
 
-export type FinanceAccountStatus = "Open" | "Suspended" | "Closed";
-export type KycVerificationStatus =
-  | "None"
-  | "Submitted"
-  | "UnderReview"
-  | "Verified"
-  | "Rejected";
+export type FinanceAccountStatus = "Pending" | "Active" | "Suspended" | "Closed";
+export type KycVerificationStatus = "Submitted" | "UnderReview" | "Verified" | "Rejected";
 export type FinanceDocumentKind = "Statement" | "Invoice";
 
 export interface FinancePortalAccount {

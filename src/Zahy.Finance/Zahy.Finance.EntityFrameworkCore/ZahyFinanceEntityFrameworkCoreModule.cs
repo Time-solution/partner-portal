@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
-using Volo.Abp.EntityFrameworkCore;
-using Volo.Abp.Modularity;
+using Volo.Abp.EntityFrameworkCore;using Volo.Abp.Modularity;
 
 namespace Zahy.Finance;
 
@@ -16,5 +15,7 @@ public class ZahyFinanceEntityFrameworkCoreModule : AbpModule
         {
             options.AddDefaultRepositories(includeAllEntities: true);
         });
+
+        context.Services.AddTransient<ISqlServerFinanceInvoiceNumberAllocator, SqlServerFinanceInvoiceNumberAllocator>();
     }
 }

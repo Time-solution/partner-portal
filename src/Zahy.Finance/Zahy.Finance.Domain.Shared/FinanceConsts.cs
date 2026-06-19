@@ -6,6 +6,9 @@ public static class FinanceConsts
 
     public static readonly Guid PlatformSettingsId = new("11111111-1111-1111-1111-111111111001");
 
+    /// <summary>Fixed partner id for Development seed data (partner@zahy.dev).</summary>
+    public static readonly Guid DevPartnerId = new("22222222-2222-2222-2222-222222222001");
+
     public const int MaxIdempotencyKeyLength = 512;
     public const int MaxDescriptionLength = 512;
     public const int MaxSourceTypeLength = 64;

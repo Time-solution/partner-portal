@@ -25,5 +25,8 @@
     <ProjectReference Include="..\Zahy.Commission\Zahy.Commission.Application\Zahy.Commission.Application.csproj" />
     <ProjectReference Include="..\Zahy.Commission\Zahy.Commission.EntityFrameworkCore\Zahy.Commission.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\Zahy.Commission\Zahy.Commission.HttpApi\Zahy.Commission.HttpApi.csproj" />
+    <ProjectReference Include="..\Zahy.Finance\Zahy.Finance.Application\Zahy.Finance.Application.csproj" />
+    <ProjectReference Include="..\Zahy.Finance\Zahy.Finance.EntityFrameworkCore\Zahy.Finance.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\Zahy.Finance\Zahy.Finance.HttpApi\Zahy.Finance.HttpApi.csproj" />
   </ItemGroup>
 </Project>
