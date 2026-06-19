@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.Application;
+using Volo.Abp.Auditing;
 using Volo.Abp.Modularity;
 
 namespace Zahy.Finance;
@@ -13,6 +14,13 @@ public class ZahyFinanceApplicationModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
+        Configure<AbpAuditingOptions>(options =>
+        {
+            options.IgnoredTypes.Add(typeof(KycSubmissionRequest));
+            options.IgnoredTypes.Add(typeof(KycVerifyRequest));
+            options.IgnoredTypes.Add(typeof(KycRejectRequest));
+        });
+
         context.Services.AddTransient<IFinanceAccountService, FinanceAccountService>();
         context.Services.AddTransient<IFinanceAccountQueryService, FinanceAccountService>();
         context.Services.AddTransient<FinancePostingIngestionService>();
@@ -23,5 +31,12 @@ public class ZahyFinanceApplicationModule : AbpModule
         context.Services.AddTransient<IKycCanonicalProfileProvider, KycCanonicalProfileProvider>();
         context.Services.AddTransient<IFinanceDocumentKycBlockBuilder, FinanceDocumentKycBlockBuilder>();
         context.Services.Configure<FinanceKycProtectionOptions>(_ => { });
+        context.Services.AddTransient<IFinancePostingReadService, FinancePostingReadService>();
+        context.Services.AddTransient<IFinanceDocumentExportService, FinanceDocumentExportService>();
+        context.Services.AddTransient<IFinanceStatementDocumentService, FinanceStatementDocumentService>();
+        context.Services.AddTransient<IFinanceInvoiceDocumentService, FinanceInvoiceDocumentService>();
+        context.Services.AddTransient<IZatcaInvoiceShaper, LocalZatcaInvoiceShaper>();
+        context.Services.AddTransient<IZatcaSubmitter, NullZatcaSubmitter>();
+        context.Services.Configure<FinanceBrandingOptions>(_ => { });
     }
 }

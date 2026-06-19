@@ -2,12 +2,14 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Volo.Abp.Application.Services;
+using Volo.Abp.Auditing;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Guids;
 using Volo.Abp.Uow;
 
 namespace Zahy.Finance;
 
+[DisableAuditing]
 public class KycSubmissionService : ApplicationService, IKycSubmissionService
 {
     private readonly IRepository<KycSubmission, Guid> _submissionRepository;

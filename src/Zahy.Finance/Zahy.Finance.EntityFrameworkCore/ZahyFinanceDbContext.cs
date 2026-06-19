@@ -92,8 +92,14 @@ public class ZahyFinanceDbContext : AbpDbContext<ZahyFinanceDbContext>
             b.HasIndex(x => new { x.AccountKind, x.AccountId });
 
             b.HasQueryFilter(x =>
-                (!IsPartnerFilterEnabled || CurrentPartnerId == null || x.PartnerId == CurrentPartnerId) &&
-                (!IsTenantFilterEnabled || FinanceCurrentTenantId == null || x.TenantId == null || x.TenantId == FinanceCurrentTenantId));
+                (!IsPartnerFilterEnabled ||
+                 CurrentPartnerId == null ||
+                 x.AccountKind != FinanceAccountKind.Partner ||
+                 x.PartnerId == CurrentPartnerId) &&
+                (!IsTenantFilterEnabled ||
+                 FinanceCurrentTenantId == null ||
+                 x.AccountKind != FinanceAccountKind.Merchant ||
+                 x.TenantId == FinanceCurrentTenantId));
         });
 
         builder.Entity<KycSubmission>(b =>

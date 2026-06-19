@@ -90,7 +90,7 @@ public class FinanceAccountService :
     public Task EnsureCanAccessMerchantAccountAsync(
         Guid tenantId,
         CancellationToken cancellationToken = default) =>
-        Task.CompletedTask;
+        _accessGuard.EnsureCanAccessMerchantAccountAsync(tenantId);
 
     public async Task<FinanceAccountBalanceDto> GetPartnerBalanceAsync(
         Guid partnerId,

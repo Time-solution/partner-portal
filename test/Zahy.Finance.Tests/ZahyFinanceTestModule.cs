@@ -13,6 +13,7 @@ using Volo.Abp.EntityFrameworkCore;
 using Volo.Abp.EntityFrameworkCore.Sqlite;
 using Volo.Abp.Modularity;
 using Volo.Abp.Testing;
+using Volo.Abp.MultiTenancy;
 using Zahy.Commission;
 using Zahy.Identity.Partners;
 
@@ -85,5 +86,7 @@ public class ZahyFinanceIntegrationTestModule : AbpModule
 
         context.Services.Replace(ServiceDescriptor.Singleton<ICurrentPartner, TestCurrentPartnerAccessor>());
         context.Services.AddSingleton<TestCurrentPartner>();
+        context.Services.Replace(ServiceDescriptor.Singleton<ICurrentTenant, TestCurrentTenantAccessor>());
+        context.Services.AddSingleton<TestCurrentTenant>();
     }
 }

@@ -34,3 +34,17 @@ public enum FinancePostingSourceModule
     Billing = 2,
     Finance = 3
 }
+
+public enum FinanceExportFormat
+{
+    Csv = 1,
+    Xlsx = 2
+}
+
+public enum FinanceDocumentKind
+{
+    Statement = 1,
+    Invoice = 2,
+    TransactionExport = 3,
+    CommissionExport = 4
+}

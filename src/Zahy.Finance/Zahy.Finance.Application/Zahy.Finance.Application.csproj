@@ -2,6 +2,8 @@
   <ItemGroup>
     <PackageReference Include="Volo.Abp.Ddd.Application" />
     <PackageReference Include="Volo.Abp.Authorization" />
+    <PackageReference Include="QuestPDF" />
+    <PackageReference Include="ClosedXML" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Zahy.Finance.Domain\Zahy.Finance.Domain.csproj" />

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
+using Volo.Abp.Auditing;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Uow;
 using Volo.Abp.Users;
@@ -12,6 +13,7 @@ using Zahy.Identity.Permissions;
 namespace Zahy.Finance;
 
 [Authorize(ZahyPermissions.Finance.KycReview)]
+[DisableAuditing]
 public class KycVerificationService : ApplicationService, IKycVerificationService
 {
     private readonly IRepository<KycVerification, Guid> _verificationRepository;
