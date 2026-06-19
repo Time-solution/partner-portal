@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Volo.Abp.Ddd.Application" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Zahy.Connectors.Application.Contracts\Zahy.Connectors.Application.Contracts.csproj" />
+    <ProjectReference Include="..\Zahy.Connectors.Domain.Shared\Zahy.Connectors.Domain.Shared.csproj" />
+    <ProjectReference Include="..\..\Zahy.OrderLedger\Zahy.OrderLedger.Application\Zahy.OrderLedger.Application.csproj" />
+    <ProjectReference Include="..\..\Zahy.OrderLedger\Zahy.OrderLedger.Domain\Zahy.OrderLedger.Domain.csproj" />
+    <ProjectReference Include="..\..\Zahy.OrderLedger\Zahy.OrderLedger.Application.Contracts\Zahy.OrderLedger.Application.Contracts.csproj" />
+    <ProjectReference Include="..\..\Zahy.OrderLedger\Zahy.OrderLedger.Domain.Shared\Zahy.OrderLedger.Domain.Shared.csproj" />
+    <ProjectReference Include="..\..\Zahy.PartnerPlatform\Zahy.PartnerPlatform.Domain.Shared\Zahy.PartnerPlatform.Domain.Shared.csproj" />
+  </ItemGroup>
+</Project>

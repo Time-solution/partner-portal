@@ -1,8 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Volo.Abp.EntityFrameworkCore" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Zahy.Webhooks.Domain\Zahy.Webhooks.Domain.csproj" />
+    <ProjectReference Include="..\..\Zahy.Identity\Zahy.Identity.Domain\Zahy.Identity.Domain.csproj" />
   </ItemGroup>
 </Project>

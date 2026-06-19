@@ -5,7 +5,7 @@ namespace Zahy.PartnerPlatform.Partners;
 
 public class PartnerLifecycleManager : DomainService
 {
-    public void Approve(Partner partner)
+    public void EnsureCanApprove(Partner partner)
     {
         EnsureTransition(partner, PartnerLifecycleAction.Approve);
 
@@ -14,7 +14,11 @@ public class PartnerLifecycleManager : DomainService
             throw new BusinessException(PartnerPlatformErrorCodes.BankInfoRequiredForApproval)
                 .WithData("PartnerId", partner.Id);
         }
+    }
 
+    public void Approve(Partner partner)
+    {
+        EnsureCanApprove(partner);
         partner.SetStatus(PartnerStatus.Active);
     }
 

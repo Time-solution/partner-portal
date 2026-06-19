@@ -72,6 +72,35 @@ public class PartnerM2MClientProvisionerTests : ZahyIdentityTestBase
     }
 
     [Fact]
+    public async Task Should_Return_M2M_Client_Secret_Only_Once_In_Provision_Result()
+    {
+        await WithUnitOfWorkAsync(() => _dataSeeder.SeedAsync());
+
+        var partnerId = Guid.NewGuid();
+        PartnerM2MClientProvisionResult result = null!;
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            result = await _provisioner.ProvisionAsync(new PartnerM2MClientProvisionRequest
+            {
+                PartnerId = partnerId,
+                DisplayName = "Acme Logistics LLC",
+                Scopes = [ZahyScopes.OrdersRead]
+            });
+        });
+
+        result.ClientSecret.ShouldNotBeNullOrWhiteSpace();
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var client = await _applicationManager.FindByClientIdAsync(result.ClientId);
+            client.ShouldNotBeNull();
+            (await _applicationManager.ValidateClientSecretAsync(client!, result.ClientSecret)).ShouldBeTrue();
+            (await _applicationManager.ValidateClientSecretAsync(client!, result.ClientSecret + "x")).ShouldBeFalse();
+        });
+    }
+
+    [Fact]
     public async Task Should_Reject_Duplicate_Provision_For_Same_Partner()
     {
         await WithUnitOfWorkAsync(() => _dataSeeder.SeedAsync());

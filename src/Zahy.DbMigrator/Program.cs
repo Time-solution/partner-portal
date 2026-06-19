@@ -9,8 +9,12 @@ using Volo.Abp.EntityFrameworkCore.SqlServer;
 using Volo.Abp.Modularity;
 using Zahy.Identity;
 using Zahy.Identity.EntityFrameworkCore;
+using Zahy.OrderLedger;
 using Zahy.PartnerPlatform;
 using Zahy.PartnerPlatform.EntityFrameworkCore;
+using Zahy.Webhooks;
+using Zahy.Connectors;
+using Zahy.Commission;
 
 namespace Zahy.DbMigrator;
 
@@ -20,7 +24,11 @@ namespace Zahy.DbMigrator;
     typeof(ZahyIdentityEntityFrameworkCoreModule),
     typeof(ZahyIdentityApplicationContractsModule),
     typeof(ZahyPartnerPlatformEntityFrameworkCoreModule),
-    typeof(ZahyPartnerPlatformApplicationContractsModule)
+    typeof(ZahyPartnerPlatformApplicationContractsModule),
+    typeof(ZahyWebhooksEntityFrameworkCoreModule),
+    typeof(ZahyOrderLedgerEntityFrameworkCoreModule),
+    typeof(ZahyConnectorsEntityFrameworkCoreModule),
+    typeof(ZahyCommissionEntityFrameworkCoreModule)
 )]
 public class DbMigratorModule : AbpModule
 {
@@ -71,6 +79,22 @@ public class DbMigratorHostedService : IHostedService
             application.ServiceProvider.GetRequiredService<IZahyPartnerPlatformDbSchemaMigrator>();
         await partnerMigrator.MigrateAsync();
         Console.WriteLine("Partner Platform migrations applied.");
+
+        var webhooksMigrator = application.ServiceProvider.GetRequiredService<IZahyWebhooksDbSchemaMigrator>();
+        await webhooksMigrator.MigrateAsync();
+        Console.WriteLine("Webhooks migrations applied.");
+
+        var orderLedgerMigrator = application.ServiceProvider.GetRequiredService<IZahyOrderLedgerDbSchemaMigrator>();
+        await orderLedgerMigrator.MigrateAsync();
+        Console.WriteLine("Order Ledger migrations applied.");
+
+        var connectorsMigrator = application.ServiceProvider.GetRequiredService<IZahyConnectorsDbSchemaMigrator>();
+        await connectorsMigrator.MigrateAsync();
+        Console.WriteLine("Connectors migrations applied.");
+
+        var commissionMigrator = application.ServiceProvider.GetRequiredService<IZahyCommissionDbSchemaMigrator>();
+        await commissionMigrator.MigrateAsync();
+        Console.WriteLine("Commission migrations applied.");
 
         await application.ServiceProvider.GetRequiredService<IDataSeeder>().SeedAsync();
         Console.WriteLine("Standard data seed completed (includes dev test users when Development + Zahy:DevSeed:Enabled=true).");

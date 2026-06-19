@@ -4,5 +4,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Zahy.Commission.Domain.Shared\Zahy.Commission.Domain.Shared.csproj" />
+    <ProjectReference Include="..\..\Zahy.PartnerPlatform\Zahy.PartnerPlatform.Domain.Shared\Zahy.PartnerPlatform.Domain.Shared.csproj" />
   </ItemGroup>
 </Project>

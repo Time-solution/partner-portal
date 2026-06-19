@@ -5,5 +5,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Zahy.Commission.Domain\Zahy.Commission.Domain.csproj" />
     <ProjectReference Include="..\Zahy.Commission.Application.Contracts\Zahy.Commission.Application.Contracts.csproj" />
+    <ProjectReference Include="..\..\Zahy.OrderLedger\Zahy.OrderLedger.Application\Zahy.OrderLedger.Application.csproj" />
+    <ProjectReference Include="..\..\Zahy.OrderLedger\Zahy.OrderLedger.Domain\Zahy.OrderLedger.Domain.csproj" />
   </ItemGroup>
 </Project>

@@ -95,7 +95,7 @@ public class PartnerAdminAppService : ApplicationService, IPartnerAdminAppServic
 
         try
         {
-            _lifecycleManager.Approve(partner);
+            _lifecycleManager.EnsureCanApprove(partner);
 
             var scopes = PartnerTypeScopePolicy.GetDefaultScopes(partner.Type);
             var provisionResult = await _m2mClientProvisioner.ProvisionAsync(new PartnerM2MClientProvisionRequest
@@ -105,6 +105,7 @@ public class PartnerAdminAppService : ApplicationService, IPartnerAdminAppServic
                 Scopes = scopes
             });
 
+            _lifecycleManager.Approve(partner);
             partner.AssignOpenIddictClient(provisionResult.ClientId);
 
             var ownerInvite = await _partnerUserInviteService.InviteAsync(new PartnerUserInviteRequest

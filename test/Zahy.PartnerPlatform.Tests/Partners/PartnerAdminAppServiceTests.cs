@@ -74,6 +74,25 @@ public class PartnerAdminAppServiceTests : ZahyPartnerPlatformTestBase
     }
 
     [Fact]
+    public async Task Should_Not_Log_M2M_Client_Secret_In_Approve_Audit()
+    {
+        var partnerId = await RegisterPartnerAsync(includeBankInfo: true);
+        _auditLogger.Clear();
+        _m2mProvisioner.Reset();
+
+        PartnerApproveResultDto result = null!;
+        await WithUnitOfWorkAsync(async () =>
+        {
+            result = await _adminAppService.ApproveAsync(partnerId);
+        });
+
+        result.ClientSecret.ShouldNotBeNullOrWhiteSpace();
+        _auditLogger.Entries
+            .Where(e => e.Action == "Partner.Approve")
+            .ShouldAllBe(e => e.ExtraData == null || !e.ExtraData!.Contains(result.ClientSecret));
+    }
+
+    [Fact]
     public async Task Should_Rotate_M2M_Client_Secret_For_Active_Partner()
     {
         var partnerId = await RegisterPartnerAsync(includeBankInfo: true);

@@ -23,6 +23,13 @@
     <Project Path="src\Zahy.Webhooks\Zahy.Webhooks.EntityFrameworkCore\Zahy.Webhooks.EntityFrameworkCore.csproj" />
     <Project Path="src\Zahy.Webhooks\Zahy.Webhooks.HttpApi\Zahy.Webhooks.HttpApi.csproj" />
   </Folder>
+  <Folder Name="/Zahy.Connectors/">
+    <Project Path="src\Zahy.Connectors\Zahy.Connectors.Domain.Shared\Zahy.Connectors.Domain.Shared.csproj" />
+    <Project Path="src\Zahy.Connectors\Zahy.Connectors.Domain\Zahy.Connectors.Domain.csproj" />
+    <Project Path="src\Zahy.Connectors\Zahy.Connectors.Application.Contracts\Zahy.Connectors.Application.Contracts.csproj" />
+    <Project Path="src\Zahy.Connectors\Zahy.Connectors.Application\Zahy.Connectors.Application.csproj" />
+    <Project Path="src\Zahy.Connectors\Zahy.Connectors.EntityFrameworkCore\Zahy.Connectors.EntityFrameworkCore.csproj" />
+  </Folder>
   <Folder Name="/Zahy.OrderLedger/">
     <Project Path="src\Zahy.OrderLedger\Zahy.OrderLedger.Domain.Shared\Zahy.OrderLedger.Domain.Shared.csproj" />
     <Project Path="src\Zahy.OrderLedger\Zahy.OrderLedger.Domain\Zahy.OrderLedger.Domain.csproj" />
@@ -44,5 +51,10 @@
   <Folder Name="/test/">
     <Project Path="test\Zahy.Identity.Tests\Zahy.Identity.Tests.csproj" />
     <Project Path="test\Zahy.PartnerPlatform.Tests\Zahy.PartnerPlatform.Tests.csproj" />
+    <Project Path="test\Zahy.Webhooks.Tests\Zahy.Webhooks.Tests.csproj" />
+    <Project Path="test\Zahy.OrderLedger.Tests\Zahy.OrderLedger.Tests.csproj" />
+    <Project Path="test\Zahy.Connectors.Tests\Zahy.Connectors.Tests.csproj" />
+    <Project Path="test\Zahy.Commission.Tests\Zahy.Commission.Tests.csproj" />
+    <Project Path="test\Zahy.PlatformIntegration.Tests\Zahy.PlatformIntegration.Tests.csproj" />
   </Folder>
 </Solution>

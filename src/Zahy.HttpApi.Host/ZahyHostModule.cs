@@ -23,6 +23,7 @@ using Zahy.PartnerPlatform;
 using Zahy.Webhooks;
 using Zahy.OrderLedger;
 using Zahy.Commission;
+using Zahy.Connectors;
 
 namespace Zahy;
 
@@ -42,9 +43,13 @@ namespace Zahy;
     typeof(ZahyWebhooksEntityFrameworkCoreModule),
     typeof(ZahyWebhooksHttpApiModule),
     typeof(ZahyOrderLedgerApplicationModule),
+    typeof(ZahyOrderLedgerWebhooksModule),
     typeof(ZahyOrderLedgerEntityFrameworkCoreModule),
     typeof(ZahyOrderLedgerHttpApiModule),
+    typeof(ZahyConnectorsOrderLedgerModule),
+    typeof(ZahyConnectorsEntityFrameworkCoreModule),
     typeof(ZahyCommissionApplicationModule),
+    typeof(ZahyCommissionOrderLedgerModule),
     typeof(ZahyCommissionEntityFrameworkCoreModule),
     typeof(ZahyCommissionHttpApiModule)
 )]

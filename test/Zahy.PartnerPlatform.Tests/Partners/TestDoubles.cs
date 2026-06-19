@@ -1,8 +1,12 @@
+using System;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Volo.Abp;
 using Volo.Abp.Authorization.Permissions;
+using Zahy.Identity;
 using Zahy.Identity.Auditing;
+using Zahy.Identity.OpenIddict;
 
 namespace Zahy.PartnerPlatform.Partners;
 
@@ -30,6 +34,16 @@ public sealed record RecordedAdminAuditEntry(
     string? TargetId,
     string Result,
     string? ExtraData);
+
+public class FailingPartnerM2MClientProvisioner : IPartnerM2MClientProvisioner
+{
+    public Task<PartnerM2MClientProvisionResult> ProvisionAsync(PartnerM2MClientProvisionRequest request) =>
+        throw new BusinessException(ZahyIdentityErrorCodes.PartnerM2MClientAlreadyExists)
+            .WithData("ClientId", PartnerM2MClientProvisioner.BuildClientId(request.PartnerId));
+
+    public Task<PartnerM2MClientRotateResult> RotateSecretAsync(string clientId) =>
+        throw new NotSupportedException();
+}
 
 public class DenyAllPermissionChecker : IPermissionChecker
 {
