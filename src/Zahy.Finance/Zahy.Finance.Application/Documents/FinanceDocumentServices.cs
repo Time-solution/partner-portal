@@ -180,67 +180,27 @@ public class FinanceStatementDocumentService : ApplicationService, IFinanceState
 
 public class FinanceInvoiceDocumentService : ApplicationService, IFinanceInvoiceDocumentService
 {
-    private readonly IFinancePostingReadService _postingReadService;
-    private readonly IFinanceDocumentKycBlockBuilder _kycBlockBuilder;
-    private readonly IZatcaInvoiceShaper _zatcaInvoiceShaper;
-    private readonly FinanceBrandingOptions _branding;
+    private readonly IFinanceInvoiceGenerationService _invoiceGenerationService;
 
-    public FinanceInvoiceDocumentService(
-        IFinancePostingReadService postingReadService,
-        IFinanceDocumentKycBlockBuilder kycBlockBuilder,
-        IZatcaInvoiceShaper zatcaInvoiceShaper,
-        IOptions<FinanceBrandingOptions> branding)
+    public FinanceInvoiceDocumentService(IFinanceInvoiceGenerationService invoiceGenerationService)
     {
-        _postingReadService = postingReadService;
-        _kycBlockBuilder = kycBlockBuilder;
-        _zatcaInvoiceShaper = zatcaInvoiceShaper;
-        _branding = branding.Value;
+        _invoiceGenerationService = invoiceGenerationService;
     }
 
     public async Task<FinanceDocumentBytesResult> GeneratePartnerInvoiceAsync(
         FinanceInvoiceRequest request,
         CancellationToken cancellationToken = default)
     {
-        var ledger = await _postingReadService.GetPartnerLedgerAsync(
-            request.PartnerId,
-            request.PeriodFrom,
-            request.PeriodTo,
+        var result = await _invoiceGenerationService.GeneratePartnerInvoiceOnDemandAsync(
+            request,
             cancellationToken);
-
-        var verifiedKyc = await _kycBlockBuilder.BuildAsync(
-            KycEntityKind.Partner,
-            request.PartnerId,
-            cancellationToken);
-
-        var taxExclusive = ledger.PostingSum;
-        var taxAmount = FinanceMoney.RoundPosting(taxExclusive * 0.15m);
-        var draft = new FinanceInvoiceDraft
-        {
-            InvoiceNumber = $"ZAHY-INV-{Clock.Now:yyyy-MM-dd-HHmmss}",
-            IssueDate = Clock.Now,
-            TaxExclusiveAmount = taxExclusive,
-            TaxAmount = taxAmount,
-            TaxInclusiveAmount = FinanceMoney.RoundPosting(taxExclusive + taxAmount),
-            Currency = ledger.Currency,
-            Seller = new FinanceDocumentKycBlockDto
-            {
-                LegalNameEn = _branding.PlatformLegalNameEn,
-                LegalNameAr = _branding.PlatformLegalNameAr,
-                CommercialRegistrationNumber = "0000000000",
-                VatNumber = "300000000000003"
-            },
-            Buyer = verifiedKyc
-        };
-
-        var zatca = _zatcaInvoiceShaper.Shape(draft);
-        var pdf = FinancePdfDocumentGenerator.GenerateInvoice(_branding, ledger, verifiedKyc, zatca);
 
         return new FinanceDocumentBytesResult
         {
-            Content = pdf,
-            ContentType = "application/pdf",
-            FileName = FinanceDocumentFileNames.BuildInvoiceFileName(request.PartnerId),
-            PostingSum = ledger.PostingSum,
+            Content = result.Content,
+            ContentType = result.ContentType,
+            FileName = result.FileName,
+            PostingSum = result.PostingSum,
             DocumentKind = FinanceDocumentKind.Invoice
         };
     }

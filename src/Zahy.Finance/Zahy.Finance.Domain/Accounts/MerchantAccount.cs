@@ -14,6 +14,8 @@ public class MerchantAccount : AggregateRoot<Guid>, Volo.Abp.MultiTenancy.IMulti
 
     public DateTime OpenedAt { get; private set; }
 
+    public InvoiceGenerationMode? InvoiceGenerationModeOverride { get; private set; }
+
     protected MerchantAccount()
     {
     }
@@ -42,4 +44,23 @@ public class MerchantAccount : AggregateRoot<Guid>, Volo.Abp.MultiTenancy.IMulti
     public bool CanAcceptPostings => Status == FinanceAccountStatus.Active;
 
     public bool IsOperational => Status == FinanceAccountStatus.Active;
+
+    public InvoiceGenerationMode ResolveInvoiceGenerationMode(InvoiceGenerationMode platformDefault) =>
+        InvoiceGenerationModeOverride ?? platformDefault;
+
+    public void SetInvoiceGenerationModeOverride(InvoiceGenerationMode? mode) =>
+        InvoiceGenerationModeOverride = mode;
+
+    public FinanceAccountStatus ApplyStatusTransition(FinanceAccountStatus targetStatus)
+    {
+        if (!FinanceAccountStatusRules.CanTransition(Status, targetStatus))
+        {
+            throw new BusinessException(FinanceErrorCodes.IllegalStatusTransition)
+                .WithData("FromStatus", Status.ToString())
+                .WithData("ToStatus", targetStatus.ToString());
+        }
+
+        Status = targetStatus;
+        return Status;
+    }
 }

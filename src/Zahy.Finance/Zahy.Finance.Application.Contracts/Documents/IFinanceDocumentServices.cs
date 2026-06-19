@@ -106,6 +106,8 @@ public sealed class FinanceInvoiceRequest
     public DateTime? PeriodFrom { get; init; }
 
     public DateTime? PeriodTo { get; init; }
+
+    public string? IdempotencyKey { get; init; }
 }
 
 public sealed class FinanceDocumentBytesResult

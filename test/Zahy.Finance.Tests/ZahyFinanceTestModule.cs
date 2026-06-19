@@ -88,5 +88,9 @@ public class ZahyFinanceIntegrationTestModule : AbpModule
         context.Services.AddSingleton<TestCurrentPartner>();
         context.Services.Replace(ServiceDescriptor.Singleton<ICurrentTenant, TestCurrentTenantAccessor>());
         context.Services.AddSingleton<TestCurrentTenant>();
+
+        context.Services.AddSingleton<ConfigurableFinanceInvoicePdfGenerator>();
+        context.Services.Replace(ServiceDescriptor.Singleton<IFinanceInvoicePdfGenerator>(
+            sp => sp.GetRequiredService<ConfigurableFinanceInvoicePdfGenerator>()));
     }
 }

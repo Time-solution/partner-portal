@@ -38,5 +38,13 @@ public class ZahyFinanceApplicationModule : AbpModule
         context.Services.AddTransient<IZatcaInvoiceShaper, LocalZatcaInvoiceShaper>();
         context.Services.AddTransient<IZatcaSubmitter, NullZatcaSubmitter>();
         context.Services.Configure<FinanceBrandingOptions>(_ => { });
+        context.Services.AddTransient<FinancePlatformSettingsProvider>();
+        context.Services.AddTransient<IFinanceInvoiceNumberAllocator, FinanceInvoiceNumberAllocator>();
+        context.Services.AddTransient<DefaultFinanceInvoicePdfGenerator>();
+        context.Services.AddTransient<IFinanceInvoicePdfGenerator, DefaultFinanceInvoicePdfGenerator>();
+        context.Services.AddTransient<IFinanceInvoiceGenerationService, FinanceInvoiceGenerationService>();
+        context.Services.AddTransient<IInvoiceTrigger, BillingChargeInvoiceTrigger>();
+        context.Services.AddTransient<IFinanceAccountStatusService, FinanceAccountStatusService>();
+        context.Services.AddTransient<IMerchantOperationalStatusService, MerchantOperationalStatusService>();
     }
 }

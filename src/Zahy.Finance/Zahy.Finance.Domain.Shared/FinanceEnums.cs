@@ -48,3 +48,9 @@ public enum FinanceDocumentKind
     TransactionExport = 3,
     CommissionExport = 4
 }
+
+public enum InvoiceGenerationMode
+{
+    Manual = 1,
+    Automatic = 2
+}

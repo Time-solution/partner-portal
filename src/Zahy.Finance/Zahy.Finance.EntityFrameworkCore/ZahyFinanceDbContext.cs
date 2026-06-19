@@ -20,6 +20,14 @@ public class ZahyFinanceDbContext : AbpDbContext<ZahyFinanceDbContext>
 
     public DbSet<KycVerification> KycVerifications { get; set; }
 
+    public DbSet<FinancePlatformSettings> FinancePlatformSettings { get; set; }
+
+    public DbSet<FinanceDocument> FinanceDocuments { get; set; }
+
+    public DbSet<InvoiceNumberSequence> InvoiceNumberSequences { get; set; }
+
+    public DbSet<FinanceAccountStatusAudit> FinanceAccountStatusAudits { get; set; }
+
     public ZahyFinanceDbContext(DbContextOptions<ZahyFinanceDbContext> options)
         : base(options)
     {
@@ -138,6 +146,52 @@ public class ZahyFinanceDbContext : AbpDbContext<ZahyFinanceDbContext>
 
             b.HasIndex(x => new { x.EntityKind, x.EntityId, x.Status });
             b.HasIndex(x => x.KycSubmissionId).IsUnique();
+        });
+
+        builder.Entity<FinancePlatformSettings>(b =>
+        {
+            b.ToTable("FinPlatformSettings");
+            b.ConfigureByConvention();
+            b.Property(x => x.DefaultInvoiceGenerationMode).IsRequired();
+        });
+
+        builder.Entity<FinanceDocument>(b =>
+        {
+            b.ToTable("FinDocuments");
+            b.ConfigureByConvention();
+
+            b.Property(x => x.IdempotencyKey).IsRequired().HasMaxLength(FinanceConsts.MaxIdempotencyKeyLength);
+            b.Property(x => x.InvoiceNumber).IsRequired().HasMaxLength(64);
+            b.Property(x => x.Currency).IsRequired().HasMaxLength(3);
+            b.Property(x => x.PostingSum).HasPrecision(18, 2);
+            b.Property(x => x.DocumentKind).IsRequired();
+            b.Property(x => x.GeneratedAt).IsRequired();
+
+            b.HasIndex(x => x.IdempotencyKey).IsUnique();
+            b.HasIndex(x => new { x.AccountKind, x.AccountId });
+        });
+
+        builder.Entity<InvoiceNumberSequence>(b =>
+        {
+            b.ToTable("FinInvoiceNumberSequences");
+            b.ConfigureByConvention();
+
+            b.Property(x => x.DocumentKind).IsRequired();
+            b.Property(x => x.FiscalYear).IsRequired();
+            b.Property(x => x.LastNumber).IsRequired();
+
+            b.HasIndex(x => new { x.DocumentKind, x.FiscalYear }).IsUnique();
+        });
+
+        builder.Entity<FinanceAccountStatusAudit>(b =>
+        {
+            b.ToTable("FinAccountStatusAudits");
+            b.ConfigureByConvention();
+
+            b.Property(x => x.Reason).HasMaxLength(FinanceConsts.MaxDescriptionLength);
+            b.Property(x => x.TransitionedAt).IsRequired();
+
+            b.HasIndex(x => new { x.AccountKind, x.AccountId });
         });
     }
 }
