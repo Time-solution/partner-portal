@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Volo.Abp.EntityFrameworkCore" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Zahy.Finance.Domain\Zahy.Finance.Domain.csproj" />
+    <ProjectReference Include="..\..\Zahy.Identity\Zahy.Identity.Domain\Zahy.Identity.Domain.csproj" />
+  </ItemGroup>
+</Project>

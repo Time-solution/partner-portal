@@ -89,6 +89,7 @@ public class ZahyCommissionDbContext : AbpDbContext<ZahyCommissionDbContext>
             b.Property(x => x.Description).HasMaxLength(BillingConsts.MaxDescriptionLength);
             b.Property(x => x.Amount).HasPrecision(18, 2);
             b.Property(x => x.Kind).IsRequired();
+            b.Property(x => x.ChargeTarget).IsRequired();
             b.Property(x => x.ChargedAt).IsRequired();
 
             b.HasIndex(x => x.IdempotencyKey).IsUnique();

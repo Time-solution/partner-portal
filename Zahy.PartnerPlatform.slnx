@@ -46,6 +46,13 @@
     <Project Path="src\Zahy.Commission\Zahy.Commission.EntityFrameworkCore\Zahy.Commission.EntityFrameworkCore.csproj" />
     <Project Path="src\Zahy.Commission\Zahy.Commission.HttpApi\Zahy.Commission.HttpApi.csproj" />
   </Folder>
+  <Folder Name="/Zahy.Finance/">
+    <Project Path="src\Zahy.Finance\Zahy.Finance.Domain.Shared\Zahy.Finance.Domain.Shared.csproj" />
+    <Project Path="src\Zahy.Finance\Zahy.Finance.Domain\Zahy.Finance.Domain.csproj" />
+    <Project Path="src\Zahy.Finance\Zahy.Finance.Application.Contracts\Zahy.Finance.Application.Contracts.csproj" />
+    <Project Path="src\Zahy.Finance\Zahy.Finance.Application\Zahy.Finance.Application.csproj" />
+    <Project Path="src\Zahy.Finance\Zahy.Finance.EntityFrameworkCore\Zahy.Finance.EntityFrameworkCore.csproj" />
+  </Folder>
   <Project Path="src\Zahy.HttpApi.Host\Zahy.HttpApi.Host.csproj" />
   <Project Path="src\Zahy.DbMigrator\Zahy.DbMigrator.csproj" />
   <Folder Name="/test/">
@@ -55,6 +62,7 @@
     <Project Path="test\Zahy.OrderLedger.Tests\Zahy.OrderLedger.Tests.csproj" />
     <Project Path="test\Zahy.Connectors.Tests\Zahy.Connectors.Tests.csproj" />
     <Project Path="test\Zahy.Commission.Tests\Zahy.Commission.Tests.csproj" />
+    <Project Path="test\Zahy.Finance.Tests\Zahy.Finance.Tests.csproj" />
     <Project Path="test\Zahy.PlatformIntegration.Tests\Zahy.PlatformIntegration.Tests.csproj" />
   </Folder>
 </Solution>

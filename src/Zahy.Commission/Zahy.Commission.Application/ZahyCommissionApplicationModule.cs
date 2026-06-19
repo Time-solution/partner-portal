@@ -20,5 +20,7 @@ public class ZahyCommissionApplicationModule : AbpModule
         context.Services.AddTransient<ICommissionAccrualService, CommissionAccrualService>();
         context.Services.AddTransient<IBillingChargeService, BillingChargeService>();
         context.Services.AddTransient<ICommissionPartnerTypeLookup, NullCommissionPartnerTypeLookup>();
+        context.Services.AddTransient<ICommissionLedgerFinanceTrigger, NullCommissionLedgerFinanceTrigger>();
+        context.Services.AddTransient<IBillingChargeFinanceTrigger, NullBillingChargeFinanceTrigger>();
     }
 }

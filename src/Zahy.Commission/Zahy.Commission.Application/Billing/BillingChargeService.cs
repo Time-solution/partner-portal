@@ -13,15 +13,18 @@ public class BillingChargeService : ApplicationService, IBillingChargeService
     private readonly IRepository<BillingCharge, Guid> _chargeRepository;
     private readonly IRepository<PartnerBillingProfile, Guid> _profileRepository;
     private readonly IGuidGenerator _guidGenerator;
+    private readonly IBillingChargeFinanceTrigger _financeTrigger;
 
     public BillingChargeService(
         IRepository<BillingCharge, Guid> chargeRepository,
         IRepository<PartnerBillingProfile, Guid> profileRepository,
-        IGuidGenerator guidGenerator)
+        IGuidGenerator guidGenerator,
+        IBillingChargeFinanceTrigger financeTrigger)
     {
         _chargeRepository = chargeRepository;
         _profileRepository = profileRepository;
         _guidGenerator = guidGenerator;
+        _financeTrigger = financeTrigger;
     }
 
     [UnitOfWork]
@@ -38,6 +41,7 @@ public class BillingChargeService : ApplicationService, IBillingChargeService
         var charge = BillingCharge.Create(
             _guidGenerator.Create(),
             request.PartnerId,
+            request.ChargeTarget,
             request.TenantId,
             request.Kind,
             request.Amount,
@@ -49,7 +53,9 @@ public class BillingChargeService : ApplicationService, IBillingChargeService
             request.Description);
 
         await _chargeRepository.InsertAsync(charge, autoSave: true, cancellationToken: cancellationToken);
-        return ToResult(charge, isNew: true);
+        var result = ToResult(charge, isNew: true);
+        await NotifyFinanceAsync(charge, result.IsNew, cancellationToken);
+        return result;
     }
 
     [UnitOfWork]
@@ -82,6 +88,7 @@ public class BillingChargeService : ApplicationService, IBillingChargeService
         return await ChargeAsync(new BillingChargeRequest
         {
             PartnerId = partnerId,
+            ChargeTarget = BillingChargeTarget.Partner,
             TenantId = tenantId,
             Kind = BillingChargeKind.Transaction,
             Amount = accrual.ComputedCommission,
@@ -113,6 +120,7 @@ public class BillingChargeService : ApplicationService, IBillingChargeService
         return await ChargeAsync(new BillingChargeRequest
         {
             PartnerId = partnerId,
+            ChargeTarget = BillingChargeTarget.Partner,
             TenantId = tenantId,
             Kind = BillingChargeKind.ActivationFee,
             Amount = profile.ActivationFeeAmount,
@@ -144,7 +152,23 @@ public class BillingChargeService : ApplicationService, IBillingChargeService
             ChargeId = charge.Id,
             IsNew = isNew,
             Kind = charge.Kind,
+            ChargeTarget = charge.ChargeTarget,
             Amount = charge.Amount,
             IdempotencyKey = charge.IdempotencyKey
         };
+
+    private Task NotifyFinanceAsync(BillingCharge charge, bool isNew, CancellationToken cancellationToken) =>
+        _financeTrigger.NotifyChargedAsync(new BillingChargeFinanceContext
+        {
+            ChargeId = charge.Id,
+            IsNew = isNew,
+            PartnerId = charge.PartnerId,
+            TenantId = charge.TenantId,
+            ChargeTarget = charge.ChargeTarget,
+            Kind = charge.Kind,
+            Amount = charge.Amount,
+            Currency = charge.Currency,
+            IdempotencyKey = charge.IdempotencyKey,
+            CommissionLedgerEntryId = charge.CommissionLedgerEntryId
+        }, cancellationToken);
 }

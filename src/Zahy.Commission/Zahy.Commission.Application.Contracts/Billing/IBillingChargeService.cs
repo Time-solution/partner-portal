@@ -27,6 +27,8 @@ public sealed class BillingChargeRequest
 {
     public Guid PartnerId { get; init; }
 
+    public BillingChargeTarget ChargeTarget { get; init; } = BillingChargeTarget.Partner;
+
     public Guid? TenantId { get; init; }
 
     public BillingChargeKind Kind { get; init; }
@@ -51,6 +53,8 @@ public sealed class BillingChargeResult
     public bool IsNew { get; init; }
 
     public BillingChargeKind Kind { get; init; }
+
+    public BillingChargeTarget ChargeTarget { get; init; }
 
     public decimal Amount { get; init; }
 

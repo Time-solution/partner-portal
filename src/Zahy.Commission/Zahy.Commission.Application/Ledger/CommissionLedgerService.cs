@@ -13,13 +13,16 @@ public class CommissionLedgerService : ApplicationService, ICommissionLedgerServ
 {
     private readonly IRepository<CommissionLedgerEntry, Guid> _ledgerRepository;
     private readonly IGuidGenerator _guidGenerator;
+    private readonly ICommissionLedgerFinanceTrigger _financeTrigger;
 
     public CommissionLedgerService(
         IRepository<CommissionLedgerEntry, Guid> ledgerRepository,
-        IGuidGenerator guidGenerator)
+        IGuidGenerator guidGenerator,
+        ICommissionLedgerFinanceTrigger financeTrigger)
     {
         _ledgerRepository = ledgerRepository;
         _guidGenerator = guidGenerator;
+        _financeTrigger = financeTrigger;
     }
 
     [UnitOfWork]
@@ -53,7 +56,9 @@ public class CommissionLedgerService : ApplicationService, ICommissionLedgerServ
             request.Currency);
 
         await _ledgerRepository.InsertAsync(entry, autoSave: true, cancellationToken: cancellationToken);
-        return ToAccrualResult(entry, isNew: true);
+        var result = ToAccrualResult(entry, isNew: true);
+        await NotifyFinanceAsync(entry, result, request, cancellationToken);
+        return result;
     }
 
     [UnitOfWork]
@@ -165,4 +170,23 @@ public class CommissionLedgerService : ApplicationService, ICommissionLedgerServ
             ApprovedAt = entry.ApprovedAt,
             PaidAt = entry.PaidAt
         };
+
+    private Task NotifyFinanceAsync(
+        CommissionLedgerEntry entry,
+        CommissionLedgerAccrualResult result,
+        CommissionAccrualRequest request,
+        CancellationToken cancellationToken) =>
+        _financeTrigger.NotifyAccruedAsync(new CommissionLedgerFinanceAccrualContext
+        {
+            EntryId = entry.Id,
+            IsNew = result.IsNew,
+            PartnerId = entry.PartnerId,
+            TenantId = entry.TenantId,
+            ComputedCommission = entry.ComputedCommission,
+            Direction = entry.Direction,
+            EntryKind = entry.EntryKind,
+            Currency = entry.Currency,
+            SourceType = request.SourceType,
+            SourceId = request.SourceId
+        }, cancellationToken);
 }

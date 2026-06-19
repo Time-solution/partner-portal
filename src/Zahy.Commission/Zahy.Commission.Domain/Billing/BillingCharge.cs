@@ -13,6 +13,8 @@ public class BillingCharge : AggregateRoot<Guid>
 
     public Guid? TenantId { get; private set; }
 
+    public BillingChargeTarget ChargeTarget { get; private set; }
+
     public BillingChargeKind Kind { get; private set; }
 
     public decimal Amount { get; private set; }
@@ -36,6 +38,7 @@ public class BillingCharge : AggregateRoot<Guid>
     public static BillingCharge Create(
         Guid id,
         Guid partnerId,
+        BillingChargeTarget chargeTarget,
         Guid? tenantId,
         BillingChargeKind kind,
         decimal amount,
@@ -48,11 +51,13 @@ public class BillingCharge : AggregateRoot<Guid>
     {
         ValidateAmount(amount);
         ValidateIdempotencyKey(idempotencyKey);
+        ValidateTarget(chargeTarget, partnerId, tenantId);
 
         return new BillingCharge
         {
             Id = id,
             PartnerId = partnerId,
+            ChargeTarget = chargeTarget,
             TenantId = tenantId,
             Kind = kind,
             Amount = amount,
@@ -63,6 +68,33 @@ public class BillingCharge : AggregateRoot<Guid>
             Description = description?.Trim(),
             ChargedAt = chargedAt
         };
+    }
+
+    private static void ValidateTarget(BillingChargeTarget chargeTarget, Guid partnerId, Guid? tenantId)
+    {
+        if (partnerId == Guid.Empty)
+        {
+            throw new BusinessException(CommissionErrorCodes.InvalidBillingCharge)
+                .WithData("Field", nameof(partnerId));
+        }
+
+        switch (chargeTarget)
+        {
+            case BillingChargeTarget.Partner:
+                return;
+            case BillingChargeTarget.Merchant:
+                if (tenantId == null || tenantId == Guid.Empty)
+                {
+                    throw new BusinessException(CommissionErrorCodes.InvalidBillingCharge)
+                        .WithData("Field", nameof(tenantId))
+                        .WithData("ChargeTarget", chargeTarget.ToString());
+                }
+
+                return;
+            default:
+                throw new BusinessException(CommissionErrorCodes.InvalidBillingCharge)
+                    .WithData("ChargeTarget", chargeTarget.ToString());
+        }
     }
 
     private static void ValidateAmount(decimal amount)
