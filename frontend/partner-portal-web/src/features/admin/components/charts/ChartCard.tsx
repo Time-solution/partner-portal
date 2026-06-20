@@ -53,12 +53,4 @@ export const CHART_COLORS = {
   reversal: "#ec4899",
 };
 
-export function chartMargin(isRtl: boolean) {
-  return isRtl
-    ? { top: 8, right: 8, left: 16, bottom: 8 }
-    : { top: 8, right: 16, left: 8, bottom: 8 };
-}
-
-export function formatSarTooltip(value: unknown): string {
-  return `${Number(value ?? 0).toFixed(2)} SAR`;
-}
+export { chartMargins, formatMoneyTooltip, formatSarTooltip } from "./chartI18n";

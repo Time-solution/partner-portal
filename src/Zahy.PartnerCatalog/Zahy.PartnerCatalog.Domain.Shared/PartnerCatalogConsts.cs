@@ -37,4 +37,6 @@ public static class PartnerCatalogErrorCodes
     public const string InvalidBillingLink = Namespace + ":013";
     public const string BillingChargeAlreadyLinked = Namespace + ":014";
     public const string InvalidSubscriptionFee = Namespace + ":015";
+    public const string ActivationAlreadyEnded = Namespace + ":016";
+    public const string ActivationNotFound = Namespace + ":017";
 }

@@ -33,6 +33,9 @@ public class ZahyPartnerCatalogTestModule : AbpModule
         context.Services.AddSingleton<PartnerCatalogTestCurrentPartner>();
         context.Services.Replace(ServiceDescriptor.Singleton<ICurrentPartner>(sp =>
             sp.GetRequiredService<PartnerCatalogTestCurrentPartner>()));
+        context.Services.AddSingleton<PartnerCatalogTestCurrentTenant>();
+        context.Services.Replace(ServiceDescriptor.Singleton<Volo.Abp.MultiTenancy.ICurrentTenant>(sp =>
+            sp.GetRequiredService<PartnerCatalogTestCurrentTenant>()));
         context.Services.AddSingleton<Volo.Abp.Authorization.Permissions.IPermissionChecker, PartnerCatalogAllowAllPermissionChecker>();
 
         var sqliteConnection = CreateDatabaseAndGetConnection();

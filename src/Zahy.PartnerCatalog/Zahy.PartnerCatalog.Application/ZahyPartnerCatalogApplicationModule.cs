@@ -17,6 +17,11 @@ public class ZahyPartnerCatalogApplicationModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
+        var configuration = context.Services.GetConfiguration();
+
+        Configure<PartnerCatalogMerchantOptions>(
+            configuration.GetSection(PartnerCatalogMerchantOptions.SectionName));
+
         context.Services.AddTransient<ISettlementCatalogBridge, SettlementCatalogBridge>();
         context.Services.AddTransient<IPartnerCatalogParticipationBridge, PartnerCatalogParticipationBridge>();
         context.Services.AddTransient<ReflectionOnlyOrderBridge>();

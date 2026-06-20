@@ -13,7 +13,8 @@ import {
 import type { SettlementTrendPoint } from "@/lib/analytics/chartAnalytics";
 import type { Lang } from "@/lib/i18n";
 import { useTranslator } from "@/lib/i18n";
-import { ChartCard, ChartEmpty, CHART_COLORS, chartMargin, formatSarTooltip } from "./ChartCard";
+import { ChartCard, ChartEmpty, CHART_COLORS } from "./ChartCard";
+import { chartMargins, chartTick, moneyTooltipFormatter } from "./chartI18n";
 
 interface SettlementTrendChartProps {
   lang: Lang;
@@ -31,16 +32,11 @@ export function SettlementTrendChart({
   const t = useTranslator(lang);
   const isRtl = lang === "ar";
 
-  const rows = useMemo(() => [...data].sort((a, b) => a.periodKey.localeCompare(b.periodKey)), [data]);
+  const settlementLabel = t("chartLegendSettlement" as never);
+  const marginLabel = t("chartLegendMargin" as never);
+  const vatLabel = t("chartLegendVat" as never);
 
-  const legendLabel = (value: string) => {
-    const map: Record<string, string> = {
-      settlementSar: t("chartLegendSettlement" as never),
-      marginSar: t("chartLegendMargin" as never),
-      vatSar: t("chartLegendVat" as never),
-    };
-    return map[value] ?? value;
-  };
+  const rows = useMemo(() => [...data].sort((a, b) => a.periodKey.localeCompare(b.periodKey)), [data]);
 
   return (
     <ChartCard lang={lang} titleKey={titleKey} descKey={descKey} showBeta>
@@ -49,15 +45,37 @@ export function SettlementTrendChart({
       ) : (
         <div dir={isRtl ? "rtl" : "ltr"} className="h-[320px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={rows} margin={chartMargin(isRtl)}>
+            <ComposedChart data={rows} margin={chartMargins(isRtl, { yAxisLabel: true })}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
-              <XAxis dataKey="periodKey" tick={{ fontSize: 12 }} />
-              <YAxis orientation={isRtl ? "right" : "left"} tick={{ fontSize: 12 }} />
-              <Tooltip formatter={(value) => formatSarTooltip(value)} />
-              <Legend formatter={legendLabel} />
-              <Area type="monotone" dataKey="settlementSar" fill={CHART_COLORS.primary} fillOpacity={0.15} stroke={CHART_COLORS.primary} strokeWidth={2} />
-              <Line type="monotone" dataKey="marginSar" stroke={CHART_COLORS.margin} strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="vatSar" stroke={CHART_COLORS.vat} strokeWidth={2} dot={false} />
+              <XAxis dataKey="periodKey" tick={chartTick(isRtl)} tickMargin={8} />
+              <YAxis orientation={isRtl ? "right" : "left"} tick={chartTick(isRtl)} width={56} />
+              <Tooltip formatter={moneyTooltipFormatter(lang)} />
+              <Legend />
+              <Area
+                type="monotone"
+                dataKey="settlementSar"
+                name={settlementLabel}
+                fill={CHART_COLORS.primary}
+                fillOpacity={0.15}
+                stroke={CHART_COLORS.primary}
+                strokeWidth={2}
+              />
+              <Line
+                type="monotone"
+                dataKey="marginSar"
+                name={marginLabel}
+                stroke={CHART_COLORS.margin}
+                strokeWidth={2}
+                dot={false}
+              />
+              <Line
+                type="monotone"
+                dataKey="vatSar"
+                name={vatLabel}
+                stroke={CHART_COLORS.vat}
+                strokeWidth={2}
+                dot={false}
+              />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
