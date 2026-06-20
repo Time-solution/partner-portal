@@ -83,7 +83,7 @@ export function AdminShell({ lang, toggleLang, theme, toggleTheme }: AdminShellP
           <div className="flex min-w-0 items-center gap-3">
             <BrandLogo variant="full" lang={lang} className="md:hidden shrink-0 max-w-[120px]" />
             <h1 className="truncate text-xl font-semibold">{activeLabel}</h1>
-            {PORTAL_ROLES.includes(role as PortalRole) ? (
+            {(PORTAL_ROLES.includes(role as PortalRole) || role === "MerchantPreview") ? (
               <RoleBadge role={role as PortalRole} lang={lang} />
             ) : null}
             <BetaBadge lang={lang} className="hidden sm:inline-flex" />

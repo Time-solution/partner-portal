@@ -24,6 +24,13 @@ export interface RegisterWebhookInput {
   eventTypes: string[];
 }
 
+export interface CreateActivationInput {
+  partnerId: string;
+  catalogItemId: string;
+  tenantId: string;
+  merchantName: string;
+}
+
 export interface SecretRevealResult {
   /** Shown once — never persisted in store. */
   secretOnce: string;
@@ -50,6 +57,8 @@ export interface IPortalDataSource {
   getAll(): Promise<PortalData>;
 
   /** Activation workflow — view layer transitions. */
+  createActivation(input: CreateActivationInput): Promise<MerchantActivationRow>;
+  endActivation(activationId: string): Promise<MerchantActivationRow>;
   requestActivation(activationId: string, actorName: string): Promise<MerchantActivationRow>;
   setActivationTerms(activationId: string, actorName: string): Promise<MerchantActivationRow>;
   approveActivation(activationId: string, actorName: string): Promise<MerchantActivationRow>;

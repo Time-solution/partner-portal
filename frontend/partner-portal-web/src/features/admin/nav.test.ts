@@ -56,4 +56,19 @@ describe("filterNavByPermissions", () => {
     expect(keys).not.toContain("delivery-service");
     expect(keys).not.toContain("commerce");
   });
+
+  it("MerchantPreview role sees merchant preview nav only", () => {
+    const keys = filterNavByPermissions(
+      adminNav,
+      ["Zahy.Portal.MerchantPreview.Read"],
+      "MerchantPreview",
+    ).map((item) => item.key);
+    expect(keys).toEqual(["merchant-preview"]);
+  });
+
+  it("Platform Admin sees merchant preview in nav", () => {
+    const all = Object.values(PP).flatMap((g) => Object.values(g));
+    const keys = filterNavByPermissions(adminNav, all, "PlatformAdmin").map((item) => item.key);
+    expect(keys).toContain("merchant-preview");
+  });
 });

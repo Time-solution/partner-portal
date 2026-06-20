@@ -30,6 +30,7 @@ const mockUsers: Record<PortalRole, { name: string; username: string }> = {
   Accountant: { name: "Omar Finance", username: "accountant@zahy.sa" },
   PartnerSuccessManager: { name: "Sara Al-Qahtani", username: "psm@zahy.sa" },
   PartnerFinance: { name: "Partner Finance", username: "finance@partner.sa" },
+  MerchantPreview: { name: "Al Rajhi Demo Store", username: "merchant@zahy.dev" },
 };
 
 function buildUser(role: PortalRole): AuthUser {

@@ -78,7 +78,8 @@ export function SettingsUsersSection({ lang }: { lang: Lang }) {
   const [formError, setFormError] = useState<string | null>(null);
 
   const assignableRoles = useMemo(
-    () => PORTAL_ROLES.filter((r) => canGrantRole(actorRole as PortalRole, r)),
+    () =>
+      PORTAL_ROLES.filter((r) => canGrantRole(actorRole as PortalRole, r)) as PortalUserRole[],
     [actorRole],
   );
 

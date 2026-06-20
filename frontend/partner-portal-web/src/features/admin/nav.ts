@@ -11,12 +11,14 @@ import {
   UtensilsCrossed,
   Warehouse,
   Webhook,
+  Users,
 } from "lucide-react";
 import { PortalPermissions as PP } from "@/lib/rbac/portalRoles";
 import {
   PARTNER_MODULES,
   type PartnerBusinessModuleId,
   canAccessFinanceWorkspace,
+  canAccessMerchantPreview,
   canAccessPartnerModules,
 } from "@/lib/rbac/partnerModules";
 import type { PortalRole } from "@/lib/rbac/portalRoles";
@@ -70,6 +72,15 @@ export const adminNav: readonly AdminNavItem[] = [
     labelKey: "navDashboard",
     icon: LayoutDashboard,
     permissions: [PP.Dashboard.Read],
+    section: "core",
+  },
+  {
+    key: "merchant-preview",
+    path: "/merchant-preview",
+    labelKey: "navMerchantPreview",
+    icon: Users,
+    permissions: [PP.MerchantPreview.Read],
+    roles: ["PlatformAdmin", "MerchantPreview"],
     section: "core",
   },
   {
@@ -129,6 +140,9 @@ export function filterNavByPermissions(
       return false;
     }
     if (item.key === "finance" && role && !canAccessFinanceWorkspace(role as PortalRole)) {
+      return false;
+    }
+    if (item.key === "merchant-preview" && role && !canAccessMerchantPreview(role as PortalRole)) {
       return false;
     }
     return (

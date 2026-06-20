@@ -193,6 +193,10 @@ export function canAccessPartnerModules(role: PortalRole): boolean {
   return role === "PlatformAdmin" || role === "PartnerSuccessManager";
 }
 
+export function canAccessMerchantPreview(role: PortalRole): boolean {
+  return role === "PlatformAdmin" || role === "MerchantPreview";
+}
+
 /** Accountant Finance workspace — cross-module money view; not for PSM or Partner Finance. */
 export function canAccessFinanceWorkspace(role: PortalRole): boolean {
   return role === "Accountant" || role === "PlatformAdmin";

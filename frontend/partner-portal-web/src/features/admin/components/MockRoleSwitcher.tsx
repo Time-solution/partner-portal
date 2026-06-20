@@ -1,6 +1,6 @@
 import type { Lang } from "@/lib/i18n";
 import { useTranslator } from "@/lib/i18n";
-import { PORTAL_ROLES, roleLabels, type PortalRole } from "@/lib/rbac/portalRoles";
+import { MOCK_DEMO_ROLES, roleLabels, type PortalRole } from "@/lib/rbac/portalRoles";
 
 interface MockRoleSwitcherProps {
   role: PortalRole;
@@ -21,7 +21,7 @@ export function MockRoleSwitcher({ role, onChange, lang }: MockRoleSwitcherProps
         className="rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
         aria-label={t("mockSwitchRole" as never)}
       >
-        {PORTAL_ROLES.map((r) => (
+        {MOCK_DEMO_ROLES.map((r) => (
           <option key={r} value={r}>
             {roleLabels[r][lang]}
           </option>

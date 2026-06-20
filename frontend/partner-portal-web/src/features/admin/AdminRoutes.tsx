@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { PortalPermissions } from "@/lib/rbac/portalRoles";
-import { canAccessFinanceWorkspace } from "@/lib/rbac/partnerModules";
+import { canAccessFinanceWorkspace, canAccessMerchantPreview } from "@/lib/rbac/partnerModules";
 import { usePortalSession } from "@/features/auth/usePortalSession";
 import type { Lang } from "@/lib/i18n";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -11,6 +11,7 @@ import { FinanceWorkspacePage } from "./pages/FinanceWorkspacePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { WebhooksPage } from "./pages/WebhooksPage";
 import { CredentialsPage } from "./pages/CredentialsPage";
+import { MerchantPreviewPage } from "./pages/MerchantPreviewPage";
 
 function RequirePermission({
   permissions,
@@ -34,8 +35,17 @@ function RequireFinance({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function RequireMerchantPreview({ children }: { children: React.ReactNode }) {
+  const { role } = usePortalSession();
+  if (!canAccessMerchantPreview(role as never)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <>{children}</>;
+}
+
 function HomeRedirect() {
   const { role } = usePortalSession();
+  if (role === "MerchantPreview") return <Navigate to="/merchant-preview" replace />;
   if (role === "Accountant") return <Navigate to="/finance/overview" replace />;
   if (role === "PartnerSuccessManager") return <Navigate to="/modules/delivery-service/catalog" replace />;
   return <Navigate to="/dashboard" replace />;
@@ -52,6 +62,15 @@ export function AdminRoutes({ lang }: { lang: Lang }) {
           <RequirePermission permissions={[PortalPermissions.Dashboard.Read]}>
             <DashboardPage lang={lang} />
           </RequirePermission>
+        }
+      />
+
+      <Route
+        path="/merchant-preview"
+        element={
+          <RequireMerchantPreview>
+            <MerchantPreviewPage lang={lang} />
+          </RequireMerchantPreview>
         }
       />
 

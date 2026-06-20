@@ -2,7 +2,8 @@ export type PortalRole =
   | "PlatformAdmin"
   | "Accountant"
   | "PartnerSuccessManager"
-  | "PartnerFinance";
+  | "PartnerFinance"
+  | "MerchantPreview";
 
 export const PORTAL_ROLES: PortalRole[] = [
   "PlatformAdmin",
@@ -10,6 +11,9 @@ export const PORTAL_ROLES: PortalRole[] = [
   "PartnerSuccessManager",
   "PartnerFinance",
 ];
+
+/** Mock demo roles — includes preview-only roles not used in production portal login. */
+export const MOCK_DEMO_ROLES: PortalRole[] = [...PORTAL_ROLES, "MerchantPreview"];
 
 export const PortalPermissions = {
   Dashboard: { Read: "Zahy.Portal.Dashboard.Read" },
@@ -34,6 +38,7 @@ export const PortalPermissions = {
   Settings: { Read: "Zahy.Portal.Settings.Read", Manage: "Zahy.Portal.Settings.Manage" },
   Users: { Read: "Zahy.Portal.Users.Read", Manage: "Zahy.Portal.Users.Manage" },
   PartnerFinance: { ReadOwn: "Zahy.Portal.PartnerFinance.ReadOwn" },
+  MerchantPreview: { Read: "Zahy.Portal.MerchantPreview.Read" },
 } as const;
 
 const ALL = Object.values(PortalPermissions).flatMap((g) => Object.values(g));
@@ -76,6 +81,7 @@ export const rolePermissionMap: Record<PortalRole, readonly string[]> = {
     PortalPermissions.Credentials.Read,
     PortalPermissions.Credentials.Rotate,
   ],
+  MerchantPreview: [PortalPermissions.MerchantPreview.Read],
 };
 
 export const roleLabels: Record<PortalRole, { en: string; ar: string }> = {
@@ -83,6 +89,7 @@ export const roleLabels: Record<PortalRole, { en: string; ar: string }> = {
   Accountant: { en: "Accountant", ar: "محاسب" },
   PartnerSuccessManager: { en: "Partner Success", ar: "نجاح الشركاء" },
   PartnerFinance: { en: "Partner Finance", ar: "مالية الشريك" },
+  MerchantPreview: { en: "Merchant (preview)", ar: "تاجر (معاينة)" },
 };
 
 export const roleBadgeClass: Record<PortalRole, string> = {
@@ -90,6 +97,7 @@ export const roleBadgeClass: Record<PortalRole, string> = {
   Accountant: "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30",
   PartnerSuccessManager: "bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30",
   PartnerFinance: "bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/30",
+  MerchantPreview: "bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30",
 };
 
 export function permissionsForRole(role: PortalRole): readonly string[] {
@@ -101,6 +109,7 @@ export function canDisburse(role: PortalRole): boolean {
 }
 
 const ROLE_RANK: Record<PortalRole, number> = {
+  MerchantPreview: 0,
   PartnerFinance: 1,
   PartnerSuccessManager: 2,
   Accountant: 3,

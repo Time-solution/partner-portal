@@ -5,7 +5,7 @@ import { LanguageToggle } from "@/components/LanguageToggle";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { BetaBadge } from "@/components/brand/BetaBadge";
 import { MockDataBanner } from "@/features/admin/components/MockDataBanner";
-import { PORTAL_ROLES, roleLabels, type PortalRole } from "@/lib/rbac/portalRoles";
+import { MOCK_DEMO_ROLES, roleLabels, type PortalRole } from "@/lib/rbac/portalRoles";
 import type { Lang } from "@/lib/i18n";
 import { useTranslator } from "@/lib/i18n";
 
@@ -43,7 +43,7 @@ export function MockRoleSelectScreen({ lang, toggleLang, onLogin }: MockRoleSele
             <CardDescription>{t("mockSelectRoleDesc" as never)}</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-2">
-            {PORTAL_ROLES.map((role) => (
+            {MOCK_DEMO_ROLES.map((role) => (
               <Button
                 key={role}
                 variant="outline"

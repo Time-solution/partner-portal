@@ -117,6 +117,28 @@ export const mockPortalData: PortalData = {
       settlementBook: "Integration",
       status: "Active",
     },
+    {
+      id: "a1000004-0004-4000-8000-000000000004",
+      partnerId: "22222222-2222-2222-2222-222222222003",
+      code: "NOON-LIST",
+      name: "noon marketplace listing",
+      offeringKind: "ServiceOneOff",
+      participationMode: "ReflectionOnly",
+      partnerCost: sar(0),
+      settlementBook: "Marketplace",
+      status: "Active",
+    },
+    {
+      id: "a1000005-0005-4000-8000-000000000005",
+      partnerId: "22222222-2222-2222-2222-222222222005",
+      code: "SUP-ONBOARD",
+      name: "Supplier marketplace onboarding",
+      offeringKind: "ServiceOneOff",
+      participationMode: "Principal",
+      partnerCost: sar(49),
+      settlementBook: "Marketplace",
+      status: "Active",
+    },
   ],
   activations: [
     {

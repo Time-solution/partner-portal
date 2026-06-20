@@ -1,4 +1,4 @@
-import type { IPortalDataSource, RegisterWebhookInput } from "./IPortalDataSource";
+import type { IPortalDataSource, CreateActivationInput, RegisterWebhookInput } from "./IPortalDataSource";
 import { loadOrSeedData, resetToSeedData, savePersistedData } from "./mockStore";
 import type {
   ActivationWorkflowState,
@@ -290,6 +290,67 @@ export class MockPortalDataSource implements IPortalDataSource {
   async getAll() {
     await delay();
     return structuredClone(this.data);
+  }
+
+  async createActivation(input: CreateActivationInput) {
+    await delay();
+    const partner = this.data.partners.find((p) => p.id === input.partnerId);
+    if (!partner) throw new Error("Partner not found");
+    if (partner.status !== "Active") throw new Error("Partner is not available for activation");
+
+    const duplicate = this.data.activations.find(
+      (a) =>
+        a.partnerId === input.partnerId &&
+        a.tenantId === input.tenantId &&
+        a.status !== "Ended",
+    );
+    if (duplicate) throw new Error("Partner already activated for this merchant");
+
+    const catalogItem = this.data.catalogItems.find(
+      (c) => c.id === input.catalogItemId && c.partnerId === input.partnerId && c.status === "Active",
+    );
+    if (!catalogItem) throw new Error("Catalog item not found");
+
+    const activation: MerchantActivation = {
+      id: uid("act"),
+      partnerId: input.partnerId,
+      tenantId: input.tenantId,
+      merchantName: input.merchantName,
+      catalogItemId: catalogItem.id,
+      catalogItemName: catalogItem.name,
+      resalePrice: { ...catalogItem.partnerCost },
+      status: "Pending",
+      idempotencyKey: `preview-${input.partnerId}-${input.tenantId}`,
+    };
+    this.data.activations.push(activation);
+    workflowFor(this.data, activation.id);
+    appendAudit(this.data, {
+      actor: input.merchantName,
+      role: "MerchantPreview",
+      action: "Requested partner activation (merchant preview)",
+      target: activation.id,
+    });
+    this.persist();
+    return row(this.data, activation);
+  }
+
+  async endActivation(activationId: string) {
+    await delay();
+    const activation = this.data.activations.find((a) => a.id === activationId);
+    if (!activation) throw new Error("Activation not found");
+    if (activation.status === "Ended") throw new Error("Activation already ended");
+    activation.status = "Ended";
+    activation.endedAt = new Date().toISOString();
+    const wf = workflowFor(this.data, activationId);
+    wf.stage = "Ended";
+    appendAudit(this.data, {
+      actor: activation.merchantName,
+      role: "MerchantPreview",
+      action: "Ended partner activation",
+      target: activationId,
+    });
+    this.persist();
+    return row(this.data, activation);
   }
 
   async requestActivation(activationId: string, actorName: string) {
