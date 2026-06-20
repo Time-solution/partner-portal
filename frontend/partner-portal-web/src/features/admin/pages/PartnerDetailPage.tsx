@@ -13,6 +13,7 @@ import {
   resolvePartnerModule,
 } from "@/lib/rbac/partnerModules";
 import { usePortalSession } from "@/features/auth/usePortalSession";
+import { isPartnerScopedRole } from "@/lib/rbac/roleNavConfig";
 import { ModuleSubNav } from "../components/ModuleSubNav";
 import { ModuleScreenRenderer } from "../moduleScreenRegistry";
 import { PageHeader } from "../components/PageHeader";
@@ -24,7 +25,7 @@ import { ModuleComingSoonPage } from "./ModuleComingSoonPage";
 export function PartnerDetailPage({ lang }: { lang: Lang }) {
   const t = useTranslator(lang);
   const { id, tab } = useParams<{ id: string; tab?: string }>();
-  const { scopedPartnerId, user } = usePortalSession();
+  const { scopedPartnerId, user, role } = usePortalSession();
   const [partner, setPartner] = useState<Partner | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -63,12 +64,14 @@ export function PartnerDetailPage({ lang }: { lang: Lang }) {
   if (mod.comingSoon) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" size="sm" asChild>
-          <Link to="/partners">
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            {t("navPartners" as never)}
-          </Link>
-        </Button>
+        {!isPartnerScopedRole(role) ? (
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/partners">
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+              {t("navPartners" as never)}
+            </Link>
+          </Button>
+        ) : null}
         <ModuleComingSoonPage lang={lang} moduleId={moduleId} />
       </div>
     );
@@ -88,18 +91,24 @@ export function PartnerDetailPage({ lang }: { lang: Lang }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" asChild>
-          <Link to="/partners">
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            {t("navPartners" as never)}
-          </Link>
-        </Button>
-      </div>
+      {!isPartnerScopedRole(role) ? (
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/partners">
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+              {t("navPartners" as never)}
+            </Link>
+          </Button>
+        </div>
+      ) : null}
 
       <PageHeader
         title={partner.tradeName ?? partner.legalName}
-        description={`${t(moduleLabelKey(moduleId) as never)} · ${partnerTypeLabel(partner.type, lang)} · ${participationModeLabel(lang, partner.participationMode)} · ${partnerStatusLabel(lang, partner.status)}`}
+        description={
+          isPartnerScopedRole(role)
+            ? `${t("partnerHomeDesc" as never)} · ${t(moduleLabelKey(moduleId) as never)} · ${partnerTypeLabel(partner.type, lang)}`
+            : `${t(moduleLabelKey(moduleId) as never)} · ${partnerTypeLabel(partner.type, lang)} · ${participationModeLabel(lang, partner.participationMode)} · ${partnerStatusLabel(lang, partner.status)}`
+        }
         lang={lang}
       />
 

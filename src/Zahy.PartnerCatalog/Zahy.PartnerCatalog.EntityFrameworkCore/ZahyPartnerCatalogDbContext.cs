@@ -55,6 +55,7 @@ public class ZahyPartnerCatalogDbContext : AbpDbContext<ZahyPartnerCatalogDbCont
             b.Property(x => x.ExternalMenuItemId).HasMaxLength(PartnerCatalogConsts.MaxExternalMenuItemIdLength);
             b.Property(x => x.MenuCategoryCode).HasMaxLength(PartnerCatalogConsts.MaxMenuCategoryCodeLength);
             b.Property(x => x.SettlementParticipationMode).IsRequired();
+            b.Property(x => x.ConsignmentOwnershipMode);
 
             b.HasIndex(x => x.PartnerId);
             b.HasIndex(x => new { x.PartnerId, x.Code }).IsUnique();

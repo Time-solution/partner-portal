@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 import { canGrantRole, roleRequiresPartner } from "@/lib/rbac/portalRoles";
 
 describe("user role helpers", () => {
-  it("PartnerFinance requires partner assignment", () => {
+  it("partner-scoped roles require partner assignment", () => {
     expect(roleRequiresPartner("PartnerFinance")).toBe(true);
+    expect(roleRequiresPartner("PartnerSuccessManager")).toBe(true);
     expect(roleRequiresPartner("PlatformAdmin")).toBe(false);
   });
 

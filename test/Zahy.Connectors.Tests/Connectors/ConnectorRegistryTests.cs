@@ -55,9 +55,21 @@ public class ConnectorRegistryTests : ZahyConnectorsTestBase
     {
         var descriptors = _registry.ListDescriptors();
 
-        descriptors.Count.ShouldBe(3);
+        descriptors.Count.ShouldBe(4);
         descriptors.Select(x => x.ConnectorCode).ShouldContain(ConnectorConsts.MockAggregatorCode);
         descriptors.Select(x => x.ConnectorCode).ShouldContain(ConnectorConsts.MockThreePLCode);
         descriptors.Select(x => x.ConnectorCode).ShouldContain(ConnectorConsts.MockCarrierCode);
+        descriptors.Select(x => x.ConnectorCode).ShouldContain(ConnectorConsts.MockJumpConsignmentCode);
+    }
+
+    [Fact]
+    public void Should_Resolve_Jump_Consignment_Connector_With_Stock_Custody_Operations()
+    {
+        var connector = _registry.Resolve(ConnectorConsts.MockJumpConsignmentCode);
+
+        connector.Descriptor.Kind.ShouldBe(ConnectorKind.ThreePL);
+        connector.Descriptor.SupportedOperations.HasFlag(ConnectorOperations.ReceiveStockTransfer).ShouldBeTrue();
+        connector.Descriptor.SupportedOperations.HasFlag(ConnectorOperations.ReconcileInventory).ShouldBeTrue();
+        connector.ShouldBeAssignableTo<IConsignmentConnector>();
     }
 }

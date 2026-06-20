@@ -14,13 +14,23 @@ public static class PartnerCatalogOfferingKindDefaults
         {
             PartnerType.Service => new[] { PartnerCatalogOfferingKind.ServiceOneOff, PartnerCatalogOfferingKind.ServiceSubscription },
             PartnerType.Carrier => new[] { PartnerCatalogOfferingKind.DeliveryFulfilmentPerOrder },
-            PartnerType.ThreePL => new[] { PartnerCatalogOfferingKind.DeliveryFulfilmentPerOrder },
+            // ThreePL can hold stock in custody (JUMP "Fulfilled by") in addition to plain fulfilment.
+            PartnerType.ThreePL => new[]
+            {
+                PartnerCatalogOfferingKind.DeliveryFulfilmentPerOrder,
+                PartnerCatalogOfferingKind.ConsignmentFulfilment
+            },
             PartnerType.Aggregator => new[]
             {
                 PartnerCatalogOfferingKind.FnBItemsPerSale,
                 PartnerCatalogOfferingKind.DeliveryFulfilmentPerOrder
             },
-            PartnerType.Marketplace => new[] { PartnerCatalogOfferingKind.FnBItemsPerSale },
+            // Marketplace (noon JUMP-shaped) can resell via consignment custody as well as F&B items.
+            PartnerType.Marketplace => new[]
+            {
+                PartnerCatalogOfferingKind.FnBItemsPerSale,
+                PartnerCatalogOfferingKind.ConsignmentFulfilment
+            },
             _ => new[] { PartnerCatalogOfferingKind.ServiceOneOff }
         };
 
@@ -31,6 +41,8 @@ public static class PartnerCatalogOfferingKindDefaults
             PartnerCatalogOfferingKind.ServiceSubscription => SettlementTriggerMode.PerBillingPeriod,
             PartnerCatalogOfferingKind.DeliveryFulfilmentPerOrder => SettlementTriggerMode.PerOrder,
             PartnerCatalogOfferingKind.FnBItemsPerSale => SettlementTriggerMode.PerOrderLine,
+            // Consignment fulfils per sold unit from the partner warehouse — settle per order line.
+            PartnerCatalogOfferingKind.ConsignmentFulfilment => SettlementTriggerMode.PerOrderLine,
             _ => SettlementTriggerMode.OnActivation
         };
 
@@ -41,6 +53,7 @@ public static class PartnerCatalogOfferingKindDefaults
             PartnerCatalogOfferingKind.ServiceSubscription => SettlementBook.Integration,
             PartnerCatalogOfferingKind.DeliveryFulfilmentPerOrder => SettlementBook.Marketplace,
             PartnerCatalogOfferingKind.FnBItemsPerSale => SettlementBook.Marketplace,
+            PartnerCatalogOfferingKind.ConsignmentFulfilment => SettlementBook.Marketplace,
             _ => SettlementBook.Integration
         };
 }

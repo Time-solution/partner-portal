@@ -8,6 +8,7 @@ public static class ConnectorConsts
     public const string MockAggregatorCode = "mock-aggregator";
     public const string MockThreePLCode = "mock-3pl";
     public const string MockCarrierCode = "mock-carrier";
+    public const string MockJumpConsignmentCode = "mock-jump";
 
     public const int DefaultAcceptWindowMinutes = 5;
 

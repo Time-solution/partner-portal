@@ -28,8 +28,8 @@ export const MockPortalAuthContext = createContext<MockPortalAuthValue | undefin
 const mockUsers: Record<PortalRole, { name: string; username: string }> = {
   PlatformAdmin: { name: "Admin User", username: "admin@zahy.sa" },
   Accountant: { name: "Omar Finance", username: "accountant@zahy.sa" },
-  PartnerSuccessManager: { name: "Sara Al-Qahtani", username: "psm@zahy.sa" },
-  PartnerFinance: { name: "Partner Finance", username: "finance@partner.sa" },
+  PartnerSuccessManager: { name: "Sara Al-Qahtani", username: "psm@salasa.sa" },
+  PartnerFinance: { name: "Jahez Finance", username: "finance@jahez.sa" },
   MerchantPreview: { name: "Al Rajhi Demo Store", username: "merchant@zahy.dev" },
 };
 
@@ -45,7 +45,7 @@ function buildUser(role: PortalRole): AuthUser {
 }
 
 export function MockPortalAuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [role, setRoleState] = useState<PortalRole>("PlatformAdmin");
   const user = useMemo(
     () => (isAuthenticated ? buildUser(role) : null),

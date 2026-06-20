@@ -61,22 +61,25 @@ export const rolePermissionMap: Record<PortalRole, readonly string[]> = {
     PortalPermissions.Settings.Read,
   ],
   PartnerSuccessManager: [
-    PortalPermissions.Dashboard.Read,
     PortalPermissions.Partners.Read,
-    PortalPermissions.Partners.Manage,
     PortalPermissions.Catalog.Read,
     PortalPermissions.Activations.Read,
     PortalPermissions.Activations.Request,
     PortalPermissions.Reflection.Read,
+    PortalPermissions.Settlement.Read,
+    PortalPermissions.Reversals.Read,
     PortalPermissions.Webhooks.Read,
     PortalPermissions.Webhooks.Manage,
     PortalPermissions.Credentials.Read,
   ],
   PartnerFinance: [
-    PortalPermissions.Dashboard.Read,
     PortalPermissions.PartnerFinance.ReadOwn,
     PortalPermissions.Billing.Read,
     PortalPermissions.Settlement.Read,
+    PortalPermissions.Catalog.Read,
+    PortalPermissions.Activations.Read,
+    PortalPermissions.Reflection.Read,
+    PortalPermissions.Reversals.Read,
     PortalPermissions.Webhooks.Read,
     PortalPermissions.Credentials.Read,
     PortalPermissions.Credentials.Rotate,
@@ -116,9 +119,9 @@ const ROLE_RANK: Record<PortalRole, number> = {
   PlatformAdmin: 4,
 };
 
-/** PartnerFinance is the only role scoped to a single partner in the portal. */
+/** Partner portal roles scoped to a single partner (mock + live-swap ready). */
 export function roleRequiresPartner(role: PortalRole): boolean {
-  return role === "PartnerFinance";
+  return role === "PartnerFinance" || role === "PartnerSuccessManager";
 }
 
 /** Lower roles cannot grant higher roles (PlatformAdmin may grant any). */

@@ -54,6 +54,14 @@ public class PartnerCatalogItem : FullAuditedAggregateRoot<Guid>, IMultiTenant
     /// <summary>Settlement participation routing — stored only; bridge uses in 2b/2c.</summary>
     public SettlementParticipationMode SettlementParticipationMode { get; private set; }
 
+    /// <summary>
+    /// Consignment custody decision for <see cref="PartnerCatalogOfferingKind.ConsignmentFulfilment"/> only
+    /// (null for every other kind). It routes to the existing <see cref="SettlementParticipationMode"/>
+    /// (MerchantOwned → ReflectionOnly, PartnerBought → Principal) — no new settlement logic.
+    /// Final mode is confirmed with the accountant at go-live, like other flows.
+    /// </summary>
+    public ConsignmentOwnershipMode? ConsignmentOwnershipMode { get; private set; }
+
     public Money PartnerCost =>
         PartnerCatalogMoneyAssignment.Read(PartnerCostAmount, PartnerCostCurrency, PartnerCostVatInclusive);
 
@@ -78,13 +86,30 @@ public class PartnerCatalogItem : FullAuditedAggregateRoot<Guid>, IMultiTenant
         PartnerCatalogFulfilmentUnit? fulfilmentUnit = null,
         string? externalMenuItemId = null,
         string? menuCategoryCode = null,
-        SettlementParticipationMode settlementParticipationMode = SettlementParticipationMode.Principal)
+        SettlementParticipationMode settlementParticipationMode = SettlementParticipationMode.Principal,
+        ConsignmentOwnershipMode? consignmentOwnershipMode = null)
     {
         if (partnerId == Guid.Empty)
         {
             throw new BusinessException(PartnerCatalogErrorCodes.InvalidOfferingKind)
                 .WithData("Reason", "PartnerIdRequired");
         }
+
+        var isConsignment = offeringKind == PartnerCatalogOfferingKind.ConsignmentFulfilment;
+        if (!isConsignment && consignmentOwnershipMode.HasValue)
+        {
+            throw new BusinessException(PartnerCatalogErrorCodes.InvalidOfferingKind)
+                .WithData("Reason", "ConsignmentOwnershipModeOnlyForConsignmentFulfilment");
+        }
+
+        // Consignment custody routes to an EXISTING settlement mode; default is MerchantOwned (consignment).
+        var resolvedOwnershipMode = isConsignment
+            ? consignmentOwnershipMode ?? ConsignmentOwnershipModeRouting.DefaultMode
+            : (ConsignmentOwnershipMode?)null;
+
+        var resolvedParticipationMode = isConsignment
+            ? ConsignmentOwnershipModeRouting.ResolveParticipationMode(resolvedOwnershipMode!.Value)
+            : settlementParticipationMode;
 
         var item = new PartnerCatalogItem
         {
@@ -100,7 +125,8 @@ public class PartnerCatalogItem : FullAuditedAggregateRoot<Guid>, IMultiTenant
             SettlementTriggerMode = settlementTriggerMode
                 ?? PartnerCatalogOfferingKindDefaults.GetDefaultTriggerMode(offeringKind),
             DefaultVatTreatment = VatTreatment.Principal,
-            SettlementParticipationMode = settlementParticipationMode,
+            SettlementParticipationMode = resolvedParticipationMode,
+            ConsignmentOwnershipMode = resolvedOwnershipMode,
             RequiresPlatformCatalogSync = offeringKind == PartnerCatalogOfferingKind.FnBItemsPerSale,
             CarrierServiceCode = NormalizeOptional(carrierServiceCode, PartnerCatalogConsts.MaxCarrierServiceCodeLength),
             FulfilmentUnit = offeringKind == PartnerCatalogOfferingKind.DeliveryFulfilmentPerOrder

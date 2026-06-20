@@ -22,6 +22,9 @@ public static class PrincipalSettlementDispatchPolicy
             PartnerCatalogOfferingKind.DeliveryFulfilmentPerOrder =>
                 snapshot.Trigger is SettlementCostMarkupTrigger.Order
                 && snapshot.OrderLineId == string.Empty,
+            // Consignment sale from the partner warehouse — PartnerBought custody settles per sold line.
+            PartnerCatalogOfferingKind.ConsignmentFulfilment =>
+                snapshot.Trigger is SettlementCostMarkupTrigger.OrderLine,
             _ => false
         };
     }

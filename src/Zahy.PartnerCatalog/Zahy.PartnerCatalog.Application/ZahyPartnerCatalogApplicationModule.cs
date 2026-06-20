@@ -22,8 +22,12 @@ public class ZahyPartnerCatalogApplicationModule : AbpModule
         Configure<PartnerCatalogMerchantOptions>(
             configuration.GetSection(PartnerCatalogMerchantOptions.SectionName));
 
+        Configure<ConsignmentSettlementOptions>(
+            configuration.GetSection(ConsignmentSettlementOptions.SectionName));
+
         context.Services.AddTransient<ISettlementCatalogBridge, SettlementCatalogBridge>();
         context.Services.AddTransient<IPartnerCatalogParticipationBridge, PartnerCatalogParticipationBridge>();
+        context.Services.AddTransient<IConsignmentSaleSettlementRouter, ConsignmentSaleSettlementRouter>();
         context.Services.AddTransient<ReflectionOnlyOrderBridge>();
         context.Services.AddTransient<SubscriptionFeeBillingBridge>();
     }

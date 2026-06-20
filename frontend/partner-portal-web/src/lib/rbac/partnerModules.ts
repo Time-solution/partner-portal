@@ -202,11 +202,7 @@ export function canAccessFinanceWorkspace(role: PortalRole): boolean {
   return role === "Accountant" || role === "PlatformAdmin";
 }
 
-export function defaultLandingPath(role: PortalRole): string {
-  if (role === "Accountant") return "/finance";
-  if (canAccessPartnerModules(role)) return "/modules/delivery-service/catalog";
-  return "/dashboard";
-}
+export { defaultLandingPath } from "./roleNavConfig";
 
 export type FinanceWorkspaceTabId =
   | "overview"

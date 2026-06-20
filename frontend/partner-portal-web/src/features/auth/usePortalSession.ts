@@ -2,10 +2,8 @@ import { useContext } from "react";
 import { AuthContext } from "./AuthContext";
 import { MockPortalAuthContext } from "./MockPortalAuth";
 import type { PortalRole } from "@/lib/rbac/portalRoles";
+import { mockScopedPartnerId } from "@/lib/rbac/roleNavConfig";
 import type { AuthUser } from "./types";
-
-/** Partner Finance mock scope — Jahez Channel. */
-export const MOCK_PARTNER_FINANCE_PARTNER_ID = "22222222-2222-2222-2222-222222222004";
 
 export interface PortalSession {
   user: AuthUser;
@@ -27,8 +25,7 @@ export function usePortalSession(): PortalSession {
       user: mock.user,
       role: mock.role,
       setRole: mock.setRole,
-      scopedPartnerId:
-        mock.role === "PartnerFinance" ? MOCK_PARTNER_FINANCE_PARTNER_ID : undefined,
+      scopedPartnerId: mockScopedPartnerId(mock.role),
       logout: mock.logout,
       can: mock.can,
       canAny: mock.canAny,

@@ -5,7 +5,28 @@ public enum PartnerCatalogOfferingKind
     ServiceOneOff = 1,
     ServiceSubscription = 2,
     DeliveryFulfilmentPerOrder = 3,
-    FnBItemsPerSale = 4
+    FnBItemsPerSale = 4,
+
+    /// <summary>
+    /// noon JUMP "Fulfilled by" shape — partner physically holds the merchant's stock in their
+    /// warehouse, fulfils from there, then remits. The new element vs other kinds is stock CUSTODY.
+    /// </summary>
+    ConsignmentFulfilment = 5
+}
+
+/// <summary>
+/// Who owns the stock the partner holds in custody (the one new commercial decision for
+/// <see cref="PartnerCatalogOfferingKind.ConsignmentFulfilment"/>). It only routes to an EXISTING
+/// settlement participation mode — no new settlement logic. Default is <see cref="MerchantOwned"/>
+/// (true consignment). Final mode confirmed with accountant at go-live, like other flows.
+/// </summary>
+public enum ConsignmentOwnershipMode
+{
+    /// <summary>Consignment — partner sells the merchant's goods and remits. Settles ReflectionOnly.</summary>
+    MerchantOwned = 1,
+
+    /// <summary>Partner bought the goods up-front and owns them. Settles Principal.</summary>
+    PartnerBought = 2
 }
 
 public enum PartnerCatalogItemStatus

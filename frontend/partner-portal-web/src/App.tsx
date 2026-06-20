@@ -1,5 +1,5 @@
-import { BrowserRouter } from "react-router-dom";
 import { Moon, Sun } from "lucide-react";
+import { BrowserRouter, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { LoginScreen } from "@/features/auth/LoginScreen";
@@ -12,6 +12,8 @@ import { isMockDataSource } from "@/lib/data/config";
 import { useTheme } from "@/hooks/useTheme";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useTranslator } from "@/lib/i18n";
+import { defaultLandingPath } from "@/lib/rbac/roleNavConfig";
+import type { PortalRole } from "@/lib/rbac/portalRoles";
 import { Loader2 } from "lucide-react";
 
 function LiveAppContent() {
@@ -57,26 +59,40 @@ function LiveAppContent() {
   );
 }
 
+function MockRoleSelectRoute({
+  lang,
+  toggleLang,
+}: {
+  lang: ReturnType<typeof useLanguage>["lang"];
+  toggleLang: () => void;
+}) {
+  const navigate = useNavigate();
+  const { login } = useMockPortalAuthState();
+
+  return (
+    <MockRoleSelectScreen
+      lang={lang}
+      toggleLang={toggleLang}
+      onLogin={(role: PortalRole) => {
+        login(role);
+        navigate(defaultLandingPath(role), { replace: true });
+      }}
+    />
+  );
+}
+
 function MockAppContent() {
   const { theme, toggleTheme } = useTheme();
   const { lang, toggleLang } = useLanguage();
-  const { isAuthenticated, login } = useMockPortalAuthState();
-
-  if (!isAuthenticated) {
-    return (
-      <MockRoleSelectScreen
-        lang={lang}
-        toggleLang={toggleLang}
-        onLogin={(role) => {
-          login(role);
-        }}
-      />
-    );
-  }
+  const { isAuthenticated } = useMockPortalAuthState();
 
   return (
     <BrowserRouter>
-      <AdminShell lang={lang} toggleLang={toggleLang} theme={theme} toggleTheme={toggleTheme} />
+      {isAuthenticated ? (
+        <AdminShell lang={lang} toggleLang={toggleLang} theme={theme} toggleTheme={toggleTheme} />
+      ) : (
+        <MockRoleSelectRoute lang={lang} toggleLang={toggleLang} />
+      )}
     </BrowserRouter>
   );
 }

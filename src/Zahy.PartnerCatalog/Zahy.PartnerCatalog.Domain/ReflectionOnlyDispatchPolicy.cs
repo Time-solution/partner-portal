@@ -20,6 +20,10 @@ public static class ReflectionOnlyDispatchPolicy
             PartnerCatalogOfferingKind.DeliveryFulfilmentPerOrder =>
                 snapshot.Trigger is SettlementCostMarkupTrigger.Order
                 && snapshot.OrderLineId == string.Empty,
+            // Consignment sale from the partner warehouse — MerchantOwned custody reflects per sold line.
+            PartnerCatalogOfferingKind.ConsignmentFulfilment =>
+                snapshot.Trigger is SettlementCostMarkupTrigger.OrderLine
+                    or SettlementCostMarkupTrigger.Order,
             _ => false
         };
     }
