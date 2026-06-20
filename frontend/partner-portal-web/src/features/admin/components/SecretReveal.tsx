@@ -1,15 +1,19 @@
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { Lang } from "@/lib/i18n";
+import { useTranslator } from "@/lib/i18n";
 
 interface SecretRevealProps {
+  lang: Lang;
   label: string;
   secret: string;
   warning: string;
   onDismiss: () => void;
 }
 
-export function SecretReveal({ label, secret, warning, onDismiss }: SecretRevealProps) {
+export function SecretReveal({ lang, label, secret, warning, onDismiss }: SecretRevealProps) {
+  const t = useTranslator(lang);
   const [copied, setCopied] = useState(false);
 
   const copy = async () => {
@@ -28,10 +32,10 @@ export function SecretReveal({ label, secret, warning, onDismiss }: SecretReveal
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="outline" onClick={() => void copy()}>
           {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-          {copied ? "Copied" : "Copy"}
+          {copied ? t("copied" as never) : t("copy" as never)}
         </Button>
         <Button size="sm" onClick={onDismiss}>
-          Dismiss
+          {t("dismiss" as never)}
         </Button>
       </div>
     </div>

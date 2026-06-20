@@ -47,6 +47,13 @@ export interface Partner {
   primaryContactEmail: string;
   participationMode: ParticipationMode;
   accentClass: string;
+  /**
+   * Display-only mock label for ReflectionOnly Commerce vs F&B split.
+   * Maps to real OfferingKind/field in production — not a backend entity field.
+   */
+  marketplaceCategory?: "commerce" | "fnb";
+  /** Parked business module (Consignment / FBA demo). */
+  parkedModule?: "consignment";
 }
 
 export interface PartnerCatalogItem {
@@ -221,6 +228,43 @@ export interface AuditEntry {
   target: string;
 }
 
+/** Mirrors ABP Identity user shape for live-swap. */
+export type PortalUserRole =
+  | "PlatformAdmin"
+  | "Accountant"
+  | "PartnerSuccessManager"
+  | "PartnerFinance";
+
+export type PortalUserStatus = "Active" | "Invited" | "Suspended";
+
+export interface PortalUser {
+  id: string;
+  name: string;
+  email: string;
+  roles: PortalUserRole[];
+  partnerId?: string;
+  partnerName?: string;
+  status: PortalUserStatus;
+  invitedAt?: string;
+  lastLoginAt?: string;
+}
+
+export interface CreatePortalUserInput {
+  name: string;
+  email: string;
+  role: PortalUserRole;
+  partnerId?: string;
+}
+
+export interface UpdatePortalUserInput {
+  name?: string;
+  email?: string;
+  role?: PortalUserRole;
+  partnerId?: string | null;
+  status?: PortalUserStatus;
+  resendInvite?: boolean;
+}
+
 export interface PortalData {
   partners: Partner[];
   catalogItems: PartnerCatalogItem[];
@@ -236,6 +280,7 @@ export interface PortalData {
   kpis: DashboardKpis;
   teams: PortalTeam[];
   auditLog: AuditEntry[];
+  users: PortalUser[];
 }
 
 /** Derive display summary from journal lines (Principal delivery pattern). */

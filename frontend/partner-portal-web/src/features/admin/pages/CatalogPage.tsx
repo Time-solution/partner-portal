@@ -4,24 +4,46 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { getPortalDataSource } from "@/lib/data";
 import type { PartnerCatalogItem } from "@/lib/data/types";
 import { PageHeader } from "../components/PageHeader";
-import type { Lang } from "@/lib/i18n";
 import { useTranslator } from "@/lib/i18n";
+import {
+  offeringKindLabel,
+  participationModeLabel,
+  settlementBookLabel,
+} from "@/lib/i18n/domainLabels";
+import type { ModuleScopeProps } from "../moduleScope";
+import { filterByPartnerIds, useScopePartnerIds } from "../hooks/useScopePartnerIds";
 
-export function CatalogPage({ lang }: { lang: Lang }) {
+type CatalogPageProps = ModuleScopeProps & {
+  titleKey?: string;
+  descKey?: string;
+};
+
+export function CatalogPage({
+  lang,
+  moduleId,
+  partnerId,
+  titleKey = "navCatalog",
+  descKey = "catalogDesc",
+}: CatalogPageProps) {
   const t = useTranslator(lang);
+  const scopeIds = useScopePartnerIds(moduleId, partnerId);
   const [items, setItems] = useState<PartnerCatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const showHeader = !moduleId && !partnerId;
 
   useEffect(() => {
     void getPortalDataSource()
-      .getCatalogItems()
+      .getCatalogItems(partnerId)
+      .then((all) => filterByPartnerIds(all, scopeIds))
       .then(setItems)
       .finally(() => setLoading(false));
-  }, []);
+  }, [partnerId, scopeIds?.join(",")]);
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("navCatalog" as never)} description={t("catalogDesc" as never)} lang={lang} />
+      {showHeader ? (
+        <PageHeader title={t(titleKey as never)} description={t(descKey as never)} lang={lang} />
+      ) : null}
       <Card>
         <CardHeader>
           <CardTitle>{t("catalogAllTitle" as never)}</CardTitle>
@@ -52,9 +74,9 @@ export function CatalogPage({ lang }: { lang: Lang }) {
                         <span className="font-medium">{item.name}</span>
                         <span className="ms-2 text-xs text-muted-foreground">{item.code}</span>
                       </td>
-                      <td className="px-2 py-2">{item.offeringKind}</td>
-                      <td className="px-2 py-2">{item.participationMode}</td>
-                      <td className="px-2 py-2">{item.settlementBook}</td>
+                      <td className="px-2 py-2">{offeringKindLabel(lang, item.offeringKind)}</td>
+                      <td className="px-2 py-2">{participationModeLabel(lang, item.participationMode)}</td>
+                      <td className="px-2 py-2">{settlementBookLabel(lang, item.settlementBook)}</td>
                       <td className="px-2 py-2 text-end tabular-nums">{item.partnerCost.amount.toFixed(2)} SAR</td>
                     </tr>
                   ))}

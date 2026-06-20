@@ -6,23 +6,27 @@ import type { SettlementReversal } from "@/lib/data/types";
 import { usePortalSession } from "@/features/auth/usePortalSession";
 import { JournalTable } from "../components/JournalTable";
 import { PageHeader } from "../components/PageHeader";
-import type { Lang } from "@/lib/i18n";
 import { useTranslator } from "@/lib/i18n";
+import type { ModuleScopeProps } from "../moduleScope";
+import { filterByPartnerIds, useScopePartnerIds } from "../hooks/useScopePartnerIds";
 
-export function ReversalsPage({ lang }: { lang: Lang }) {
+export function ReversalsPage({ lang, moduleId, partnerId, financeMode }: ModuleScopeProps) {
   const t = useTranslator(lang);
   const { scopedPartnerId } = usePortalSession();
+  const scopeIds = useScopePartnerIds(moduleId, partnerId ?? scopedPartnerId);
   const [reversals, setReversals] = useState<SettlementReversal[]>([]);
   const [loading, setLoading] = useState(true);
+  const showHeader = !moduleId && !partnerId && !financeMode;
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setReversals(await getPortalDataSource().getReversals(scopedPartnerId));
+      const all = await getPortalDataSource().getReversals(scopedPartnerId ?? partnerId);
+      setReversals(filterByPartnerIds(all, scopeIds));
     } finally {
       setLoading(false);
     }
-  }, [scopedPartnerId]);
+  }, [scopedPartnerId, partnerId, scopeIds?.join(",")]);
 
   useEffect(() => {
     void load();
@@ -30,12 +34,14 @@ export function ReversalsPage({ lang }: { lang: Lang }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={t("navReversals" as never)}
-        description={t("reversalsDesc" as never)}
-        lang={lang}
-        showBeta
-      />
+      {showHeader ? (
+        <PageHeader
+          title={t("navReversals" as never)}
+          description={t("reversalsDesc" as never)}
+          lang={lang}
+          showBeta
+        />
+      ) : null}
       {loading ? (
         <div className="flex items-center gap-2 text-base text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" />
@@ -59,7 +65,7 @@ export function ReversalsPage({ lang }: { lang: Lang }) {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <JournalTable lines={r.journal.lines} caption={t("reversalPerLine" as never)} />
+                <JournalTable lang={lang} lines={r.journal.lines} caption={t("reversalPerLine" as never)} />
               </CardContent>
             </Card>
           ))}

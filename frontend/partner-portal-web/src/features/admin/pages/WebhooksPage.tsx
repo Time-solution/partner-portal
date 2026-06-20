@@ -12,6 +12,10 @@ import { SecretReveal } from "../components/SecretReveal";
 import { PageHeader } from "../components/PageHeader";
 import type { Lang } from "@/lib/i18n";
 import { useTranslator } from "@/lib/i18n";
+import {
+  webhookDeliveryStatusLabel,
+  webhookEndpointStatusLabel,
+} from "@/lib/i18n/domainLabels";
 
 const statusClass: Record<string, string> = {
   Delivered: "text-emerald-600",
@@ -122,6 +126,7 @@ export function WebhooksPage({ lang }: { lang: Lang }) {
 
       {revealedSecret ? (
         <SecretReveal
+          lang={lang}
           label={t("webhooksSigningSecret" as never)}
           secret={revealedSecret}
           warning={t("webhooksSecretOnce" as never)}
@@ -180,7 +185,7 @@ export function WebhooksPage({ lang }: { lang: Lang }) {
                     <p className="mt-1 text-sm text-muted-foreground">
                       {ep.eventTypes.join(", ")} · {ep.secretHint} ·{" "}
                       <span className={ep.status === "Active" ? "text-emerald-600" : "text-warning"}>
-                        {ep.status}
+                        {webhookEndpointStatusLabel(lang, ep.status)}
                       </span>
                     </p>
                   </div>
@@ -245,7 +250,7 @@ export function WebhooksPage({ lang }: { lang: Lang }) {
                       <tr key={d.id} className="border-b border-border/60">
                         <td className="px-2 py-2.5 font-mono text-sm">{d.eventType}</td>
                         <td className={`px-2 py-2.5 font-medium ${statusClass[d.status] ?? ""}`}>
-                          {d.status}
+                          {webhookDeliveryStatusLabel(lang, d.status)}
                           {d.responseCode ? ` (${d.responseCode})` : ""}
                         </td>
                         <td className="px-2 py-2.5 tabular-nums">{d.attemptCount}</td>

@@ -22,7 +22,13 @@ export function clearPersistedData(): void {
 }
 
 export function loadOrSeedData(): PortalData {
-  return loadPersistedData() ?? createSeedData();
+  const persisted = loadPersistedData();
+  if (!persisted) return createSeedData();
+  if (!persisted.users) {
+    persisted.users = createSeedData().users;
+    savePersistedData(persisted);
+  }
+  return persisted;
 }
 
 export function resetToSeedData(): PortalData {

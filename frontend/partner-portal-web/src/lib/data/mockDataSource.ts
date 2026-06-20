@@ -3,15 +3,21 @@ import { loadOrSeedData, resetToSeedData, savePersistedData } from "./mockStore"
 import type {
   ActivationWorkflowState,
   AuditEntry,
+  CreatePortalUserInput,
   MerchantActivation,
   MerchantActivationRow,
   PortalData,
+  PortalUser,
+  PortalUserRole,
   SettlementReversal,
   SubscriptionBillingPeriod,
+  UpdatePortalUserInput,
   WebhookDelivery,
   WebhookEndpoint,
 } from "./types";
 import { invertJournal } from "./types";
+import { notifyPortalDataChanged } from "./portalDataEvents";
+import { canGrantRole, roleRequiresPartner, type PortalRole } from "@/lib/rbac/portalRoles";
 
 const delay = (ms = 80) => new Promise((r) => setTimeout(r, ms));
 
@@ -73,6 +79,7 @@ export class MockPortalDataSource implements IPortalDataSource {
   private persist() {
     recalcKpis(this.data);
     savePersistedData(this.data);
+    notifyPortalDataChanged();
   }
 
   async getDashboardKpis() {
@@ -161,6 +168,123 @@ export class MockPortalDataSource implements IPortalDataSource {
   async getAuditLog() {
     await delay();
     return [...this.data.auditLog];
+  }
+
+  async listUsers() {
+    await delay();
+    return [...this.data.users].sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async createUser(input: CreatePortalUserInput) {
+    await delay();
+    const name = input.name.trim();
+    const email = normalizeEmail(input.email);
+    if (!name) throw new Error("Name is required");
+    if (!isValidEmail(email)) throw new Error("Invalid email address");
+    if (this.data.users.some((u) => normalizeEmail(u.email) === email)) {
+      throw new Error("A user with this email already exists");
+    }
+    assertCanGrantRole(input.role);
+    if (roleRequiresPartner(input.role) && !input.partnerId) {
+      throw new Error("Partner assignment is required for Partner Finance");
+    }
+    if (!roleRequiresPartner(input.role) && input.partnerId) {
+      throw new Error("Partner assignment applies only to Partner Finance");
+    }
+    const partner = input.partnerId ? resolvePartner(this.data, input.partnerId) : undefined;
+    const user: PortalUser = {
+      id: uid("user"),
+      name,
+      email,
+      roles: [input.role],
+      partnerId: partner?.id,
+      partnerName: partner ? (partner.tradeName ?? partner.legalName) : undefined,
+      status: "Invited",
+      invitedAt: new Date().toISOString(),
+    };
+    this.data.users.unshift(user);
+    appendAudit(this.data, {
+      actor: actorNameSafe(),
+      role: "PlatformAdmin",
+      action: "Invited user (mock — no email sent)",
+      target: user.email,
+    });
+    this.persist();
+    return { ...user };
+  }
+
+  async updateUser(id: string, input: UpdatePortalUserInput) {
+    await delay();
+    const user = this.data.users.find((u) => u.id === id);
+    if (!user) throw new Error("User not found");
+
+    if (input.name !== undefined) {
+      const name = input.name.trim();
+      if (!name) throw new Error("Name is required");
+      user.name = name;
+    }
+
+    if (input.email !== undefined) {
+      const email = normalizeEmail(input.email);
+      if (!isValidEmail(email)) throw new Error("Invalid email address");
+      if (this.data.users.some((u) => u.id !== id && normalizeEmail(u.email) === email)) {
+        throw new Error("A user with this email already exists");
+      }
+      user.email = email;
+    }
+
+    if (input.role !== undefined) {
+      assertCanGrantRole(input.role);
+      user.roles = [input.role];
+      if (!roleRequiresPartner(input.role)) {
+        user.partnerId = undefined;
+        user.partnerName = undefined;
+      }
+    }
+
+    const effectiveRole = user.roles[0]!;
+    if (input.partnerId !== undefined) {
+      if (input.partnerId === null || input.partnerId === "") {
+        if (roleRequiresPartner(effectiveRole)) {
+          throw new Error("Partner assignment is required for Partner Finance");
+        }
+        user.partnerId = undefined;
+        user.partnerName = undefined;
+      } else {
+        if (!roleRequiresPartner(effectiveRole)) {
+          throw new Error("Partner assignment applies only to Partner Finance");
+        }
+        const partner = resolvePartner(this.data, input.partnerId);
+        user.partnerId = partner.id;
+        user.partnerName = partner.tradeName ?? partner.legalName;
+      }
+    } else if (roleRequiresPartner(effectiveRole) && !user.partnerId) {
+      throw new Error("Partner assignment is required for Partner Finance");
+    }
+
+    if (input.status !== undefined) {
+      user.status = input.status;
+    }
+
+    if (input.resendInvite) {
+      user.status = "Invited";
+      user.invitedAt = new Date().toISOString();
+      appendAudit(this.data, {
+        actor: actorNameSafe(),
+        role: "PlatformAdmin",
+        action: "Resent invite (mock — no email sent)",
+        target: user.email,
+      });
+    }
+
+    appendAudit(this.data, {
+      actor: actorNameSafe(),
+      role: "PlatformAdmin",
+      action: "Updated user",
+      target: user.email,
+    });
+    this.persist();
+    return { ...user };
   }
 
   async getAll() {
@@ -423,11 +547,33 @@ export class MockPortalDataSource implements IPortalDataSource {
     await delay();
     this.data = resetToSeedData();
     recalcKpis(this.data);
+    notifyPortalDataChanged();
   }
 }
 
 function actorNameSafe() {
   return "Portal user";
+}
+
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+}
+
+function resolvePartner(data: PortalData, partnerId: string) {
+  const partner = data.partners.find((p) => p.id === partnerId);
+  if (!partner) throw new Error("Partner not found");
+  return partner;
+}
+
+function assertCanGrantRole(targetRole: PortalUserRole) {
+  const grantor: PortalRole = "PlatformAdmin";
+  if (!canGrantRole(grantor, targetRole)) {
+    throw new Error("Cannot assign a role higher than your own");
+  }
 }
 
 let instance: MockPortalDataSource | null = null;

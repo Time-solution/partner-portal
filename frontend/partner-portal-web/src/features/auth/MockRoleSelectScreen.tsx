@@ -1,6 +1,7 @@
 import { ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { BetaBadge } from "@/components/brand/BetaBadge";
 import { MockDataBanner } from "@/features/admin/components/MockDataBanner";
@@ -10,14 +11,19 @@ import { useTranslator } from "@/lib/i18n";
 
 interface MockRoleSelectScreenProps {
   lang: Lang;
+  toggleLang: () => void;
   onLogin: (role: PortalRole) => void;
 }
 
-export function MockRoleSelectScreen({ lang, onLogin }: MockRoleSelectScreenProps) {
+export function MockRoleSelectScreen({ lang, toggleLang, onLogin }: MockRoleSelectScreenProps) {
   const t = useTranslator(lang);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-10">
+    <div className="relative flex min-h-screen flex-col items-center justify-center bg-background px-4 py-10">
+      <div className="absolute top-4 end-4 z-10">
+        <LanguageToggle lang={lang} toggleLang={toggleLang} />
+      </div>
+
       <div className="w-full max-w-lg space-y-6">
         <div className="flex flex-col items-center gap-3 text-center">
           <BrandLogo variant="full" lang={lang} className="max-w-[200px]" />

@@ -8,27 +8,46 @@ import type { SubscriptionBillingPeriod } from "@/lib/data/types";
 import { PortalPermissions } from "@/lib/rbac/portalRoles";
 import { usePortalSession } from "@/features/auth/usePortalSession";
 import { PageHeader } from "../components/PageHeader";
-import type { Lang } from "@/lib/i18n";
 import { useTranslator } from "@/lib/i18n";
+import { billingPeriodStatusLabel } from "@/lib/i18n/domainLabels";
+import type { ModuleScopeProps } from "../moduleScope";
+import { filterByPartnerIds, useScopePartnerIds } from "../hooks/useScopePartnerIds";
 
-export function BillingPage({ lang }: { lang: Lang }) {
+type BillingPageProps = ModuleScopeProps & {
+  titleKey?: string;
+  descKey?: string;
+  invoicesOnly?: boolean;
+};
+
+export function BillingPage({
+  lang,
+  moduleId,
+  partnerId,
+  financeMode,
+  titleKey = "navBilling",
+  descKey = "billingDesc",
+  invoicesOnly = false,
+}: BillingPageProps) {
   const t = useTranslator(lang);
   const { scopedPartnerId, can } = usePortalSession();
+  const scopeIds = useScopePartnerIds(moduleId, partnerId ?? scopedPartnerId);
   const [periods, setPeriods] = useState<SubscriptionBillingPeriod[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const canManage = can(PortalPermissions.Billing.SetTerms);
-  const partnerId = scopedPartnerId ?? "22222222-2222-2222-2222-222222222004";
+  const canManage = can(PortalPermissions.Billing.SetTerms) && !financeMode;
+  const defaultPartnerId = scopedPartnerId ?? "22222222-2222-2222-2222-222222222004";
+  const showHeader = !moduleId && !partnerId && !financeMode;
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setPeriods(await getPortalDataSource().getBillingPeriods(scopedPartnerId));
+      const all = await getPortalDataSource().getBillingPeriods(partnerId ?? scopedPartnerId);
+      setPeriods(filterByPartnerIds(all, scopeIds));
     } finally {
       setLoading(false);
     }
-  }, [scopedPartnerId]);
+  }, [scopedPartnerId, partnerId, scopeIds?.join(",")]);
 
   useEffect(() => {
     void load();
@@ -47,21 +66,20 @@ export function BillingPage({ lang }: { lang: Lang }) {
   const advancePeriod = async () => {
     setBusyId("advance");
     try {
-      await getPortalDataSource().advanceBillingPeriod(partnerId);
+      await getPortalDataSource().advanceBillingPeriod(defaultPartnerId);
       await load();
     } finally {
       setBusyId(null);
     }
   };
 
+  const rows = invoicesOnly ? periods.filter((p) => p.invoiceNumber || p.status === "Invoiced") : periods;
+
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={t("navBilling" as never)}
-        description={t("billingDesc" as never)}
-        lang={lang}
-        showBeta
-      />
+      {showHeader ? (
+        <PageHeader title={t(titleKey as never)} description={t(descKey as never)} lang={lang} showBeta />
+      ) : null}
       {canManage ? (
         <Button variant="outline" disabled={busyId === "advance"} onClick={() => void advancePeriod()}>
           {t("billingAdvancePeriod" as never)}
@@ -69,7 +87,9 @@ export function BillingPage({ lang }: { lang: Lang }) {
       ) : null}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">{t("billingPeriodsTitle" as never)}</CardTitle>
+          <CardTitle className="text-lg">
+            {invoicesOnly ? t("invoicesListTitle" as never) : t("billingPeriodsTitle" as never)}
+          </CardTitle>
           <CardDescription className="text-base">{t("billingVatOnFee" as never)}</CardDescription>
         </CardHeader>
         <CardContent>
@@ -90,11 +110,13 @@ export function BillingPage({ lang }: { lang: Lang }) {
                     <th className="px-2 py-2.5 text-end font-medium">{t("colNetFee" as never)}</th>
                     <th className="px-2 py-2.5 font-medium">{t("colInvoice" as never)}</th>
                     <th className="px-2 py-2.5 font-medium">{t("colStatus" as never)}</th>
-                    <th className="px-2 py-2.5 font-medium">{t("colActions" as never)}</th>
+                    {!financeMode ? (
+                      <th className="px-2 py-2.5 font-medium">{t("colActions" as never)}</th>
+                    ) : null}
                   </tr>
                 </thead>
                 <tbody>
-                  {periods.map((p) => (
+                  {rows.map((p) => (
                     <tr key={p.id} className="border-b border-border/60">
                       <td className="px-2 py-2.5 font-medium">{p.periodKey}</td>
                       <td className="px-2 py-2.5">{p.merchantName}</td>
@@ -112,21 +134,25 @@ export function BillingPage({ lang }: { lang: Lang }) {
                         )}
                       </td>
                       <td className="px-2 py-2.5">
-                        <span className="rounded bg-muted px-2 py-0.5 text-sm">{p.status}</span>
+                        <span className="rounded bg-muted px-2 py-0.5 text-sm">
+                          {billingPeriodStatusLabel(lang, p.status)}
+                        </span>
                         {p.journalBalanced ? " ✓" : ""}
                       </td>
-                      <td className="px-2 py-2.5">
-                        {canManage && p.status === "Charged" ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={busyId === p.id}
-                            onClick={() => void generateInvoice(p.id)}
-                          >
-                            {t("billingGenerateInvoice" as never)}
-                          </Button>
-                        ) : null}
-                      </td>
+                      {!financeMode ? (
+                        <td className="px-2 py-2.5">
+                          {canManage && p.status === "Charged" ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={busyId === p.id}
+                              onClick={() => void generateInvoice(p.id)}
+                            >
+                              {t("billingGenerateInvoice" as never)}
+                            </Button>
+                          ) : null}
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 </tbody>

@@ -1,8 +1,11 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { Languages, LogOut, Moon, ShieldOff, Sun } from "lucide-react";
+import { LogOut, Moon, ShieldOff, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LanguageToggle } from "@/components/LanguageToggle";
+import { SessionIdleWarning } from "@/features/auth/SessionIdleWarning";
 import { usePortalSession } from "@/features/auth/usePortalSession";
+import { useSessionIdleLock } from "@/hooks/useSessionIdleLock";
 import { isMockDataSource } from "@/lib/data/config";
 import { useTranslator, type Lang } from "@/lib/i18n";
 import { PORTAL_ROLES, type PortalRole } from "@/lib/rbac/portalRoles";
@@ -27,8 +30,8 @@ export function AdminShell({ lang, toggleLang, theme, toggleTheme }: AdminShellP
   const location = useLocation();
 
   const visibleNav = useMemo(
-    () => filterNavByPermissions(adminNav, user?.permissions ?? []),
-    [user],
+    () => filterNavByPermissions(adminNav, user?.permissions ?? [], role),
+    [user, role],
   );
 
   const activeLabel = useMemo(() => {
@@ -36,9 +39,11 @@ export function AdminShell({ lang, toggleLang, theme, toggleTheme }: AdminShellP
     return match ? t(match.labelKey as never) : t("adminConsole");
   }, [location.pathname, visibleNav, t]);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     void logout();
-  };
+  }, [logout]);
+
+  const { showWarning, remainingMs, staySignedIn } = useSessionIdleLock(handleLogout);
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -94,10 +99,7 @@ export function AdminShell({ lang, toggleLang, theme, toggleTheme }: AdminShellP
               {t("mfaDisabled")}
             </span>
 
-            <Button variant="outline" size="sm" onClick={toggleLang} aria-label={t("toggleToEnglish")}>
-              <Languages className="h-4 w-4" aria-hidden="true" />
-              {t("toggleToEnglish")}
-            </Button>
+            <LanguageToggle lang={lang} toggleLang={toggleLang} />
 
             <Button variant="outline" size="icon" onClick={toggleTheme} aria-label={t("toggleTheme")}>
               {theme === "dark" ? (
@@ -123,6 +125,14 @@ export function AdminShell({ lang, toggleLang, theme, toggleTheme }: AdminShellP
           <AdminRoutes lang={lang} />
         </main>
       </div>
+
+      {showWarning ? (
+        <SessionIdleWarning
+          lang={lang}
+          remainingMs={remainingMs}
+          onStaySignedIn={staySignedIn}
+        />
+      ) : null}
     </div>
   );
 }

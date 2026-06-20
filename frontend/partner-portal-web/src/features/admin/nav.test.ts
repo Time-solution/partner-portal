@@ -8,7 +8,7 @@ describe("filterNavByPermissions", () => {
     expect(keys).toEqual([]);
   });
 
-  it("shows Partner Success Manager sections", () => {
+  it("shows Partner Success Manager module nav (not finance workspace)", () => {
     const granted = [
       PP.Dashboard.Read,
       PP.Partners.Read,
@@ -21,27 +21,26 @@ describe("filterNavByPermissions", () => {
       PP.Webhooks.Manage,
       PP.Credentials.Read,
     ];
-    const keys = filterNavByPermissions(adminNav, granted).map((item) => item.key);
-    expect(keys).toEqual([
-      "dashboard",
-      "partners",
-      "catalog",
-      "activations",
-      "reflected-orders",
-      "webhooks",
-      "credentials",
-    ]);
+    const keys = filterNavByPermissions(adminNav, granted, "PartnerSuccessManager").map(
+      (item) => item.key,
+    );
+    expect(keys).toContain("dashboard");
+    expect(keys).toContain("partners");
+    expect(keys).toContain("delivery-service");
+    expect(keys).toContain("commerce");
+    expect(keys).not.toContain("finance");
   });
 
   it("shows every item to Platform Admin (all portal permissions)", () => {
     const all = Object.values(PP).flatMap((g) => Object.values(g));
-    const keys = filterNavByPermissions(adminNav, all).map((item) => item.key);
+    const keys = filterNavByPermissions(adminNav, all, "PlatformAdmin").map((item) => item.key);
     expect(keys).toEqual(adminNav.map((item) => item.key));
   });
 
-  it("Accountant sees settlement and billing but not settings manage-only paths via nav", () => {
+  it("Accountant lands on finance workspace nav, not partner modules", () => {
     const granted = [
       PP.Dashboard.Read,
+      PP.Finance.Read,
       PP.Partners.Read,
       PP.Catalog.Read,
       PP.Activations.Read,
@@ -52,9 +51,9 @@ describe("filterNavByPermissions", () => {
       PP.Credentials.Read,
       PP.Settings.Read,
     ];
-    const keys = filterNavByPermissions(adminNav, granted).map((item) => item.key);
-    expect(keys).toContain("settlement");
-    expect(keys).toContain("billing");
-    expect(keys).not.toContain("reflected-orders");
+    const keys = filterNavByPermissions(adminNav, granted, "Accountant").map((item) => item.key);
+    expect(keys).toContain("finance");
+    expect(keys).not.toContain("delivery-service");
+    expect(keys).not.toContain("commerce");
   });
 });

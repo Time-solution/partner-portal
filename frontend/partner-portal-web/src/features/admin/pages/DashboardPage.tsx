@@ -1,25 +1,23 @@
-import { useEffect, useState } from "react";
-import { Loader2, TrendingUp, Users, Wallet, ShoppingCart } from "lucide-react";
+import { Loader2, RotateCcw, ShoppingCart, TrendingUp, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getPortalDataSource } from "@/lib/data";
-import type { DashboardKpis } from "@/lib/data/types";
+import { usePortalAnalytics } from "@/hooks/usePortalAnalytics";
+import { usePortalSession } from "@/features/auth/usePortalSession";
+import { canAccessPartnerModules } from "@/lib/rbac/partnerModules";
+import type { PortalRole } from "@/lib/rbac/portalRoles";
+import { PendingVsDoneChart } from "../components/charts/PendingVsDoneChart";
+import { SettlementTrendChart } from "../components/charts/SettlementTrendChart";
+import { TransactionsByModuleChart } from "../components/charts/TransactionsByModuleChart";
 import { PageHeader } from "../components/PageHeader";
 import type { Lang } from "@/lib/i18n";
 import { useTranslator } from "@/lib/i18n";
 
 export function DashboardPage({ lang }: { lang: Lang }) {
   const t = useTranslator(lang);
-  const [kpis, setKpis] = useState<DashboardKpis | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { role } = usePortalSession();
+  const { analytics, loading } = usePortalAnalytics();
+  const showCharts = canAccessPartnerModules(role as PortalRole);
 
-  useEffect(() => {
-    void getPortalDataSource()
-      .getDashboardKpis()
-      .then(setKpis)
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading || !kpis) {
+  if (loading || !analytics) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
@@ -28,16 +26,19 @@ export function DashboardPage({ lang }: { lang: Lang }) {
     );
   }
 
+  const { kpis } = analytics;
+
   const cards = [
-    { label: t("kpiPartners" as never), value: kpis.totalPartners, icon: Users },
+    { label: t("kpiPartners" as never), value: kpis.activePartners, icon: Users },
     { label: t("kpiActivations" as never), value: kpis.activeActivations, icon: TrendingUp },
-    { label: t("kpiSettlement" as never), value: `${kpis.settlementTotalSar.toFixed(2)} SAR`, icon: Wallet },
-    { label: t("kpiReflected" as never), value: kpis.reflectedOrdersCount, icon: ShoppingCart },
+    { label: t("kpiReflected" as never), value: kpis.reflectedOrders, icon: ShoppingCart },
+    { label: t("kpiReversals" as never), value: kpis.reversals, icon: RotateCcw },
   ];
 
   return (
     <div className="space-y-6">
       <PageHeader title={t("navDashboard" as never)} description={t("dashboardDesc" as never)} lang={lang} />
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map(({ label, value, icon: Icon }) => (
           <Card key={label}>
@@ -51,15 +52,16 @@ export function DashboardPage({ lang }: { lang: Lang }) {
           </Card>
         ))}
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t("kpiSubscriptionMtd" as never)}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-2xl font-bold tabular-nums">{kpis.subscriptionFeesMtd.toFixed(2)} SAR</p>
-          <p className="mt-1 text-xs text-muted-foreground">{t("mockSampleNotice" as never)}</p>
-        </CardContent>
-      </Card>
+
+      {showCharts ? (
+        <>
+          <TransactionsByModuleChart lang={lang} data={analytics.transactionsByModule} />
+          <div className="grid gap-6 xl:grid-cols-2">
+            <PendingVsDoneChart lang={lang} data={analytics.pendingVsDone} />
+            <SettlementTrendChart lang={lang} data={analytics.settlementTrend} />
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }

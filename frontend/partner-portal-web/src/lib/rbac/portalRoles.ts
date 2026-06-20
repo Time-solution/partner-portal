@@ -28,9 +28,11 @@ export const PortalPermissions = {
     SetTerms: "Zahy.Portal.Billing.SetTerms",
   },
   Reversals: { Read: "Zahy.Portal.Reversals.Read" },
+  Finance: { Read: "Zahy.Portal.Finance.Read" },
   Webhooks: { Read: "Zahy.Portal.Webhooks.Read", Manage: "Zahy.Portal.Webhooks.Manage" },
   Credentials: { Read: "Zahy.Portal.Credentials.Read", Rotate: "Zahy.Portal.Credentials.Rotate" },
   Settings: { Read: "Zahy.Portal.Settings.Read", Manage: "Zahy.Portal.Settings.Manage" },
+  Users: { Read: "Zahy.Portal.Users.Read", Manage: "Zahy.Portal.Users.Manage" },
   PartnerFinance: { ReadOwn: "Zahy.Portal.PartnerFinance.ReadOwn" },
 } as const;
 
@@ -40,6 +42,7 @@ export const rolePermissionMap: Record<PortalRole, readonly string[]> = {
   PlatformAdmin: ALL,
   Accountant: [
     PortalPermissions.Dashboard.Read,
+    PortalPermissions.Finance.Read,
     PortalPermissions.Partners.Read,
     PortalPermissions.Catalog.Read,
     PortalPermissions.Activations.Read,
@@ -95,4 +98,21 @@ export function permissionsForRole(role: PortalRole): readonly string[] {
 
 export function canDisburse(role: PortalRole): boolean {
   return role === "PlatformAdmin";
+}
+
+const ROLE_RANK: Record<PortalRole, number> = {
+  PartnerFinance: 1,
+  PartnerSuccessManager: 2,
+  Accountant: 3,
+  PlatformAdmin: 4,
+};
+
+/** PartnerFinance is the only role scoped to a single partner in the portal. */
+export function roleRequiresPartner(role: PortalRole): boolean {
+  return role === "PartnerFinance";
+}
+
+/** Lower roles cannot grant higher roles (PlatformAdmin may grant any). */
+export function canGrantRole(grantorRole: PortalRole, targetRole: PortalRole): boolean {
+  return ROLE_RANK[grantorRole] >= ROLE_RANK[targetRole];
 }

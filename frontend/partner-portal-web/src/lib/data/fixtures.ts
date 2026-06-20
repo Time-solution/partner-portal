@@ -23,7 +23,7 @@ export const deliveryJournal: SettlementJournal = {
 
 export const mockPortalData: PortalData = {
   kpis: {
-    totalPartners: 4,
+    totalPartners: 5,
     activeActivations: 2,
     settlementTotalSar: 13,
     reflectedOrdersCount: 2,
@@ -48,6 +48,7 @@ export const mockPortalData: PortalData = {
       status: "Active",
       primaryContactEmail: "integrations@hungerstation.com",
       participationMode: "ReflectionOnly",
+      marketplaceCategory: "fnb",
       accentClass: "border-l-orange-500",
     },
     {
@@ -58,6 +59,7 @@ export const mockPortalData: PortalData = {
       status: "Active",
       primaryContactEmail: "marketplace@noon.com",
       participationMode: "ReflectionOnly",
+      marketplaceCategory: "commerce",
       accentClass: "border-l-yellow-500",
     },
     {
@@ -69,6 +71,16 @@ export const mockPortalData: PortalData = {
       primaryContactEmail: "billing@jahez.sa",
       participationMode: "SubscriptionFee",
       accentClass: "border-l-sky-500",
+    },
+    {
+      id: "22222222-2222-2222-2222-222222222005",
+      legalName: "Zahy Supplier Marketplace KSA",
+      tradeName: "Supplier Hub",
+      type: "Marketplace",
+      status: "Active",
+      primaryContactEmail: "suppliers@zahy.sa",
+      participationMode: "Principal",
+      accentClass: "border-l-violet-500",
     },
   ],
   catalogItems: [
@@ -187,6 +199,26 @@ export const mockPortalData: PortalData = {
       journal: deliveryJournal,
       createdAt: "2026-06-18T14:22:00Z",
     },
+    {
+      id: "stl-case-7002",
+      partnerId: "22222222-2222-2222-2222-222222222001",
+      partnerName: "Salasa Delivery",
+      externalTransactionId: "order:ord-7002:v1",
+      book: "Marketplace",
+      state: "Invoiced",
+      journal: deliveryJournal,
+      createdAt: "2026-06-10T11:00:00Z",
+    },
+    {
+      id: "stl-case-7003",
+      partnerId: "22222222-2222-2222-2222-222222222001",
+      partnerName: "Salasa Delivery",
+      externalTransactionId: "order:ord-7003:v1",
+      book: "Marketplace",
+      state: "Cleared",
+      journal: deliveryJournal,
+      createdAt: "2026-06-05T09:30:00Z",
+    },
   ],
   reversals: [],
   reflectedOrders: [
@@ -286,6 +318,17 @@ export const mockPortalData: PortalData = {
       createdAt: "2026-06-18T09:00:00Z",
       updatedAt: "2026-06-18T09:15:00Z",
     },
+    {
+      id: "del-003",
+      endpointId: "wh-001",
+      partnerId: "22222222-2222-2222-2222-222222222001",
+      eventType: "order.reflected",
+      status: "Retrying",
+      attemptCount: 2,
+      responseCode: 502,
+      createdAt: "2026-06-19T15:00:00Z",
+      updatedAt: "2026-06-19T15:05:00Z",
+    },
   ],
   credentials: [
     {
@@ -336,6 +379,50 @@ export const mockPortalData: PortalData = {
       role: "Accountant",
       action: "Set billing terms",
       target: "act-002",
+    },
+  ],
+  users: [
+    {
+      id: "mock-PlatformAdmin",
+      name: "Admin User",
+      email: "admin@zahy.sa",
+      roles: ["PlatformAdmin"],
+      status: "Active",
+      lastLoginAt: "2026-06-19T08:00:00Z",
+    },
+    {
+      id: "mock-Accountant",
+      name: "Omar Finance",
+      email: "accountant@zahy.sa",
+      roles: ["Accountant"],
+      status: "Active",
+      lastLoginAt: "2026-06-19T07:30:00Z",
+    },
+    {
+      id: "mock-PartnerSuccessManager",
+      name: "Sara Al-Qahtani",
+      email: "psm@zahy.sa",
+      roles: ["PartnerSuccessManager"],
+      status: "Active",
+      lastLoginAt: "2026-06-18T16:00:00Z",
+    },
+    {
+      id: "mock-PartnerFinance",
+      name: "Partner Finance",
+      email: "finance@partner.sa",
+      roles: ["PartnerFinance"],
+      partnerId: "22222222-2222-2222-2222-222222222004",
+      partnerName: "Jahez Channel",
+      status: "Active",
+      lastLoginAt: "2026-06-18T14:00:00Z",
+    },
+    {
+      id: "user-invited-001",
+      name: "Layla Analyst",
+      email: "layla.analyst@zahy.sa",
+      roles: ["Accountant"],
+      status: "Invited",
+      invitedAt: "2026-06-17T11:00:00Z",
     },
   ],
 };

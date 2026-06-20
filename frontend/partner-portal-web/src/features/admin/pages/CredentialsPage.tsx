@@ -62,6 +62,7 @@ export function CredentialsPage({ lang }: { lang: Lang }) {
 
       {revealedSecret ? (
         <SecretReveal
+          lang={lang}
           label={t("credentialsSecretLabel" as never)}
           secret={revealedSecret.secret}
           warning={t("credentialsSecretOnce" as never)}
@@ -99,7 +100,7 @@ export function CredentialsPage({ lang }: { lang: Lang }) {
                         size="icon"
                         variant="ghost"
                         className="h-8 w-8"
-                        aria-label="Copy client ID"
+                        aria-label={t("copyClientId" as never)}
                         onClick={() => void copyClientId(cred.clientId)}
                       >
                         <Copy className="h-4 w-4" />

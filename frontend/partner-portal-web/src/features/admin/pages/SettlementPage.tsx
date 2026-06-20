@@ -8,12 +8,15 @@ import { canDisburse } from "@/lib/rbac/portalRoles";
 import { usePortalSession } from "@/features/auth/usePortalSession";
 import { JournalTable } from "../components/JournalTable";
 import { PageHeader } from "../components/PageHeader";
-import type { Lang } from "@/lib/i18n";
 import { useTranslator } from "@/lib/i18n";
+import { settlementBookLabel, settlementStateLabel } from "@/lib/i18n/domainLabels";
+import type { ModuleScopeProps } from "../moduleScope";
+import { filterByPartnerIds, useScopePartnerIds } from "../hooks/useScopePartnerIds";
 
-export function SettlementPage({ lang }: { lang: Lang }) {
+export function SettlementPage({ lang, moduleId, partnerId, financeMode }: ModuleScopeProps) {
   const t = useTranslator(lang);
   const { role, scopedPartnerId } = usePortalSession();
+  const scopeIds = useScopePartnerIds(moduleId, partnerId ?? scopedPartnerId);
   const [cases, setCases] = useState<SettlementCase[]>([]);
   const [reversedIds, setReversedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -24,22 +27,24 @@ export function SettlementPage({ lang }: { lang: Lang }) {
     try {
       const ds = getPortalDataSource();
       const [caseList, reversals] = await Promise.all([
-        ds.getSettlementCases(scopedPartnerId),
-        ds.getReversals(scopedPartnerId),
+        ds.getSettlementCases(scopedPartnerId ?? partnerId),
+        ds.getReversals(scopedPartnerId ?? partnerId),
       ]);
-      setCases(caseList);
+      setCases(filterByPartnerIds(caseList, scopeIds));
       setReversedIds(new Set(reversals.map((r) => r.originalCaseId)));
     } finally {
       setLoading(false);
     }
-  }, [scopedPartnerId]);
+  }, [scopedPartnerId, partnerId, scopeIds?.join(",")]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const showDisburse = canDisburse(role as never);
-  const canReverse = role === "PlatformAdmin" || role === "Accountant";
+  const showDisburse = canDisburse(role as never) && !financeMode;
+  const canReverse =
+    !financeMode && (role === "PlatformAdmin" || role === "Accountant");
+  const showHeader = !moduleId && !partnerId && !financeMode;
 
   const triggerReversal = async (caseId: string) => {
     setBusyId(caseId);
@@ -53,12 +58,14 @@ export function SettlementPage({ lang }: { lang: Lang }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={t("navSettlement" as never)}
-        description={t("settlementDesc" as never)}
-        lang={lang}
-        showBeta
-      />
+      {showHeader ? (
+        <PageHeader
+          title={t("navSettlement" as never)}
+          description={t("settlementDesc" as never)}
+          lang={lang}
+          showBeta
+        />
+      ) : null}
       {loading ? (
         <div className="flex items-center gap-2 text-base text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" />
@@ -75,7 +82,8 @@ export function SettlementPage({ lang }: { lang: Lang }) {
                   <div>
                     <CardTitle className="text-lg">{c.partnerName}</CardTitle>
                     <CardDescription className="text-base">
-                      {c.externalTransactionId} · {c.state} · {c.book}
+                      {c.externalTransactionId} · {settlementStateLabel(lang, c.state)} ·{" "}
+                      {settlementBookLabel(lang, c.book)}
                     </CardDescription>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -123,7 +131,7 @@ export function SettlementPage({ lang }: { lang: Lang }) {
                       <dd className="font-medium tabular-nums">{summary.netVatToZatca.toFixed(2)} SAR</dd>
                     </div>
                   </dl>
-                  <JournalTable lines={c.journal.lines} caption={t("settlementJournalCaption" as never)} />
+                  <JournalTable lang={lang} lines={c.journal.lines} caption={t("settlementJournalCaption" as never)} />
                 </CardContent>
               </Card>
             );

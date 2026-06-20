@@ -1,25 +1,34 @@
 import { NavLink } from "react-router-dom";
-import { getPartnerSubTabs } from "@/lib/rbac/partnerNav";
 import type { Partner } from "@/lib/data/types";
+import {
+  getVisibleModuleScreens,
+  resolvePartnerModule,
+} from "@/lib/rbac/partnerModules";
+import { usePortalSession } from "@/features/auth/usePortalSession";
 import type { Lang } from "@/lib/i18n";
+import { useTranslator } from "@/lib/i18n";
 
 interface PartnerSubNavProps {
   partner: Partner;
   lang: Lang;
 }
 
+/** Partner detail sub-nav — driven by business module config map. */
 export function PartnerSubNav({ partner, lang }: PartnerSubNavProps) {
-  const tabs = getPartnerSubTabs(partner.type, partner.participationMode);
+  const t = useTranslator(lang);
+  const { user } = usePortalSession();
+  const moduleId = resolvePartnerModule(partner);
+  const screens = getVisibleModuleScreens(moduleId, user?.permissions ?? []);
 
   return (
     <nav
       className="flex flex-wrap gap-1 border-b border-border pb-2"
-      aria-label={lang === "ar" ? "أقسام الشريك" : "Partner sections"}
+      aria-label={t("partnerSectionsNav" as never)}
     >
-      {tabs.map((tab) => (
+      {screens.map((screen) => (
         <NavLink
-          key={tab.key}
-          to={`/partners/${partner.id}/${tab.path}`}
+          key={screen.id}
+          to={`/partners/${partner.id}/${screen.path}`}
           end={false}
           className={({ isActive }) =>
             [
@@ -30,7 +39,7 @@ export function PartnerSubNav({ partner, lang }: PartnerSubNavProps) {
             ].join(" ")
           }
         >
-          {lang === "ar" ? tab.labelAr : tab.labelEn}
+          {t(screen.labelKey as never)}
         </NavLink>
       ))}
     </nav>

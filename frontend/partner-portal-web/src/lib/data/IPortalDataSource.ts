@@ -11,6 +11,9 @@ import type {
   SettlementReversal,
   SubscriptionBillingPeriod,
   PortalTeam,
+  PortalUser,
+  CreatePortalUserInput,
+  UpdatePortalUserInput,
   WebhookDelivery,
   WebhookEndpoint,
 } from "./types";
@@ -41,6 +44,9 @@ export interface IPortalDataSource {
   getPartnerCredentials(partnerId?: string): Promise<PartnerCredential[]>;
   getTeams(): Promise<PortalTeam[]>;
   getAuditLog(): Promise<AuditEntry[]>;
+  listUsers(): Promise<PortalUser[]>;
+  createUser(input: CreatePortalUserInput): Promise<PortalUser>;
+  updateUser(id: string, input: UpdatePortalUserInput): Promise<PortalUser>;
   getAll(): Promise<PortalData>;
 
   /** Activation workflow — view layer transitions. */

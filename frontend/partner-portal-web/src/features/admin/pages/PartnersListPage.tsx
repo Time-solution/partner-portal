@@ -4,10 +4,11 @@ import { ChevronRight, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getPortalDataSource } from "@/lib/data";
 import type { Partner } from "@/lib/data/types";
-import { partnerTypeLabel } from "@/lib/rbac/partnerNav";
+import { moduleLabelKey, resolvePartnerModule } from "@/lib/rbac/partnerModules";
 import { PageHeader } from "../components/PageHeader";
 import type { Lang } from "@/lib/i18n";
 import { useTranslator } from "@/lib/i18n";
+import { partnerStatusLabel } from "@/lib/i18n/domainLabels";
 
 export function PartnersListPage({ lang }: { lang: Lang }) {
   const t = useTranslator(lang);
@@ -46,10 +47,10 @@ export function PartnersListPage({ lang }: { lang: Lang }) {
                     <div className="min-w-0 flex-1">
                       <p className="font-medium">{p.tradeName ?? p.legalName}</p>
                       <p className="text-xs text-muted-foreground">
-                        {partnerTypeLabel(p.type, lang)} · {p.participationMode}
+                        {t(moduleLabelKey(resolvePartnerModule(p)) as never)} ·{" "}
+                        {partnerStatusLabel(lang, p.status)}
                       </p>
                     </div>
-                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs">{p.status}</span>
                     <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                   </Link>
                 </li>
