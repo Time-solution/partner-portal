@@ -12,8 +12,11 @@ import {
 } from "@/lib/rbac/roleNavConfig";
 import { usePortalSession } from "@/features/auth/usePortalSession";
 import type { PortalRole } from "@/lib/rbac/portalRoles";
+import { OrgPermissions, type OrgPermission } from "@/lib/org/orgModel";
 import type { Lang } from "@/lib/i18n";
 import { DashboardPage } from "./pages/DashboardPage";
+import { OrgAccountsPage } from "./pages/OrgAccountsPage";
+import { OrgUsersPage } from "./pages/OrgUsersPage";
 import { PartnersListPage } from "./pages/PartnersListPage";
 import { PartnerDetailPage } from "./pages/PartnerDetailPage";
 import { PartnerModulePage } from "./pages/PartnerModulePage";
@@ -37,6 +40,20 @@ function RequirePermission({
 }) {
   const { canAny } = usePortalSession();
   if (!canAny(permissions)) {
+    return <RoleFallback />;
+  }
+  return <>{children}</>;
+}
+
+function RequireOrgPermission({
+  permission,
+  children,
+}: {
+  permission: OrgPermission;
+  children: React.ReactNode;
+}) {
+  const { orgCan } = usePortalSession();
+  if (!orgCan || !orgCan(permission)) {
     return <RoleFallback />;
   }
   return <>{children}</>;
@@ -184,6 +201,23 @@ export function AdminRoutes({ lang }: { lang: Lang }) {
             >
               <PartnerDetailPage lang={lang} />
             </RequirePermission>
+          }
+        />
+
+        <Route
+          path="/orgs"
+          element={
+            <RequireOrgPermission permission={OrgPermissions.OrgAccountsCreate}>
+              <OrgAccountsPage lang={lang} />
+            </RequireOrgPermission>
+          }
+        />
+        <Route
+          path="/org-users"
+          element={
+            <RequireOrgPermission permission={OrgPermissions.UsersManage}>
+              <OrgUsersPage lang={lang} />
+            </RequireOrgPermission>
           }
         />
 

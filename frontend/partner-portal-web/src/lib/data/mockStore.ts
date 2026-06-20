@@ -24,10 +24,19 @@ export function clearPersistedData(): void {
 export function loadOrSeedData(): PortalData {
   const persisted = loadPersistedData();
   if (!persisted) return createSeedData();
+  let migrated = false;
   if (!persisted.users) {
     persisted.users = createSeedData().users;
-    savePersistedData(persisted);
+    migrated = true;
   }
+  // Multi-org migration for demos persisted before orgs/orgUsers existed.
+  if (!persisted.orgs || !persisted.orgUsers) {
+    const seed = createSeedData();
+    persisted.orgs = persisted.orgs ?? seed.orgs;
+    persisted.orgUsers = persisted.orgUsers ?? seed.orgUsers;
+    migrated = true;
+  }
+  if (migrated) savePersistedData(persisted);
   return persisted;
 }
 

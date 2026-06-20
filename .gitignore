@@ -54,6 +54,12 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Local dev-server / tooling scratch logs (never commit)
+vite-dev.txt
+tsc-out.txt
+test-out.txt
+build-out.txt
+
 # ----- OS / misc -----------------------------------------------------------
 .DS_Store
 Thumbs.db

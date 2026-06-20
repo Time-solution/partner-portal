@@ -6,14 +6,12 @@ import { LoginScreen } from "@/features/auth/LoginScreen";
 import { AdminShell } from "@/features/admin/AdminShell";
 import { AuthProvider, useAuth } from "@/features/auth/AuthContext";
 import { MockPortalAuthProvider } from "@/features/auth/MockPortalAuth";
-import { MockRoleSelectScreen } from "@/features/auth/MockRoleSelectScreen";
+import { MockLoginScreen } from "@/features/auth/MockLoginScreen";
 import { useMockPortalAuthState } from "@/features/auth/usePortalSession";
 import { isMockDataSource } from "@/lib/data/config";
 import { useTheme } from "@/hooks/useTheme";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useTranslator } from "@/lib/i18n";
-import { defaultLandingPath } from "@/lib/rbac/roleNavConfig";
-import type { PortalRole } from "@/lib/rbac/portalRoles";
 import { Loader2 } from "lucide-react";
 
 function LiveAppContent() {
@@ -59,7 +57,7 @@ function LiveAppContent() {
   );
 }
 
-function MockRoleSelectRoute({
+function MockLoginRoute({
   lang,
   toggleLang,
 }: {
@@ -67,16 +65,12 @@ function MockRoleSelectRoute({
   toggleLang: () => void;
 }) {
   const navigate = useNavigate();
-  const { login } = useMockPortalAuthState();
 
   return (
-    <MockRoleSelectScreen
+    <MockLoginScreen
       lang={lang}
       toggleLang={toggleLang}
-      onLogin={(role: PortalRole) => {
-        login(role);
-        navigate(defaultLandingPath(role), { replace: true });
-      }}
+      onSuccess={(landing: string) => navigate(landing, { replace: true })}
     />
   );
 }
@@ -91,7 +85,7 @@ function MockAppContent() {
       {isAuthenticated ? (
         <AdminShell lang={lang} toggleLang={toggleLang} theme={theme} toggleTheme={toggleTheme} />
       ) : (
-        <MockRoleSelectRoute lang={lang} toggleLang={toggleLang} />
+        <MockLoginRoute lang={lang} toggleLang={toggleLang} />
       )}
     </BrowserRouter>
   );

@@ -80,14 +80,19 @@ export const ADMIN_ONLY_PATH_PREFIXES = [
 export function isPathAllowedForRole(pathname: string, role: PortalRole): boolean {
   const experience = roleExperience(role);
 
+  // Self-service org users area is reachable by any signed-in org admin (org-permission gated downstream).
+  const orgUsers = pathname === "/org-users" || pathname.startsWith("/org-users/");
+
   if (experience === "admin") return true;
 
   if (experience === "merchant") {
-    return pathname === "/merchant-preview" || pathname.startsWith("/merchant-preview/");
+    return (
+      pathname === "/merchant-preview" || pathname.startsWith("/merchant-preview/") || orgUsers
+    );
   }
 
   if (experience === "finance") {
-    return pathname.startsWith("/finance") || pathname.startsWith("/settings");
+    return pathname.startsWith("/finance") || pathname.startsWith("/settings") || orgUsers;
   }
 
   if (experience === "partner") {
@@ -96,7 +101,7 @@ export function isPathAllowedForRole(pathname: string, role: PortalRole): boolea
     const webhooks = pathname === "/webhooks" || pathname.startsWith("/webhooks/");
     const credentials = pathname === "/credentials" || pathname.startsWith("/credentials/");
     const partnerAlias = pathname === "/partner" || pathname.startsWith("/partner/");
-    return ownPartner || webhooks || credentials || partnerAlias;
+    return ownPartner || webhooks || credentials || partnerAlias || orgUsers;
   }
 
   return false;

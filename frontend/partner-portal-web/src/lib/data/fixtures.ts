@@ -1,10 +1,16 @@
-import type { PortalData, SettlementJournal } from "./types";
+import type { Org, OrgUser, PortalData, SettlementJournal } from "./types";
+import { OrgPermissions, presetPermissions } from "@/lib/org/orgModel";
 
 const sar = (amount: number, vatInclusive = true) => ({
   amount,
   currency: "SAR",
   vatInclusive,
 });
+
+const PARTNER_SALASA = "22222222-2222-2222-2222-222222222001";
+const PARTNER_JAHEZ = "22222222-2222-2222-2222-222222222004";
+const TENANT_ALNOOR = "11111111-1111-1111-1111-111111111001";
+const TENANT_QUICKBITES = "11111111-1111-1111-1111-111111111003";
 
 /** Principal delivery journal — buy 10 → sell 13 (accountant-approved mock). */
 export const deliveryJournal: SettlementJournal = {
@@ -215,6 +221,7 @@ export const mockPortalData: PortalData = {
       id: "stl-case-7001",
       partnerId: "22222222-2222-2222-2222-222222222001",
       partnerName: "Salasa Delivery",
+      tenantId: "11111111-1111-1111-1111-111111111001",
       externalTransactionId: "order:ord-7001:v1",
       book: "Marketplace",
       state: "Allocated",
@@ -225,6 +232,7 @@ export const mockPortalData: PortalData = {
       id: "stl-case-7002",
       partnerId: "22222222-2222-2222-2222-222222222001",
       partnerName: "Salasa Delivery",
+      tenantId: "11111111-1111-1111-1111-111111111001",
       externalTransactionId: "order:ord-7002:v1",
       book: "Marketplace",
       state: "Invoiced",
@@ -235,6 +243,7 @@ export const mockPortalData: PortalData = {
       id: "stl-case-7003",
       partnerId: "22222222-2222-2222-2222-222222222001",
       partnerName: "Salasa Delivery",
+      tenantId: "11111111-1111-1111-1111-111111111001",
       externalTransactionId: "order:ord-7003:v1",
       book: "Marketplace",
       state: "Cleared",
@@ -271,6 +280,7 @@ export const mockPortalData: PortalData = {
     {
       id: "bill-2026-06",
       partnerId: "22222222-2222-2222-2222-222222222004",
+      tenantId: "11111111-1111-1111-1111-111111111003",
       merchantName: "Quick Bites Co.",
       periodKey: "2026-06",
       feeInclusive: sar(115),
@@ -284,6 +294,7 @@ export const mockPortalData: PortalData = {
     {
       id: "bill-2026-07",
       partnerId: "22222222-2222-2222-2222-222222222004",
+      tenantId: "11111111-1111-1111-1111-111111111003",
       merchantName: "Quick Bites Co.",
       periodKey: "2026-07",
       feeInclusive: sar(115),
@@ -447,7 +458,103 @@ export const mockPortalData: PortalData = {
       invitedAt: "2026-06-17T11:00:00Z",
     },
   ],
+  orgs: seedOrgs(),
+  orgUsers: seedOrgUsers(),
 };
+
+function seedOrgs(): Org[] {
+  const at = "2026-05-01T08:00:00Z";
+  return [
+    { id: "org-platform", level: "Platform", name: "Zahy Platform", status: "Active", createdAt: at },
+    {
+      id: "org-partner-salasa",
+      level: "Partner",
+      name: "Salasa Delivery",
+      partnerId: PARTNER_SALASA,
+      status: "Active",
+      createdAt: at,
+    },
+    {
+      id: "org-partner-jahez",
+      level: "Partner",
+      name: "Jahez Channel",
+      partnerId: PARTNER_JAHEZ,
+      status: "Active",
+      createdAt: at,
+    },
+    {
+      id: "org-merchant-alnoor",
+      level: "Merchant",
+      name: "Al Noor Restaurant",
+      tenantId: TENANT_ALNOOR,
+      status: "Active",
+      createdAt: at,
+    },
+    {
+      id: "org-merchant-quickbites",
+      level: "Merchant",
+      name: "Quick Bites Co.",
+      tenantId: TENANT_QUICKBITES,
+      status: "Active",
+      createdAt: at,
+    },
+  ];
+}
+
+function seedOrgUsers(): OrgUser[] {
+  const at = "2026-05-02T08:00:00Z";
+  return [
+    {
+      id: "ou-platform-admin",
+      orgId: "org-platform",
+      name: "Admin User",
+      email: "admin@zahy.sa",
+      rolePreset: "PlatformAdmin",
+      permissions: presetPermissions("Platform", "PlatformAdmin"),
+      status: "Active",
+      lastLoginAt: "2026-06-19T08:00:00Z",
+    },
+    {
+      id: "ou-platform-accountant",
+      orgId: "org-platform",
+      name: "Omar Finance",
+      email: "accountant@zahy.sa",
+      rolePreset: "Accountant",
+      permissions: presetPermissions("Platform", "Accountant"),
+      status: "Active",
+      lastLoginAt: "2026-06-19T07:30:00Z",
+    },
+    {
+      id: "ou-salasa-admin",
+      orgId: "org-partner-salasa",
+      name: "Salasa Owner",
+      email: "owner@salasa.sa",
+      rolePreset: "PartnerAdmin",
+      permissions: presetPermissions("Partner", "PartnerAdmin"),
+      status: "Active",
+    },
+    {
+      id: "ou-jahez-finance",
+      orgId: "org-partner-jahez",
+      name: "Jahez Finance",
+      email: "finance@jahez.sa",
+      rolePreset: "PartnerFinance",
+      // Per-user override demo: add Webhooks.Manage on top of the finance preset.
+      permissions: [...presetPermissions("Partner", "PartnerFinance"), OrgPermissions.WebhooksManage],
+      status: "Active",
+      lastLoginAt: at,
+    },
+    {
+      id: "ou-quickbites-admin",
+      orgId: "org-merchant-quickbites",
+      name: "Quick Bites Owner",
+      email: "owner@quickbites.sa",
+      rolePreset: "MerchantAdmin",
+      permissions: presetPermissions("Merchant", "MerchantAdmin"),
+      status: "Active",
+    },
+  ];
+}
 
 export function createSeedData(): PortalData {
   return structuredClone(mockPortalData);

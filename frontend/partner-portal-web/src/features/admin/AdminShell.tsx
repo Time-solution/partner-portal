@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { LogOut, Moon, ShieldOff, Sun } from "lucide-react";
+import { Building2, LogOut, Moon, ShieldOff, Sun, Users } from "lucide-react";
+import { OrgPermissions } from "@/lib/org/orgModel";
 import { Button } from "@/components/ui/button";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { SessionIdleWarning } from "@/features/auth/SessionIdleWarning";
@@ -39,14 +40,21 @@ function navItemActive(
 export function AdminShell({ lang, toggleLang, theme, toggleTheme }: AdminShellProps) {
   const t = useTranslator(lang);
   const navigate = useNavigate();
-  const { user, role, scopedPartnerId, setRole, logout } = usePortalSession();
+  const { user, role, scopedPartnerId, setRole, logout, org, orgCan } = usePortalSession();
   const location = useLocation();
   const experience = roleExperience(role as PortalRole);
 
-  const visibleNav = useMemo(
-    () => navForRole(role as PortalRole, user?.permissions ?? [], scopedPartnerId),
-    [user, role, scopedPartnerId],
-  );
+  const visibleNav = useMemo(() => {
+    const base = navForRole(role as PortalRole, user?.permissions ?? [], scopedPartnerId);
+    const orgItems: { key: string; path: string; labelKey: string; icon: typeof Building2 }[] = [];
+    if (orgCan?.(OrgPermissions.OrgAccountsCreate)) {
+      orgItems.push({ key: "orgs", path: "/orgs", labelKey: "navOrgs", icon: Building2 });
+    }
+    if (org && org.level !== "Platform" && orgCan?.(OrgPermissions.UsersManage)) {
+      orgItems.push({ key: "org-users", path: "/org-users", labelKey: "navOrgUsers", icon: Users });
+    }
+    return [...base, ...orgItems];
+  }, [user, role, scopedPartnerId, org, orgCan]);
 
   const handleRoleChange = useCallback(
     (next: PortalRole) => {

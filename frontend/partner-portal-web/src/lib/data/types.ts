@@ -1,3 +1,7 @@
+import type { Org, OrgLevel, OrgUser } from "@/lib/org/orgModel";
+
+export type { Org, OrgLevel, OrgUser } from "@/lib/org/orgModel";
+
 export type PartnerType =
   | "Marketplace"
   | "Service"
@@ -119,6 +123,8 @@ export interface SettlementCase {
   id: string;
   partnerId: string;
   partnerName: string;
+  /** Merchant party of the bridged activation — drives shared-flow visibility. */
+  tenantId?: string;
   externalTransactionId: string;
   book: "Marketplace" | "Integration";
   state: SettlementCaseState;
@@ -132,6 +138,8 @@ export interface SettlementReversal {
   originalCaseId: string;
   partnerId: string;
   partnerName: string;
+  /** Inherited from the original case's activation party. */
+  tenantId?: string;
   orderLineId: string;
   journal: SettlementJournal;
   netsToZero: boolean;
@@ -153,6 +161,8 @@ export interface ReflectedPartnerOrder {
 export interface SubscriptionBillingPeriod {
   id: string;
   partnerId: string;
+  /** Merchant party of the bridged activation — drives shared-flow visibility. */
+  tenantId?: string;
   merchantName: string;
   periodKey: string;
   feeInclusive: Money;
@@ -281,6 +291,47 @@ export interface PortalData {
   teams: PortalTeam[];
   auditLog: AuditEntry[];
   users: PortalUser[];
+  /** Multi-org accounts (Platform / Partner / Merchant) + their self-managed users. */
+  orgs: Org[];
+  orgUsers: OrgUser[];
+}
+
+/** Central-admin creates a Partner or Merchant org account after approval. */
+export interface CreateOrgAccountInput {
+  level: Exclude<OrgLevel, "Platform">;
+  name: string;
+  /** Required for Partner orgs — the approved Partner.Id. */
+  partnerId?: string;
+  /** Required for Merchant orgs — the merchant TenantId. */
+  tenantId?: string;
+  /** Optional first admin user for the new org. */
+  adminName?: string;
+  adminEmail?: string;
+}
+
+export interface CreateOrgUserInput {
+  name: string;
+  email: string;
+  rolePreset: string;
+  /** Optional per-user overrides on top of the preset (defaults to preset permissions). */
+  permissions?: string[];
+}
+
+export interface UpdateOrgUserInput {
+  name?: string;
+  email?: string;
+  rolePreset?: string;
+  permissions?: string[];
+  status?: OrgUser["status"];
+}
+
+/** Demo-account hint surfaced on the mock login screen. */
+export interface LoginAccount {
+  email: string;
+  name: string;
+  orgName: string;
+  level: OrgLevel;
+  rolePreset: string;
 }
 
 /** Derive display summary from journal lines (Principal delivery pattern). */

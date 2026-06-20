@@ -3,7 +3,10 @@ import { loadOrSeedData, resetToSeedData, savePersistedData } from "./mockStore"
 import type {
   ActivationWorkflowState,
   AuditEntry,
+  CreateOrgAccountInput,
+  CreateOrgUserInput,
   CreatePortalUserInput,
+  LoginAccount,
   MerchantActivation,
   MerchantActivationRow,
   PortalData,
@@ -11,6 +14,7 @@ import type {
   PortalUserRole,
   SettlementReversal,
   SubscriptionBillingPeriod,
+  UpdateOrgUserInput,
   UpdatePortalUserInput,
   WebhookDelivery,
   WebhookEndpoint,
@@ -18,6 +22,16 @@ import type {
 import { invertJournal } from "./types";
 import { notifyPortalDataChanged } from "./portalDataEvents";
 import { canGrantRole, roleRequiresPartner, type PortalRole } from "@/lib/rbac/portalRoles";
+import {
+  orgContextFromOrg,
+  presetPermissions,
+  presetsForLevel,
+  sanitizePermissionsForLevel,
+  type Org,
+  type OrgContext,
+  type OrgUser,
+} from "@/lib/org/orgModel";
+import { scopePortalData } from "@/lib/org/orgScope";
 
 const delay = (ms = 80) => new Promise((r) => setTimeout(r, ms));
 
@@ -70,6 +84,8 @@ function row(data: PortalData, activation: MerchantActivation): MerchantActivati
 
 export class MockPortalDataSource implements IPortalDataSource {
   private data: PortalData;
+  /** Active org scope — when set, every READ is filtered through the proven scope engine. */
+  private activeScope: OrgContext | null = null;
 
   constructor() {
     this.data = loadOrSeedData();
@@ -82,92 +98,96 @@ export class MockPortalDataSource implements IPortalDataSource {
     notifyPortalDataChanged();
   }
 
+  /** Set/clear the org scope applied to all reads (login sets it, logout clears it). */
+  setActiveScope(ctx: OrgContext | null) {
+    this.activeScope = ctx;
+  }
+
+  /** The scoped data view for the current org (strict isolation + shared activation bridge). */
+  private view(): PortalData {
+    return this.activeScope ? scopePortalData(this.data, this.activeScope) : this.data;
+  }
+
   async getDashboardKpis() {
     await delay();
-    return { ...this.data.kpis };
+    return { ...this.view().kpis };
   }
 
   async getPartners() {
     await delay();
-    return [...this.data.partners];
+    return [...this.view().partners];
   }
 
   async getPartner(id: string) {
     await delay();
-    return this.data.partners.find((p) => p.id === id);
+    return this.view().partners.find((p) => p.id === id);
   }
 
   async getCatalogItems(partnerId?: string) {
     await delay();
-    return partnerId
-      ? this.data.catalogItems.filter((i) => i.partnerId === partnerId)
-      : [...this.data.catalogItems];
+    const items = this.view().catalogItems;
+    return partnerId ? items.filter((i) => i.partnerId === partnerId) : [...items];
   }
 
   async getActivations(partnerId?: string) {
     await delay();
+    const view = this.view();
     const list = partnerId
-      ? this.data.activations.filter((a) => a.partnerId === partnerId)
-      : this.data.activations;
-    return list.map((a) => row(this.data, a));
+      ? view.activations.filter((a) => a.partnerId === partnerId)
+      : view.activations;
+    return list.map((a) => row(view, a));
   }
 
   async getSettlementCases(partnerId?: string) {
     await delay();
-    const cases = this.data.settlementCases.filter((c) => !c.reversesSettlementCaseId);
+    const cases = this.view().settlementCases.filter((c) => !c.reversesSettlementCaseId);
     return partnerId ? cases.filter((c) => c.partnerId === partnerId) : [...cases];
   }
 
   async getReversals(partnerId?: string) {
     await delay();
-    return partnerId
-      ? this.data.reversals.filter((r) => r.partnerId === partnerId)
-      : [...this.data.reversals];
+    const items = this.view().reversals;
+    return partnerId ? items.filter((r) => r.partnerId === partnerId) : [...items];
   }
 
   async getReflectedOrders(partnerId?: string) {
     await delay();
-    return partnerId
-      ? this.data.reflectedOrders.filter((o) => o.partnerId === partnerId)
-      : [...this.data.reflectedOrders];
+    const items = this.view().reflectedOrders;
+    return partnerId ? items.filter((o) => o.partnerId === partnerId) : [...items];
   }
 
   async getBillingPeriods(partnerId?: string) {
     await delay();
-    return partnerId
-      ? this.data.billingPeriods.filter((b) => b.partnerId === partnerId)
-      : [...this.data.billingPeriods];
+    const items = this.view().billingPeriods;
+    return partnerId ? items.filter((b) => b.partnerId === partnerId) : [...items];
   }
 
   async getWebhookEndpoints(partnerId?: string) {
     await delay();
-    return partnerId
-      ? this.data.webhookEndpoints.filter((w) => w.partnerId === partnerId)
-      : [...this.data.webhookEndpoints];
+    const items = this.view().webhookEndpoints;
+    return partnerId ? items.filter((w) => w.partnerId === partnerId) : [...items];
   }
 
   async getWebhookDeliveries(endpointId?: string) {
     await delay();
-    return endpointId
-      ? this.data.webhookDeliveries.filter((d) => d.endpointId === endpointId)
-      : [...this.data.webhookDeliveries];
+    const items = this.view().webhookDeliveries;
+    return endpointId ? items.filter((d) => d.endpointId === endpointId) : [...items];
   }
 
   async getPartnerCredentials(partnerId?: string) {
     await delay();
-    return partnerId
-      ? this.data.credentials.filter((c) => c.partnerId === partnerId)
-      : [...this.data.credentials];
+    const items = this.view().credentials;
+    return partnerId ? items.filter((c) => c.partnerId === partnerId) : [...items];
   }
 
   async getTeams() {
     await delay();
-    return [...this.data.teams];
+    return [...this.view().teams];
   }
 
   async getAuditLog() {
     await delay();
-    return [...this.data.auditLog];
+    return [...this.view().auditLog];
   }
 
   async listUsers() {
@@ -289,7 +309,215 @@ export class MockPortalDataSource implements IPortalDataSource {
 
   async getAll() {
     await delay();
-    return structuredClone(this.data);
+    return structuredClone(this.view());
+  }
+
+  /* ---- Multi-org: scope-aware data + self-service users ---- */
+
+  async getScopedData(ctx: OrgContext) {
+    await delay();
+    return scopePortalData(structuredClone(this.data), ctx);
+  }
+
+  /** Mock email/password auth — matches a seeded org user (password is not checked in mock). */
+  async authenticate(email: string) {
+    await delay();
+    const normalized = normalizeEmail(email);
+    const user = this.data.orgUsers.find((u) => normalizeEmail(u.email) === normalized);
+    if (!user || user.status === "Suspended") return undefined;
+    const org = this.data.orgs.find((o) => o.id === user.orgId);
+    if (!org || org.status === "Suspended") return undefined;
+    return {
+      orgUser: { ...user, permissions: [...user.permissions] },
+      org: { ...org },
+    };
+  }
+
+  /** Demo-account hint list shown on the login screen (active users only). */
+  async listLoginAccounts(): Promise<LoginAccount[]> {
+    await delay();
+    return this.data.orgUsers
+      .filter((u) => u.status !== "Suspended")
+      .map((u) => {
+        const org = this.data.orgs.find((o) => o.id === u.orgId);
+        return {
+          email: u.email,
+          name: u.name,
+          orgName: org?.name ?? u.orgId,
+          level: org?.level ?? "Platform",
+          rolePreset: u.rolePreset,
+        };
+      })
+      .sort((a, b) => a.level.localeCompare(b.level) || a.name.localeCompare(b.name));
+  }
+
+  async getOrgContext(orgId: string) {
+    await delay();
+    const org = this.data.orgs.find((o) => o.id === orgId);
+    return org ? orgContextFromOrg(org) : undefined;
+  }
+
+  async listOrgs() {
+    await delay();
+    return [...this.data.orgs];
+  }
+
+  async createOrgAccount(input: CreateOrgAccountInput) {
+    await delay();
+    const name = input.name.trim();
+    if (!name) throw new Error("Organization name is required");
+    if (input.level === "Partner") {
+      if (!input.partnerId) throw new Error("partnerId is required for a Partner org");
+      if (this.data.orgs.some((o) => o.level === "Partner" && o.partnerId === input.partnerId)) {
+        throw new Error("This partner already has an org account");
+      }
+    }
+    if (input.level === "Merchant") {
+      if (!input.tenantId) throw new Error("tenantId is required for a Merchant org");
+      if (this.data.orgs.some((o) => o.level === "Merchant" && o.tenantId === input.tenantId)) {
+        throw new Error("This merchant already has an org account");
+      }
+    }
+
+    const org: Org = {
+      id: uid("org"),
+      level: input.level,
+      name,
+      partnerId: input.level === "Partner" ? input.partnerId : undefined,
+      tenantId: input.level === "Merchant" ? input.tenantId : undefined,
+      status: "Active",
+      createdAt: new Date().toISOString(),
+    };
+    this.data.orgs.push(org);
+
+    // Seed the org's first admin user so it can self-manage from day one.
+    const adminPreset = input.level === "Partner" ? "PartnerAdmin" : "MerchantAdmin";
+    const adminEmail = normalizeEmail(input.adminEmail ?? `admin@${slug(name)}.sa`);
+    if (isValidEmail(adminEmail) && !this.data.orgUsers.some((u) => normalizeEmail(u.email) === adminEmail)) {
+      this.data.orgUsers.push({
+        id: uid("ou"),
+        orgId: org.id,
+        name: (input.adminName ?? "Org Admin").trim() || "Org Admin",
+        email: adminEmail,
+        rolePreset: adminPreset,
+        permissions: presetPermissions(input.level, adminPreset),
+        status: "Invited",
+        invitedAt: new Date().toISOString(),
+      });
+    }
+
+    appendAudit(this.data, {
+      actor: actorNameSafe(),
+      role: "PlatformAdmin",
+      action: `Created ${input.level} org account (mock)`,
+      target: org.id,
+    });
+    this.persist();
+    return { ...org };
+  }
+
+  async listOrgUsers(orgId: string) {
+    await delay();
+    this.assertOrgExists(orgId);
+    return this.data.orgUsers
+      .filter((u) => u.orgId === orgId)
+      .map((u) => ({ ...u, permissions: [...u.permissions] }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async createOrgUser(orgId: string, input: CreateOrgUserInput) {
+    await delay();
+    const org = this.assertOrgExists(orgId);
+    const name = input.name.trim();
+    const email = normalizeEmail(input.email);
+    if (!name) throw new Error("Name is required");
+    if (!isValidEmail(email)) throw new Error("Invalid email address");
+    if (this.data.orgUsers.some((u) => normalizeEmail(u.email) === email)) {
+      throw new Error("A user with this email already exists");
+    }
+    this.assertPresetForOrg(org, input.rolePreset);
+    const permissions = sanitizePermissionsForLevel(
+      org.level,
+      input.permissions ?? presetPermissions(org.level, input.rolePreset),
+    );
+    const user: OrgUser = {
+      id: uid("ou"),
+      orgId,
+      name,
+      email,
+      rolePreset: input.rolePreset,
+      permissions,
+      status: "Invited",
+      invitedAt: new Date().toISOString(),
+    };
+    this.data.orgUsers.push(user);
+    appendAudit(this.data, {
+      actor: actorNameSafe(),
+      role: org.level,
+      action: "Invited org user (mock — no email sent)",
+      target: `${org.name}: ${user.email}`,
+    });
+    this.persist();
+    return { ...user, permissions: [...user.permissions] };
+  }
+
+  async updateOrgUser(orgId: string, userId: string, input: UpdateOrgUserInput) {
+    await delay();
+    const org = this.assertOrgExists(orgId);
+    const user = this.data.orgUsers.find((u) => u.id === userId && u.orgId === orgId);
+    if (!user) throw new Error("User not found in this organization");
+
+    if (input.name !== undefined) {
+      const name = input.name.trim();
+      if (!name) throw new Error("Name is required");
+      user.name = name;
+    }
+    if (input.email !== undefined) {
+      const email = normalizeEmail(input.email);
+      if (!isValidEmail(email)) throw new Error("Invalid email address");
+      if (this.data.orgUsers.some((u) => u.id !== userId && normalizeEmail(u.email) === email)) {
+        throw new Error("A user with this email already exists");
+      }
+      user.email = email;
+    }
+    if (input.rolePreset !== undefined) {
+      this.assertPresetForOrg(org, input.rolePreset);
+      user.rolePreset = input.rolePreset;
+      if (input.permissions === undefined) {
+        user.permissions = presetPermissions(org.level, input.rolePreset);
+      }
+    }
+    if (input.permissions !== undefined) {
+      user.permissions = sanitizePermissionsForLevel(org.level, input.permissions);
+    }
+    if (input.status !== undefined) {
+      user.status = input.status;
+    }
+
+    appendAudit(this.data, {
+      actor: actorNameSafe(),
+      role: org.level,
+      action: "Updated org user",
+      target: `${org.name}: ${user.email}`,
+    });
+    this.persist();
+    return { ...user, permissions: [...user.permissions] };
+  }
+
+  async suspendOrgUser(orgId: string, userId: string) {
+    return this.updateOrgUser(orgId, userId, { status: "Suspended" });
+  }
+
+  private assertOrgExists(orgId: string): Org {
+    const org = this.data.orgs.find((o) => o.id === orgId);
+    if (!org) throw new Error("Organization not found");
+    return org;
+  }
+
+  private assertPresetForOrg(org: Org, presetKey: string) {
+    if (!presetsForLevel(org.level).some((p) => p.key === presetKey)) {
+      throw new Error(`Role '${presetKey}' is not valid for a ${org.level} org`);
+    }
   }
 
   async createActivation(input: CreateActivationInput) {
@@ -535,6 +763,7 @@ export class MockPortalDataSource implements IPortalDataSource {
       originalCaseId: settlementCaseId,
       partnerId: original.partnerId,
       partnerName: original.partnerName,
+      tenantId: original.tenantId,
       orderLineId: "",
       journal: invertJournal(original.journal),
       netsToZero: true,
@@ -618,6 +847,10 @@ function actorNameSafe() {
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
+}
+
+function slug(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "org";
 }
 
 function isValidEmail(email: string) {
