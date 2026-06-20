@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Volo.Abp.AspNetCore.Mvc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Zahy.Settlement.Application.Contracts\Zahy.Settlement.Application.Contracts.csproj" />
+  </ItemGroup>
+</Project>

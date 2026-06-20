@@ -1,48 +1,119 @@
 import {
-  Boxes,
   Building2,
+  FileText,
+  KeyRound,
   LayoutDashboard,
   Package,
+  RefreshCw,
+  RotateCcw,
   ScrollText,
+  Settings,
   ShieldCheck,
-  ShoppingCart,
+  ShoppingBag,
   Wallet,
   Webhook,
-  type LucideIcon,
 } from "lucide-react";
-import { hasAnyPermission, Permissions } from "@/lib/permissions";
+import { PortalPermissions } from "@/lib/rbac/portalRoles";
 
 export interface AdminNavItem {
   key: string;
+  path: string;
   labelKey: string;
-  icon: LucideIcon;
-  /** Required permissions (any-of). Empty means visible to any signed-in user. */
+  icon: typeof LayoutDashboard;
   permissions: readonly string[];
 }
 
+/** Main admin sections (Step 3 — 9 sections). */
 export const adminNav: readonly AdminNavItem[] = [
-  { key: "dashboard", labelKey: "navDashboard", icon: LayoutDashboard, permissions: [] },
+  {
+    key: "dashboard",
+    path: "/dashboard",
+    labelKey: "navDashboard",
+    icon: LayoutDashboard,
+    permissions: [PortalPermissions.Dashboard.Read],
+  },
+  {
+    key: "partners",
+    path: "/partners",
+    labelKey: "navPartners",
+    icon: Building2,
+    permissions: [PortalPermissions.Partners.Read, PortalPermissions.Partners.Manage],
+  },
   {
     key: "catalog",
+    path: "/catalog",
     labelKey: "navCatalog",
     icon: Package,
-    permissions: [Permissions.Catalog.Read, Permissions.Catalog.Write],
+    permissions: [PortalPermissions.Catalog.Read],
   },
-  { key: "orders", labelKey: "navOrders", icon: ShoppingCart, permissions: [Permissions.Orders.Read] },
-  { key: "inventory", labelKey: "navInventory", icon: Boxes, permissions: [Permissions.Inventory.Write] },
-  { key: "webhooks", labelKey: "navWebhooks", icon: Webhook, permissions: [Permissions.Webhooks.Manage] },
-  { key: "payouts", labelKey: "navPayouts", icon: Wallet, permissions: [Permissions.Payouts.Read] },
-  { key: "partners", labelKey: "navPartners", icon: Building2, permissions: [Permissions.Partners.Manage] },
-  { key: "roles", labelKey: "navRoles", icon: ShieldCheck, permissions: [Permissions.Roles.Manage] },
-  { key: "audit", labelKey: "navAudit", icon: ScrollText, permissions: [Permissions.Admin] },
+  {
+    key: "activations",
+    path: "/activations",
+    labelKey: "navActivations",
+    icon: ShoppingBag,
+    permissions: [PortalPermissions.Activations.Read],
+  },
+  {
+    key: "settlement",
+    path: "/settlement",
+    labelKey: "navSettlement",
+    icon: Wallet,
+    permissions: [PortalPermissions.Settlement.Read],
+  },
+  {
+    key: "reflected-orders",
+    path: "/reflected-orders",
+    labelKey: "navReflectedOrders",
+    icon: RefreshCw,
+    permissions: [PortalPermissions.Reflection.Read],
+  },
+  {
+    key: "billing",
+    path: "/billing",
+    labelKey: "navBilling",
+    icon: FileText,
+    permissions: [PortalPermissions.Billing.Read],
+  },
+  {
+    key: "reversals",
+    path: "/reversals",
+    labelKey: "navReversals",
+    icon: RotateCcw,
+    permissions: [PortalPermissions.Reversals.Read],
+  },
+  {
+    key: "webhooks",
+    path: "/webhooks",
+    labelKey: "navWebhooksManage",
+    icon: Webhook,
+    permissions: [PortalPermissions.Webhooks.Read, PortalPermissions.Webhooks.Manage],
+  },
+  {
+    key: "credentials",
+    path: "/credentials",
+    labelKey: "navCredentials",
+    icon: KeyRound,
+    permissions: [PortalPermissions.Credentials.Read, PortalPermissions.Credentials.Rotate],
+  },
+  {
+    key: "settings",
+    path: "/settings",
+    labelKey: "navSettings",
+    icon: Settings,
+    permissions: [PortalPermissions.Settings.Read],
+  },
 ];
 
-/** Pure role-gating: returns only the nav items the user is permitted to see. */
 export function filterNavByPermissions(
   items: readonly AdminNavItem[],
   granted: readonly string[],
 ): AdminNavItem[] {
   return items.filter(
-    (item) => item.permissions.length === 0 || hasAnyPermission(granted, item.permissions),
+    (item) =>
+      item.permissions.length === 0 ||
+      item.permissions.some((p) => granted.includes(p) || granted.includes("Zahy.Admin")),
   );
 }
+
+/** Legacy export for audit subsection icon reuse. */
+export { ScrollText, ShieldCheck };

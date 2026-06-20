@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Volo.Abp.Validation" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Zahy.PartnerPlatform\Zahy.PartnerPlatform.Domain.Shared\Zahy.PartnerPlatform.Domain.Shared.csproj" />
+    <ProjectReference Include="..\..\Zahy.Settlement\Zahy.Settlement.Domain.Shared\Zahy.Settlement.Domain.Shared.csproj" />
+  </ItemGroup>
+</Project>

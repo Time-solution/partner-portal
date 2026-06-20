@@ -57,6 +57,20 @@ public static class ZahyPermissions
         public const string KycReview = Default + ".KycReview";
     }
 
+    public static class Settlement
+    {
+        public const string Default = GroupName + ".Settlement";
+
+        /// <summary>Read settlement books/cases/journals (scoped to own partner+book for partner roles).</summary>
+        public const string Read = Default + ".Read";
+
+        /// <summary>Reconcile settlement (accountant). Does NOT permit moving money.</summary>
+        public const string Reconcile = Default + ".Reconcile";
+
+        /// <summary>Disburse funds. Platform admin only; never granted to accountant or partner roles.</summary>
+        public const string Disburse = Default + ".Disburse";
+    }
+
     /// <summary>Platform-wide administration (super power).</summary>
     public const string Admin = GroupName + ".Admin";
 
@@ -73,6 +87,9 @@ public static class ZahyPermissions
             Partners.Manage,
             Roles.Manage,
             Finance.KycReview,
+            Settlement.Read,
+            Settlement.Reconcile,
+            Settlement.Disburse,
             Admin
         };
     }

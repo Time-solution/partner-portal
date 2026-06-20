@@ -1,0 +1,64 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="3aea61bf-6cf5-4cdb-b665-9db302560752" name="a-r7m@BOUDY 2026-06-19 18:18:09" runUser="BOUDY\a-r7m" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-06-19T18:18:09.3188165+03:00" queuing="2026-06-19T18:18:09.3188173+03:00" start="2026-06-19T18:18:06.2536583+03:00" finish="2026-06-19T18:18:15.5853244+03:00" />
+  <TestSettings name="default" id="459ccc04-e802-461a-bd13-fd9f6dfe3851">
+    <Deployment runDeploymentRoot="a-r7m_BOUDY_2026-06-19_18_18_09" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="d149aa4e-96bf-4b92-9f31-fdbb5dbe40fd" testId="b7f6e5a4-a9fb-f30c-1422-a64b353fd993" testName="Zahy.Webhooks.WebhookDeliverySigningTests.Should_Deliver_Signed_Payload_To_InMemory_Transport" computerName="BOUDY" duration="00:00:05.9621774" startTime="2026-06-19T18:18:08.3519673+03:00" endTime="2026-06-19T18:18:14.3276446+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d149aa4e-96bf-4b92-9f31-fdbb5dbe40fd" />
+    <UnitTestResult executionId="3f3c58be-5664-4321-9963-20664562fc77" testId="0b87112d-229a-be49-07ba-a4ca06895b4b" testName="Zahy.Webhooks.WebhookHmacSignerTests.Should_Sign_And_Verify_Payload_With_Known_Secret" computerName="BOUDY" duration="00:00:00.0386677" startTime="2026-06-19T18:18:08.3593926+03:00" endTime="2026-06-19T18:18:08.4156988+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3f3c58be-5664-4321-9963-20664562fc77" />
+    <UnitTestResult executionId="cb7c3ff3-5404-4253-ba58-afa8cfe0c225" testId="8581af14-0be0-3f30-12bc-ff9652d34646" testName="Zahy.Webhooks.WebhookOutboxIdempotencyTests.Should_Return_Same_Outbox_Id_For_Duplicate_Idempotency_Key" computerName="BOUDY" duration="00:00:05.7652521" startTime="2026-06-19T18:18:08.3594307+03:00" endTime="2026-06-19T18:18:14.1305606+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cb7c3ff3-5404-4253-ba58-afa8cfe0c225" />
+    <UnitTestResult executionId="dd32d915-27ed-4635-bdd9-eef58551c645" testId="52534fa7-5935-2b42-c800-e355ece44c46" testName="Zahy.Webhooks.WebhookSubscriptionIsolationTests.Should_Return_403_When_Partner_Accesses_Other_Partners_Subscription" computerName="BOUDY" duration="00:00:05.9664233" startTime="2026-06-19T18:18:08.3592518+03:00" endTime="2026-06-19T18:18:14.3576470+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="dd32d915-27ed-4635-bdd9-eef58551c645" />
+    <UnitTestResult executionId="57346d44-ca93-40bd-bb1a-1d055872dcfd" testId="3c4f74e5-7345-4650-ce4c-e4da222f284c" testName="Zahy.Webhooks.WebhookRetryDeadLetterTests.Should_Move_Message_To_Dead_Letter_After_Max_Retries" computerName="BOUDY" duration="00:00:06.9128703" startTime="2026-06-19T18:18:08.3593485+03:00" endTime="2026-06-19T18:18:15.2770861+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="57346d44-ca93-40bd-bb1a-1d055872dcfd" />
+    <UnitTestResult executionId="bab77eed-384f-433d-a7e0-443c86c54370" testId="0eb79ff2-1130-d98e-d12e-ffc49260d505" testName="Zahy.Webhooks.WebhookHmacSignerTests.Should_Reject_Tampered_Payload" computerName="BOUDY" duration="00:00:00.0005029" startTime="2026-06-19T18:18:08.4530110+03:00" endTime="2026-06-19T18:18:08.4531555+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="bab77eed-384f-433d-a7e0-443c86c54370" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Zahy.Webhooks.WebhookOutboxIdempotencyTests.Should_Return_Same_Outbox_Id_For_Duplicate_Idempotency_Key" storage="c:\users\a-r7m\onedrive\سطح المكتب\partner portal-zahy\test\zahy.webhooks.tests\bin\debug\net10.0\zahy.webhooks.tests.dll" id="8581af14-0be0-3f30-12bc-ff9652d34646">
+      <Execution id="cb7c3ff3-5404-4253-ba58-afa8cfe0c225" />
+      <TestMethod codeBase="C:\Users\a-r7m\OneDrive\سطح المكتب\partner portal-zahy\test\Zahy.Webhooks.Tests\bin\Debug\net10.0\Zahy.Webhooks.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Zahy.Webhooks.WebhookOutboxIdempotencyTests" name="Should_Return_Same_Outbox_Id_For_Duplicate_Idempotency_Key" />
+    </UnitTest>
+    <UnitTest name="Zahy.Webhooks.WebhookRetryDeadLetterTests.Should_Move_Message_To_Dead_Letter_After_Max_Retries" storage="c:\users\a-r7m\onedrive\سطح المكتب\partner portal-zahy\test\zahy.webhooks.tests\bin\debug\net10.0\zahy.webhooks.tests.dll" id="3c4f74e5-7345-4650-ce4c-e4da222f284c">
+      <Execution id="57346d44-ca93-40bd-bb1a-1d055872dcfd" />
+      <TestMethod codeBase="C:\Users\a-r7m\OneDrive\سطح المكتب\partner portal-zahy\test\Zahy.Webhooks.Tests\bin\Debug\net10.0\Zahy.Webhooks.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Zahy.Webhooks.WebhookRetryDeadLetterTests" name="Should_Move_Message_To_Dead_Letter_After_Max_Retries" />
+    </UnitTest>
+    <UnitTest name="Zahy.Webhooks.WebhookSubscriptionIsolationTests.Should_Return_403_When_Partner_Accesses_Other_Partners_Subscription" storage="c:\users\a-r7m\onedrive\سطح المكتب\partner portal-zahy\test\zahy.webhooks.tests\bin\debug\net10.0\zahy.webhooks.tests.dll" id="52534fa7-5935-2b42-c800-e355ece44c46">
+      <Execution id="dd32d915-27ed-4635-bdd9-eef58551c645" />
+      <TestMethod codeBase="C:\Users\a-r7m\OneDrive\سطح المكتب\partner portal-zahy\test\Zahy.Webhooks.Tests\bin\Debug\net10.0\Zahy.Webhooks.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Zahy.Webhooks.WebhookSubscriptionIsolationTests" name="Should_Return_403_When_Partner_Accesses_Other_Partners_Subscription" />
+    </UnitTest>
+    <UnitTest name="Zahy.Webhooks.WebhookDeliverySigningTests.Should_Deliver_Signed_Payload_To_InMemory_Transport" storage="c:\users\a-r7m\onedrive\سطح المكتب\partner portal-zahy\test\zahy.webhooks.tests\bin\debug\net10.0\zahy.webhooks.tests.dll" id="b7f6e5a4-a9fb-f30c-1422-a64b353fd993">
+      <Execution id="d149aa4e-96bf-4b92-9f31-fdbb5dbe40fd" />
+      <TestMethod codeBase="C:\Users\a-r7m\OneDrive\سطح المكتب\partner portal-zahy\test\Zahy.Webhooks.Tests\bin\Debug\net10.0\Zahy.Webhooks.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Zahy.Webhooks.WebhookDeliverySigningTests" name="Should_Deliver_Signed_Payload_To_InMemory_Transport" />
+    </UnitTest>
+    <UnitTest name="Zahy.Webhooks.WebhookHmacSignerTests.Should_Reject_Tampered_Payload" storage="c:\users\a-r7m\onedrive\سطح المكتب\partner portal-zahy\test\zahy.webhooks.tests\bin\debug\net10.0\zahy.webhooks.tests.dll" id="0eb79ff2-1130-d98e-d12e-ffc49260d505">
+      <Execution id="bab77eed-384f-433d-a7e0-443c86c54370" />
+      <TestMethod codeBase="C:\Users\a-r7m\OneDrive\سطح المكتب\partner portal-zahy\test\Zahy.Webhooks.Tests\bin\Debug\net10.0\Zahy.Webhooks.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Zahy.Webhooks.WebhookHmacSignerTests" name="Should_Reject_Tampered_Payload" />
+    </UnitTest>
+    <UnitTest name="Zahy.Webhooks.WebhookHmacSignerTests.Should_Sign_And_Verify_Payload_With_Known_Secret" storage="c:\users\a-r7m\onedrive\سطح المكتب\partner portal-zahy\test\zahy.webhooks.tests\bin\debug\net10.0\zahy.webhooks.tests.dll" id="0b87112d-229a-be49-07ba-a4ca06895b4b">
+      <Execution id="3f3c58be-5664-4321-9963-20664562fc77" />
+      <TestMethod codeBase="C:\Users\a-r7m\OneDrive\سطح المكتب\partner portal-zahy\test\Zahy.Webhooks.Tests\bin\Debug\net10.0\Zahy.Webhooks.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Zahy.Webhooks.WebhookHmacSignerTests" name="Should_Sign_And_Verify_Payload_With_Known_Secret" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="b7f6e5a4-a9fb-f30c-1422-a64b353fd993" executionId="d149aa4e-96bf-4b92-9f31-fdbb5dbe40fd" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0b87112d-229a-be49-07ba-a4ca06895b4b" executionId="3f3c58be-5664-4321-9963-20664562fc77" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8581af14-0be0-3f30-12bc-ff9652d34646" executionId="cb7c3ff3-5404-4253-ba58-afa8cfe0c225" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="52534fa7-5935-2b42-c800-e355ece44c46" executionId="dd32d915-27ed-4635-bdd9-eef58551c645" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3c4f74e5-7345-4650-ce4c-e4da222f284c" executionId="57346d44-ca93-40bd-bb1a-1d055872dcfd" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0eb79ff2-1130-d98e-d12e-ffc49260d505" executionId="bab77eed-384f-433d-a7e0-443c86c54370" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="6" executed="6" passed="6" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.0.2+dd36e86129 (64-bit .NET 10.0.8)&#xD;
+[xUnit.net 00:00:00.32]   Discovering: Zahy.Webhooks.Tests&#xD;
+[xUnit.net 00:00:00.43]   Discovered:  Zahy.Webhooks.Tests&#xD;
+[xUnit.net 00:00:00.50]   Starting:    Zahy.Webhooks.Tests&#xD;
+[xUnit.net 00:00:07.51]   Finished:    Zahy.Webhooks.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

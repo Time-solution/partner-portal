@@ -3,6 +3,7 @@
     <PackageReference Include="Volo.Abp.Autofac" />
     <PackageReference Include="Volo.Abp.BackgroundWorkers" />
     <PackageReference Include="Volo.Abp.AspNetCore.Mvc" />
+    <PackageReference Include="Volo.Abp.Swashbuckle" />
     <PackageReference Include="Volo.Abp.EntityFrameworkCore.SqlServer" />
     <PackageReference Include="Volo.Abp.OpenIddict.AspNetCore" />
     <PackageReference Include="Volo.Abp.Identity.AspNetCore" />
@@ -28,5 +29,11 @@
     <ProjectReference Include="..\Zahy.Finance\Zahy.Finance.Application\Zahy.Finance.Application.csproj" />
     <ProjectReference Include="..\Zahy.Finance\Zahy.Finance.EntityFrameworkCore\Zahy.Finance.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\Zahy.Finance\Zahy.Finance.HttpApi\Zahy.Finance.HttpApi.csproj" />
+    <ProjectReference Include="..\Zahy.PartnerCatalog\Zahy.PartnerCatalog.Application\Zahy.PartnerCatalog.Application.csproj" />
+    <ProjectReference Include="..\Zahy.PartnerCatalog\Zahy.PartnerCatalog.EntityFrameworkCore\Zahy.PartnerCatalog.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\Zahy.PartnerCatalog\Zahy.PartnerCatalog.HttpApi\Zahy.PartnerCatalog.HttpApi.csproj" />
+    <ProjectReference Include="..\Zahy.Settlement\Zahy.Settlement.Application\Zahy.Settlement.Application.csproj" />
+    <ProjectReference Include="..\Zahy.Settlement\Zahy.Settlement.EntityFrameworkCore\Zahy.Settlement.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\Zahy.Settlement\Zahy.Settlement.HttpApi\Zahy.Settlement.HttpApi.csproj" />
   </ItemGroup>
 </Project>

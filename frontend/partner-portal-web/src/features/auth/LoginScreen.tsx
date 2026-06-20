@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Eye, EyeOff, Loader2, Lock, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, Loader2, ShieldCheck } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTranslator, type Lang } from "@/lib/i18n";
 import { useAuth } from "@/features/auth/AuthContext";
+import { BrandLogo } from "@/components/brand/BrandLogo";
+import { BetaBadge } from "@/components/brand/BetaBadge";
 
 interface LoginScreenProps {
   lang: Lang;
@@ -56,11 +58,12 @@ export function LoginScreen({ lang }: LoginScreenProps) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-md">
-        <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
-            <Lock className="h-7 w-7" aria-hidden="true" />
+        <div className="mb-8 flex flex-col items-center gap-3 text-center">
+          <BrandLogo variant="full" lang={lang} className="h-12 w-auto" />
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-foreground">{t("brand")}</h1>
+            <BetaBadge lang={lang} />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">{t("brand")}</h1>
         </div>
 
         <Card>

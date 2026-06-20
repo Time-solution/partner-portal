@@ -1,0 +1,1 @@
+{"error":{"code":null,"message":"Your request is not valid!","details":"The following errors were detected during validation.\r\n - The Password field is required.\r\n - The UserName field is required.\r\n","data":null,"validationErrors":[{"message":"The Password field is required.","members":["password"]},{"message":"The UserName field is required.","members":["userName"]}]}}

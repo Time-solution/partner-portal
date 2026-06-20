@@ -11,10 +11,11 @@
 
 :root {
   /* ----- Brand palette ---------------------------------------------------- */
-  --brand-primary: #0e5c63;
-  --brand-primary-dark: #0a464c;
-  --brand-primary-light: #d9eaec;
-  --brand-accent: #13a89e;
+  --brand-primary: #023b59;       /* VI primary — deep navy-teal */
+  --brand-primary-dark: #012b41;  /* darker shade for hover/contrast */
+  --brand-primary-light: #d5fde0; /* VI mint */
+  --brand-accent: #379024;        /* VI secondary green */
+  --brand-green-soft: #76ca8c;    /* VI secondary light green */
 
   /* ----- Neutrals --------------------------------------------------------- */
   --neutral-900: #1a1a1a;
@@ -93,6 +94,8 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
+    font-size: 1rem;
+    line-height: 1.6;
     font-feature-settings: "rlig" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
   }

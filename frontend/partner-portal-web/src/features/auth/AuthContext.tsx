@@ -28,7 +28,7 @@ interface AuthContextValue {
   canAny: (permissions: readonly string[]) => boolean;
 }
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 function profileFallback(oidcUser: User) {
   const profile = oidcUser.profile as Record<string, unknown>;

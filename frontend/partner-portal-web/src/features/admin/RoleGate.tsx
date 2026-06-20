@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useAuth } from "@/features/auth/AuthContext";
+import { usePortalSession } from "@/features/auth/usePortalSession";
 
 interface RoleGateProps {
   permissions: string | readonly string[];
@@ -9,7 +9,7 @@ interface RoleGateProps {
 
 /** Renders children only when the current user holds (any of) the permission(s). */
 export function RoleGate({ permissions, children, fallback = null }: RoleGateProps) {
-  const { canAny } = useAuth();
+  const { canAny } = usePortalSession();
   const list = typeof permissions === "string" ? [permissions] : permissions;
   return <>{canAny(list) ? children : fallback}</>;
 }

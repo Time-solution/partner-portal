@@ -1,0 +1,10 @@
+HTTP/1.1 400 Bad Request
+Content-Type: application/json; charset=utf-8
+Date: Thu, 18 Jun 2026 20:31:48 GMT
+Server: Kestrel
+Access-Control-Allow-Credentials: true
+Access-Control-Allow-Origin: http://localhost:5173
+Transfer-Encoding: chunked
+Vary: Origin
+_AbpErrorFormat: true
+

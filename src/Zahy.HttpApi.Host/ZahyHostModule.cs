@@ -18,6 +18,7 @@ using Volo.Abp.EntityFrameworkCore.SqlServer;
 using Volo.Abp.Identity.AspNetCore;
 using Volo.Abp.Modularity;
 using Volo.Abp.OpenIddict;
+using Volo.Abp.Swashbuckle;
 using Volo.Abp.Uow;
 using Zahy.Identity;
 using Zahy.PartnerPlatform;
@@ -26,6 +27,8 @@ using Zahy.OrderLedger;
 using Zahy.Commission;
 using Zahy.Connectors;
 using Zahy.Finance;
+using Zahy.PartnerCatalog;
+using Zahy.Settlement;
 
 namespace Zahy;
 
@@ -33,6 +36,7 @@ namespace Zahy;
     typeof(AbpAutofacModule),
     typeof(AbpBackgroundWorkersModule),
     typeof(AbpAspNetCoreMvcModule),
+    typeof(AbpSwashbuckleModule),
     typeof(AbpEntityFrameworkCoreSqlServerModule),
     typeof(AbpOpenIddictAspNetCoreModule),
     typeof(ZahyIdentityApplicationModule),
@@ -57,7 +61,13 @@ namespace Zahy;
     typeof(ZahyFinanceApplicationModule),
     typeof(ZahyFinanceCommissionModule),
     typeof(ZahyFinanceEntityFrameworkCoreModule),
-    typeof(ZahyFinanceHttpApiModule)
+    typeof(ZahyFinanceHttpApiModule),
+    typeof(ZahyPartnerCatalogApplicationModule),
+    typeof(ZahyPartnerCatalogEntityFrameworkCoreModule),
+    typeof(ZahyPartnerCatalogHttpApiModule),
+    typeof(ZahySettlementApplicationModule),
+    typeof(ZahySettlementEntityFrameworkCoreModule),
+    typeof(ZahySettlementHttpApiModule)
 )]
 public class ZahyHostModule : AbpModule
 {
@@ -156,11 +166,18 @@ public class ZahyHostModule : AbpModule
                     .AllowCredentials();
             });
         });
+
+        context.Services.AddAbpSwaggerGen(options =>
+        {
+            options.DocInclusionPredicate((_, _) => true);
+            options.CustomSchemaIds(type => type.FullName);
+        });
     }
 
     public override void OnApplicationInitialization(ApplicationInitializationContext context)
     {
         var app = context.GetApplicationBuilder();
+        var env = context.GetEnvironment();
 
         app.UseRouting();
         app.UseCookiePolicy();
@@ -169,6 +186,22 @@ public class ZahyHostModule : AbpModule
         app.UseAbpOpenIddictValidation();
         app.UseUnitOfWork();
         app.UseAuthorization();
-        app.UseConfiguredEndpoints();
+
+        if (env.IsDevelopment())
+        {
+            app.UseSwagger();
+            app.UseAbpSwaggerUI(options =>
+            {
+                options.SwaggerEndpoint("/swagger/v1/swagger.json", "Zahy Partner Platform API");
+            });
+        }
+
+        app.UseConfiguredEndpoints(endpoints =>
+        {
+            if (env.IsDevelopment())
+            {
+                endpoints.MapGet("/", () => Results.Redirect("/swagger/index.html"));
+            }
+        });
     }
 }

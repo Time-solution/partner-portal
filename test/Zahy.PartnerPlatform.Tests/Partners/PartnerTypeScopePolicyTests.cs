@@ -16,4 +16,11 @@ public class PartnerTypeScopePolicyTests
     {
         PartnerTypeScopePolicy.GetDefaultScopes(type).ShouldBe(expected);
     }
+
+    [Fact]
+    public void Marketplace_Should_Not_Include_Catalog_Write_Scope()
+    {
+        PartnerTypeScopePolicy.GetDefaultScopes(PartnerType.Marketplace)
+            .ShouldNotContain(ZahyScopes.CatalogWrite);
+    }
 }

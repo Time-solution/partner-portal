@@ -118,6 +118,28 @@ public class FinanceDocumentStep4Tests : ZahyFinanceTestBase
         pdfText.ShouldContain(verifiedCr);
         pdfText.ShouldContain("Verified Docs Partner Ltd");
         pdfText.ShouldNotContain(submittedCr);
+        pdfText.ShouldContain("BETA"); // beta posture: generated documents are marked a test document
+    }
+
+    [Fact]
+    public async Task Generated_Invoice_Pdf_Is_Marked_Beta_Not_Valid_Tax_Invoice()
+    {
+        var partnerId = Guid.NewGuid();
+        await SeedPartnerWithPostingsAsync(partnerId, platformAmount: 10m, partnerEarnsAmount: 0m, billingAmount: 20m);
+        _currentPartner.Id = partnerId;
+
+        FinanceDocumentBytesResult invoice = null!;
+        await WithUnitOfWorkAsync(async () =>
+        {
+            invoice = await _invoiceService.GeneratePartnerInvoiceAsync(new FinanceInvoiceRequest
+            {
+                PartnerId = partnerId
+            });
+        });
+
+        var text = FinancePdfTestTextExtractor.ExtractText(invoice.Content);
+        text.ShouldContain("BETA");
+        text.ShouldContain("NOT A VALID TAX INVOICE");
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using System.IO;
 using Microsoft.Extensions.Options;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -29,6 +30,7 @@ public static class FinancePdfDocumentGenerator
 
                 page.Header().Column(column =>
                 {
+                    RenderLogo(branding, column);
                     column.Item().Text(branding.BrandName).Bold().FontSize(20);
                     column.Item().Text(branding.BrandNameArabic).FontSize(16);
                     column.Item().PaddingTop(8).Text("Account Statement / كشف حساب").Bold();
@@ -36,6 +38,8 @@ public static class FinancePdfDocumentGenerator
 
                 page.Content().PaddingVertical(16).Column(column =>
                 {
+                    RenderBetaBanner(branding, column);
+
                     column.Item().Row(row =>
                     {
                         row.RelativeItem().Column(left =>
@@ -105,6 +109,8 @@ public static class FinancePdfDocumentGenerator
 
                 page.Content().Column(column =>
                 {
+                    RenderLogo(branding, column);
+                    RenderBetaBanner(branding, column);
                     column.Item().Text(branding.BrandName).Bold().FontSize(20);
                     column.Item().Text(branding.BrandNameArabic);
                     column.Item().PaddingTop(8).Text("Tax Invoice / فاتورة ضريبية").Bold();
@@ -125,6 +131,49 @@ public static class FinancePdfDocumentGenerator
         });
 
         return document.GeneratePdf();
+    }
+
+    private static void RenderBetaBanner(FinanceBrandingOptions branding, QuestPDF.Fluent.ColumnDescriptor column)
+    {
+        if (!branding.BetaMode)
+        {
+            return;
+        }
+
+        column.Item()
+            .PaddingBottom(10)
+            .Background(Colors.Orange.Lighten4)
+            .Border(1)
+            .BorderColor(Colors.Orange.Darken1)
+            .Padding(8)
+            .Column(banner =>
+            {
+                banner.Item().Text(branding.BetaBannerEn).Bold().FontColor(Colors.Orange.Darken3);
+                banner.Item().Text(branding.BetaBannerAr).FontColor(Colors.Orange.Darken3);
+            });
+    }
+
+    private static void RenderLogo(FinanceBrandingOptions branding, QuestPDF.Fluent.ColumnDescriptor column)
+    {
+        if (string.IsNullOrWhiteSpace(branding.LogoPngPath))
+        {
+            return;
+        }
+
+        try
+        {
+            if (!File.Exists(branding.LogoPngPath))
+            {
+                return;
+            }
+
+            var bytes = File.ReadAllBytes(branding.LogoPngPath);
+            column.Item().PaddingBottom(6).MaxHeight(48).Image(bytes);
+        }
+        catch
+        {
+            // Logo is decorative — never fail a financial document over branding.
+        }
     }
 }
 

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Volo.Abp.Ddd.Application" />
+    <PackageReference Include="Volo.Abp.Authorization" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Zahy.Settlement.Domain\Zahy.Settlement.Domain.csproj" />
+    <ProjectReference Include="..\Zahy.Settlement.Application.Contracts\Zahy.Settlement.Application.Contracts.csproj" />
+    <ProjectReference Include="..\..\Zahy.PartnerCatalog\Zahy.PartnerCatalog.Domain\Zahy.PartnerCatalog.Domain.csproj" />
+    <ProjectReference Include="..\..\Zahy.Commission\Zahy.Commission.Domain\Zahy.Commission.Domain.csproj" />
+    <ProjectReference Include="..\..\Zahy.Identity\Zahy.Identity.Domain\Zahy.Identity.Domain.csproj" />
+    <ProjectReference Include="..\..\Zahy.Identity\Zahy.Identity.Domain.Shared\Zahy.Identity.Domain.Shared.csproj" />
+    <!-- Reuse the existing Webhooks HMAC primitive (WebhookHmacSigner) for signature verification. -->
+    <ProjectReference Include="..\..\Zahy.Webhooks\Zahy.Webhooks.Domain\Zahy.Webhooks.Domain.csproj" />
+  </ItemGroup>
+</Project>

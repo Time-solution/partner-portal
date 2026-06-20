@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Volo.Abp.Ddd.Domain" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Zahy.PartnerCatalog.Domain.Shared\Zahy.PartnerCatalog.Domain.Shared.csproj" />
+    <ProjectReference Include="..\..\Zahy.Settlement\Zahy.Settlement.Domain.Shared\Zahy.Settlement.Domain.Shared.csproj" />
+    <ProjectReference Include="..\..\Zahy.Settlement\Zahy.Settlement.Domain\Zahy.Settlement.Domain.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,64 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="04e557f4-ee64-4014-af0b-dcfb8f63373e" name="a-r7m@BOUDY 2026-06-19 18:18:05" runUser="BOUDY\a-r7m" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-06-19T18:18:05.6316936+03:00" queuing="2026-06-19T18:18:05.6316943+03:00" start="2026-06-19T18:18:02.4575919+03:00" finish="2026-06-19T18:18:11.7758906+03:00" />
+  <TestSettings name="default" id="14cb9332-0813-43bf-806e-3c49ddb7abd9">
+    <Deployment runDeploymentRoot="a-r7m_BOUDY_2026-06-19_18_18_05" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="48bdf7e6-e899-4283-8a48-301bb9516d9e" testId="54fc7d67-fa0d-56e8-3400-dcc5ead94fb9" testName="Zahy.OrderLedger.OrderRecordSubtotalResolutionTests.Should_Not_Fallback_Subtotal_To_TotalAmount" computerName="BOUDY" duration="00:00:00.0013089" startTime="2026-06-19T18:18:05.0008049+03:00" endTime="2026-06-19T18:18:05.0010027+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="48bdf7e6-e899-4283-8a48-301bb9516d9e" />
+    <UnitTestResult executionId="f50fb14a-4364-4c04-a6da-af880f74303b" testId="a85a1db1-58da-9135-b562-0430670bb1f3" testName="Zahy.OrderLedger.FakeOrderSourcePollTests.Should_Ingest_Snapshots_From_Fake_IOrderSource" computerName="BOUDY" duration="00:00:06.6695532" startTime="2026-06-19T18:18:04.8870703+03:00" endTime="2026-06-19T18:18:11.5589218+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f50fb14a-4364-4c04-a6da-af880f74303b" />
+    <UnitTestResult executionId="e635d18e-a387-498b-a071-0f474cb6d7f4" testId="681ed939-d818-bbf9-3470-5e278f4acb1b" testName="Zahy.OrderLedger.OrderRecordSubtotalResolutionTests.Should_Mark_Subtotal_Unavailable_When_No_Explicit_Subtotal_And_No_Lines" computerName="BOUDY" duration="00:00:00.0560635" startTime="2026-06-19T18:18:04.8869386+03:00" endTime="2026-06-19T18:18:04.9616603+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e635d18e-a387-498b-a071-0f474cb6d7f4" />
+    <UnitTestResult executionId="63696e09-ba02-4295-8919-747ff86a10cf" testId="455011c4-ab7e-b5a7-1ef4-7c5969f9ad36" testName="Zahy.OrderLedger.OrderRecordSubtotalResolutionTests.Should_Resolve_Subtotal_From_Lines" computerName="BOUDY" duration="00:00:00.0075972" startTime="2026-06-19T18:18:04.9979687+03:00" endTime="2026-06-19T18:18:04.9982398+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="63696e09-ba02-4295-8919-747ff86a10cf" />
+    <UnitTestResult executionId="97534689-f9fb-48c6-a8b1-2d631c6b6d62" testId="1372baca-f4cc-d7d7-a965-c6754b36e059" testName="Zahy.OrderLedger.OrderLedgerAppendOnlyTests.Should_Append_New_Version_Instead_Of_Updating_Existing_Row" computerName="BOUDY" duration="00:00:06.6936044" startTime="2026-06-19T18:18:04.8821181+03:00" endTime="2026-06-19T18:18:11.5829643+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="97534689-f9fb-48c6-a8b1-2d631c6b6d62" />
+    <UnitTestResult executionId="208e4630-b690-44e7-b82f-7d2379cdeceb" testId="1f1073ab-9a98-3e43-5d7e-beac47107784" testName="Zahy.OrderLedger.OrderLedgerIngestionIdempotencyTests.Should_Create_Single_Ledger_Entry_For_Duplicate_Source_Id_And_Version" computerName="BOUDY" duration="00:00:06.6036135" startTime="2026-06-19T18:18:04.8867560+03:00" endTime="2026-06-19T18:18:11.4942278+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="208e4630-b690-44e7-b82f-7d2379cdeceb" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Zahy.OrderLedger.FakeOrderSourcePollTests.Should_Ingest_Snapshots_From_Fake_IOrderSource" storage="c:\users\a-r7m\onedrive\سطح المكتب\partner portal-zahy\test\zahy.orderledger.tests\bin\debug\net10.0\zahy.orderledger.tests.dll" id="a85a1db1-58da-9135-b562-0430670bb1f3">
+      <Execution id="f50fb14a-4364-4c04-a6da-af880f74303b" />
+      <TestMethod codeBase="C:\Users\a-r7m\OneDrive\سطح المكتب\partner portal-zahy\test\Zahy.OrderLedger.Tests\bin\Debug\net10.0\Zahy.OrderLedger.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Zahy.OrderLedger.FakeOrderSourcePollTests" name="Should_Ingest_Snapshots_From_Fake_IOrderSource" />
+    </UnitTest>
+    <UnitTest name="Zahy.OrderLedger.OrderLedgerIngestionIdempotencyTests.Should_Create_Single_Ledger_Entry_For_Duplicate_Source_Id_And_Version" storage="c:\users\a-r7m\onedrive\سطح المكتب\partner portal-zahy\test\zahy.orderledger.tests\bin\debug\net10.0\zahy.orderledger.tests.dll" id="1f1073ab-9a98-3e43-5d7e-beac47107784">
+      <Execution id="208e4630-b690-44e7-b82f-7d2379cdeceb" />
+      <TestMethod codeBase="C:\Users\a-r7m\OneDrive\سطح المكتب\partner portal-zahy\test\Zahy.OrderLedger.Tests\bin\Debug\net10.0\Zahy.OrderLedger.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Zahy.OrderLedger.OrderLedgerIngestionIdempotencyTests" name="Should_Create_Single_Ledger_Entry_For_Duplicate_Source_Id_And_Version" />
+    </UnitTest>
+    <UnitTest name="Zahy.OrderLedger.OrderRecordSubtotalResolutionTests.Should_Not_Fallback_Subtotal_To_TotalAmount" storage="c:\users\a-r7m\onedrive\سطح المكتب\partner portal-zahy\test\zahy.orderledger.tests\bin\debug\net10.0\zahy.orderledger.tests.dll" id="54fc7d67-fa0d-56e8-3400-dcc5ead94fb9">
+      <Execution id="48bdf7e6-e899-4283-8a48-301bb9516d9e" />
+      <TestMethod codeBase="C:\Users\a-r7m\OneDrive\سطح المكتب\partner portal-zahy\test\Zahy.OrderLedger.Tests\bin\Debug\net10.0\Zahy.OrderLedger.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Zahy.OrderLedger.OrderRecordSubtotalResolutionTests" name="Should_Not_Fallback_Subtotal_To_TotalAmount" />
+    </UnitTest>
+    <UnitTest name="Zahy.OrderLedger.OrderLedgerAppendOnlyTests.Should_Append_New_Version_Instead_Of_Updating_Existing_Row" storage="c:\users\a-r7m\onedrive\سطح المكتب\partner portal-zahy\test\zahy.orderledger.tests\bin\debug\net10.0\zahy.orderledger.tests.dll" id="1372baca-f4cc-d7d7-a965-c6754b36e059">
+      <Execution id="97534689-f9fb-48c6-a8b1-2d631c6b6d62" />
+      <TestMethod codeBase="C:\Users\a-r7m\OneDrive\سطح المكتب\partner portal-zahy\test\Zahy.OrderLedger.Tests\bin\Debug\net10.0\Zahy.OrderLedger.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Zahy.OrderLedger.OrderLedgerAppendOnlyTests" name="Should_Append_New_Version_Instead_Of_Updating_Existing_Row" />
+    </UnitTest>
+    <UnitTest name="Zahy.OrderLedger.OrderRecordSubtotalResolutionTests.Should_Mark_Subtotal_Unavailable_When_No_Explicit_Subtotal_And_No_Lines" storage="c:\users\a-r7m\onedrive\سطح المكتب\partner portal-zahy\test\zahy.orderledger.tests\bin\debug\net10.0\zahy.orderledger.tests.dll" id="681ed939-d818-bbf9-3470-5e278f4acb1b">
+      <Execution id="e635d18e-a387-498b-a071-0f474cb6d7f4" />
+      <TestMethod codeBase="C:\Users\a-r7m\OneDrive\سطح المكتب\partner portal-zahy\test\Zahy.OrderLedger.Tests\bin\Debug\net10.0\Zahy.OrderLedger.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Zahy.OrderLedger.OrderRecordSubtotalResolutionTests" name="Should_Mark_Subtotal_Unavailable_When_No_Explicit_Subtotal_And_No_Lines" />
+    </UnitTest>
+    <UnitTest name="Zahy.OrderLedger.OrderRecordSubtotalResolutionTests.Should_Resolve_Subtotal_From_Lines" storage="c:\users\a-r7m\onedrive\سطح المكتب\partner portal-zahy\test\zahy.orderledger.tests\bin\debug\net10.0\zahy.orderledger.tests.dll" id="455011c4-ab7e-b5a7-1ef4-7c5969f9ad36">
+      <Execution id="63696e09-ba02-4295-8919-747ff86a10cf" />
+      <TestMethod codeBase="C:\Users\a-r7m\OneDrive\سطح المكتب\partner portal-zahy\test\Zahy.OrderLedger.Tests\bin\Debug\net10.0\Zahy.OrderLedger.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Zahy.OrderLedger.OrderRecordSubtotalResolutionTests" name="Should_Resolve_Subtotal_From_Lines" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="54fc7d67-fa0d-56e8-3400-dcc5ead94fb9" executionId="48bdf7e6-e899-4283-8a48-301bb9516d9e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a85a1db1-58da-9135-b562-0430670bb1f3" executionId="f50fb14a-4364-4c04-a6da-af880f74303b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="681ed939-d818-bbf9-3470-5e278f4acb1b" executionId="e635d18e-a387-498b-a071-0f474cb6d7f4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="455011c4-ab7e-b5a7-1ef4-7c5969f9ad36" executionId="63696e09-ba02-4295-8919-747ff86a10cf" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1372baca-f4cc-d7d7-a965-c6754b36e059" executionId="97534689-f9fb-48c6-a8b1-2d631c6b6d62" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1f1073ab-9a98-3e43-5d7e-beac47107784" executionId="208e4630-b690-44e7-b82f-7d2379cdeceb" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="6" executed="6" passed="6" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.01] xUnit.net VSTest Adapter v3.0.2+dd36e86129 (64-bit .NET 10.0.8)&#xD;
+[xUnit.net 00:00:00.50]   Discovering: Zahy.OrderLedger.Tests&#xD;
+[xUnit.net 00:00:00.62]   Discovered:  Zahy.OrderLedger.Tests&#xD;
+[xUnit.net 00:00:00.70]   Starting:    Zahy.OrderLedger.Tests&#xD;
+[xUnit.net 00:00:07.47]   Finished:    Zahy.OrderLedger.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

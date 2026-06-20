@@ -45,7 +45,9 @@ public static class ZahyRoleRegistry
             {
                 ZahyPermissions.Payouts.Read,
                 ZahyPermissions.Orders.Read,
-                ZahyPermissions.Finance.KycReview
+                ZahyPermissions.Finance.KycReview,
+                ZahyPermissions.Settlement.Read,
+                ZahyPermissions.Settlement.Reconcile
             },
             assignableRoles: Array.Empty<string>()),
 
@@ -139,7 +141,8 @@ public static class ZahyRoleRegistry
                 ZahyPermissions.Inventory.Write,
                 ZahyPermissions.Webhooks.Manage,
                 ZahyPermissions.Payouts.Read,
-                ZahyPermissions.Roles.Manage
+                ZahyPermissions.Roles.Manage,
+                ZahyPermissions.Settlement.Read
             },
             assignableRoles: new[]
             {
@@ -156,7 +159,8 @@ public static class ZahyRoleRegistry
                 ZahyPermissions.Catalog.Write,
                 ZahyPermissions.Orders.Read,
                 ZahyPermissions.Inventory.Write,
-                ZahyPermissions.Webhooks.Manage
+                ZahyPermissions.Webhooks.Manage,
+                ZahyPermissions.Settlement.Read
             },
             assignableRoles: new[]
             {

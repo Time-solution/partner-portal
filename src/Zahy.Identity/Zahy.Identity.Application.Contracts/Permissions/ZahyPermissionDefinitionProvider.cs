@@ -33,6 +33,11 @@ public class ZahyPermissionDefinitionProvider : PermissionDefinitionProvider
         var finance = group.AddPermission(ZahyPermissions.Finance.Default);
         finance.AddChild(ZahyPermissions.Finance.KycReview);
 
+        var settlement = group.AddPermission(ZahyPermissions.Settlement.Default);
+        settlement.AddChild(ZahyPermissions.Settlement.Read);
+        settlement.AddChild(ZahyPermissions.Settlement.Reconcile);
+        settlement.AddChild(ZahyPermissions.Settlement.Disburse);
+
         group.AddPermission(ZahyPermissions.Admin);
     }
 }

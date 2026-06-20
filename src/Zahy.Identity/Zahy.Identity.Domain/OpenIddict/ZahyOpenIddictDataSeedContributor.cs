@@ -59,10 +59,49 @@ public class ZahyOpenIddictDataSeedContributor : IDataSeedContributor, ITransien
         var partnerWeb = _configuration["OpenIddict:PartnerWebRootUrl"] ?? "http://localhost:5173";
         var adminWeb = _configuration["OpenIddict:AdminWebRootUrl"] ?? "http://localhost:5174";
         var swagger = _configuration["OpenIddict:SwaggerRootUrl"] ?? "https://localhost:44300";
+        var corsOrigins = (_configuration["App:CorsOrigins"] ?? $"{partnerWeb},{adminWeb}")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
         await CreatePublicSpaClientAsync("zahy-partner-web", "Zahy Partner Web", partnerWeb);
+        await EnsureSpaRedirectUrisAsync("zahy-partner-web", corsOrigins);
         await CreatePublicSpaClientAsync("zahy-admin-web", "Zahy Admin Console", adminWeb);
         await CreatePublicSpaClientAsync("zahy-swagger", "Zahy Swagger", swagger);
+    }
+
+    private async Task EnsureSpaRedirectUrisAsync(string clientId, string[] rootUrls)
+    {
+        var application = await _applicationManager.FindByClientIdAsync(clientId);
+        if (application == null)
+        {
+            return;
+        }
+
+        var descriptor = new OpenIddictApplicationDescriptor();
+        await _applicationManager.PopulateAsync(descriptor, application);
+
+        var changed = false;
+        foreach (var rootUrl in rootUrls)
+        {
+            var redirectUri = new Uri($"{rootUrl.TrimEnd('/')}/auth/callback");
+            var postLogoutUri = new Uri(rootUrl.TrimEnd('/'));
+
+            if (!descriptor.RedirectUris.Contains(redirectUri))
+            {
+                descriptor.RedirectUris.Add(redirectUri);
+                changed = true;
+            }
+
+            if (!descriptor.PostLogoutRedirectUris.Contains(postLogoutUri))
+            {
+                descriptor.PostLogoutRedirectUris.Add(postLogoutUri);
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            await _applicationManager.UpdateAsync(application, descriptor);
+        }
     }
 
     private async Task CreatePublicSpaClientAsync(string clientId, string displayName, string rootUrl)
