@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Options;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
@@ -18,15 +19,21 @@ public class PartnerCatalogMerchantAppService : ApplicationService, IPartnerCata
     private readonly IRepository<PartnerCatalogItem, Guid> _itemRepository;
     private readonly IRepository<MerchantActivation, Guid> _activationRepository;
     private readonly MerchantCatalogAccessGuard _accessGuard;
+    private readonly PartnerCatalogActivationSnapshotOrchestrator _activationSnapshotOrchestrator;
+    private readonly IOptionsMonitor<PartnerCatalogMerchantOptions> _merchantOptions;
 
     public PartnerCatalogMerchantAppService(
         IRepository<PartnerCatalogItem, Guid> itemRepository,
         IRepository<MerchantActivation, Guid> activationRepository,
-        MerchantCatalogAccessGuard accessGuard)
+        MerchantCatalogAccessGuard accessGuard,
+        PartnerCatalogActivationSnapshotOrchestrator activationSnapshotOrchestrator,
+        IOptionsMonitor<PartnerCatalogMerchantOptions> merchantOptions)
     {
         _itemRepository = itemRepository;
         _activationRepository = activationRepository;
         _accessGuard = accessGuard;
+        _activationSnapshotOrchestrator = activationSnapshotOrchestrator;
+        _merchantOptions = merchantOptions;
     }
 
     [Authorize(ZahyPermissions.Catalog.Read)]
@@ -98,7 +105,16 @@ public class PartnerCatalogMerchantAppService : ApplicationService, IPartnerCata
 
         await _activationRepository.InsertAsync(activation, autoSave: true);
 
-        // SubscriptionFee / participation bridges stay OFF (PartnerCatalogMerchantOptions defaults).
+        var atUtc = Clock.Now.ToUniversalTime();
+        activation.Activate(atUtc);
+        await _activationRepository.UpdateAsync(activation, autoSave: true);
+
+        // Participation / subscription bridges stay OFF by default (PartnerCatalogMerchantOptions).
+        // When ParticipationBridgeEnabled is ON, snapshot-on-activate routes through the existing bridge.
+        await _activationSnapshotOrchestrator.TryDispatchOnActivateAsync(
+            activation,
+            item,
+            _merchantOptions.CurrentValue);
 
         return PartnerCatalogReadDtoMapper.ToDto(activation);
     }

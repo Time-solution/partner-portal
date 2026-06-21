@@ -23,6 +23,8 @@ import {
   type FinancePortalPostingRow,
   type KycVerificationStatus,
 } from "@/lib/financeApi";
+import { MoneyAmount } from "@/components/MoneyAmount";
+import { formatMoneyNumber } from "@/lib/format/moneyDisplay";
 import { useTranslator, type Lang } from "@/lib/i18n";
 
 const PAGE_SIZE = 20;
@@ -58,12 +60,13 @@ function normalizeDocumentKind(raw: FinanceDocumentKind | number): FinanceDocume
   return typeof raw === "number" ? (DOCUMENT_KIND[raw] ?? "Invoice") : raw;
 }
 
-function formatMoney(amount: number, currency: string, lang: Lang) {
-  return new Intl.NumberFormat(lang === "ar" ? "ar-SA" : "en-SA", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-  }).format(amount);
+function MoneyDisplay({ amount, currency }: { amount: number; currency: string }) {
+  if (currency === "SAR") return <MoneyAmount amount={amount} />;
+  return (
+    <>
+      {formatMoneyNumber(amount)} {currency}
+    </>
+  );
 }
 
 function formatDate(value: string, lang: Lang) {
@@ -253,7 +256,7 @@ export function AccountBillingPage({ lang }: AccountBillingPageProps) {
             <CardDescription>{t("billingBalance" as never)}</CardDescription>
             <CardTitle className="flex items-center gap-2 text-2xl">
               <Wallet className="h-5 w-5 text-primary" aria-hidden="true" />
-              {account ? formatMoney(account.balance, currency, lang) : "—"}
+              {account ? <MoneyDisplay amount={account.balance} currency={currency} /> : "—"}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -368,10 +371,10 @@ export function AccountBillingPage({ lang }: AccountBillingPageProps) {
                       <td className="px-3 py-2 whitespace-nowrap">{formatDate(row.postedAt, lang)}</td>
                       <td className="px-3 py-2">{row.description ?? row.sourceType}</td>
                       <td className="px-3 py-2 text-end tabular-nums">
-                        {formatMoney(row.postingAmount, currency, lang)}
+                        <MoneyDisplay amount={row.postingAmount} currency={currency} />
                       </td>
                       <td className="px-3 py-2 text-end tabular-nums">
-                        {formatMoney(row.runningBalance, currency, lang)}
+                        <MoneyDisplay amount={row.runningBalance} currency={currency} />
                       </td>
                     </tr>
                   ))
@@ -428,7 +431,7 @@ export function AccountBillingPage({ lang }: AccountBillingPageProps) {
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {documentKindLabel(doc.documentKind)} · {formatDate(doc.generatedAt, lang)} ·{" "}
-                      {formatMoney(doc.postingSum, currency, lang)}
+                      <MoneyDisplay amount={doc.postingSum} currency={currency} />
                     </p>
                   </div>
                   <Button

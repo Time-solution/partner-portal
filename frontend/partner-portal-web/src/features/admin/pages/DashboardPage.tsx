@@ -7,6 +7,7 @@ import type { PortalRole } from "@/lib/rbac/portalRoles";
 import { PendingVsDoneChart } from "../components/charts/PendingVsDoneChart";
 import { SettlementTrendChart } from "../components/charts/SettlementTrendChart";
 import { TransactionsByModuleChart } from "../components/charts/TransactionsByModuleChart";
+import { FinanceDrillDown } from "../components/FinanceDrillDown";
 import { PageHeader } from "../components/PageHeader";
 import type { Lang } from "@/lib/i18n";
 import { useTranslator } from "@/lib/i18n";
@@ -62,6 +63,8 @@ export function DashboardPage({ lang }: { lang: Lang }) {
           </div>
         </>
       ) : null}
+
+      <FinanceDrillDown lang={lang} canOpenReports={role === "PlatformAdmin"} />
     </div>
   );
 }

@@ -11,6 +11,8 @@ public class ZahyPermissionDefinitionProvider : PermissionDefinitionProvider
         var catalog = group.AddPermission(ZahyPermissions.Catalog.Default);
         catalog.AddChild(ZahyPermissions.Catalog.Read);
         catalog.AddChild(ZahyPermissions.Catalog.Write);
+        catalog.AddChild(ZahyPermissions.Catalog.AuthorSelf);
+        catalog.AddChild(ZahyPermissions.Catalog.AuthorManaged);
 
         var orders = group.AddPermission(ZahyPermissions.Orders.Default);
         orders.AddChild(ZahyPermissions.Orders.Read);

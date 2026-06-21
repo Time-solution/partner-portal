@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Building2, LogOut, Moon, ShieldOff, Sun, Users } from "lucide-react";
+import { Building2, LogOut, Moon, ShieldOff, Store, Sun, Users } from "lucide-react";
 import { OrgPermissions } from "@/lib/org/orgModel";
 import { Button } from "@/components/ui/button";
 import { LanguageToggle } from "@/components/LanguageToggle";
@@ -8,6 +8,7 @@ import { SessionIdleWarning } from "@/features/auth/SessionIdleWarning";
 import { usePortalSession } from "@/features/auth/usePortalSession";
 import { useSessionIdleLock } from "@/hooks/useSessionIdleLock";
 import { isMockDataSource } from "@/lib/data/config";
+import { isPathActive } from "@/lib/ui/tabs";
 import { useTranslator, type Lang } from "@/lib/i18n";
 import { PORTAL_ROLES, type PortalRole } from "@/lib/rbac/portalRoles";
 import { defaultLandingPath, roleExperience } from "@/lib/rbac/roleNavConfig";
@@ -34,7 +35,9 @@ function navItemActive(
   if (item.key === "partner-home" && scopedPartnerId) {
     return pathname.startsWith(`/partners/${scopedPartnerId}`);
   }
-  return pathname === item.path || pathname.startsWith(`${item.path}/`);
+  // Shared with the Finance tab bar so the sidebar Reports entry and the Finance
+  // Reports tab share one "you are here" rule (and never both highlight Finance + Reports).
+  return isPathActive(pathname, item.path);
 }
 
 export function AdminShell({ lang, toggleLang, theme, toggleTheme }: AdminShellProps) {
@@ -47,6 +50,9 @@ export function AdminShell({ lang, toggleLang, theme, toggleTheme }: AdminShellP
   const visibleNav = useMemo(() => {
     const base = navForRole(role as PortalRole, user?.permissions ?? [], scopedPartnerId);
     const orgItems: { key: string; path: string; labelKey: string; icon: typeof Building2 }[] = [];
+    if (orgCan?.(OrgPermissions.MerchantsView)) {
+      orgItems.push({ key: "merchants", path: "/merchants", labelKey: "navMerchants", icon: Store });
+    }
     if (orgCan?.(OrgPermissions.OrgAccountsCreate)) {
       orgItems.push({ key: "orgs", path: "/orgs", labelKey: "navOrgs", icon: Building2 });
     }
@@ -171,7 +177,7 @@ export function AdminShell({ lang, toggleLang, theme, toggleTheme }: AdminShellP
                     "flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-base font-medium transition-colors",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     isActive || navItemActive(item, location.pathname, scopedPartnerId)
-                      ? "bg-primary/10 text-primary"
+                      ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   ].join(" ")
                 }

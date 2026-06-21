@@ -11,4 +11,10 @@ public class SettlementEngineOptions
     public bool DisbursementEnabled { get; set; } = false;
 
     public bool LiveProviderEnabled { get; set; } = false;
+
+    /// <summary>
+    /// Gates persisting/applying financial postings (the Principal / SubscriptionFee templates).
+    /// OFF until accountant + CTO sign-off — templates may be computed, but nothing is posted/booked.
+    /// </summary>
+    public bool PostingEnabled { get; set; } = false;
 }

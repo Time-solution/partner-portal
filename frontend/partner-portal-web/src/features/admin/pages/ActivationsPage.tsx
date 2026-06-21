@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MoneyAmount } from "@/components/MoneyAmount";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getPortalDataSource } from "@/lib/data";
 import type { MerchantActivationRow } from "@/lib/data/types";
 import { PortalPermissions, roleLabels, type PortalRole } from "@/lib/rbac/portalRoles";
 import { usePortalSession } from "@/features/auth/usePortalSession";
 import { ActivationWorkflow } from "../components/ActivationWorkflow";
+import { ActivationFeeMatrix } from "../components/ActivationFeeMatrix";
 import { PageHeader } from "../components/PageHeader";
+import { EmptyState } from "../components/EmptyState";
 import { useTranslator } from "@/lib/i18n";
 import { activationStatusLabel } from "@/lib/i18n/domainLabels";
 import type { ModuleScopeProps } from "../moduleScope";
@@ -72,6 +75,12 @@ export function ActivationsPage({ lang, moduleId, partnerId, financeMode }: Modu
           <Loader2 className="h-5 w-5 animate-spin" />
           {t("loadingData" as never)}
         </div>
+      ) : activations.length === 0 ? (
+        <Card>
+          <CardContent className="p-0">
+            <EmptyState message={t("activationsEmpty" as never)} />
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-4">
           {activations.map(({ activation: a, workflow: wf }) => (
@@ -80,7 +89,7 @@ export function ActivationsPage({ lang, moduleId, partnerId, financeMode }: Modu
                 <div>
                   <CardTitle className="text-lg">{a.merchantName}</CardTitle>
                   <CardDescription className="text-base">
-                    {a.catalogItemName} · {a.resalePrice.amount.toFixed(2)} {a.resalePrice.currency} ·{" "}
+                    {a.catalogItemName} · <MoneyAmount amount={a.resalePrice.amount} /> ·{" "}
                     {activationStatusLabel(lang, a.status)}
                   </CardDescription>
                 </div>
@@ -121,6 +130,13 @@ export function ActivationsPage({ lang, moduleId, partnerId, financeMode }: Modu
               </CardHeader>
               <CardContent className="space-y-3">
                 <ActivationWorkflow workflow={wf} lang={lang} />
+                <ActivationFeeMatrix
+                  activationId={a.id}
+                  fees={a.fees}
+                  lang={lang}
+                  canEdit={canSetTerms}
+                  onSaved={() => void load()}
+                />
                 <p className="text-xs text-muted-foreground">
                   {t("activationRoleHint" as never)}: {roleLabels[role as PortalRole][lang]}
                 </p>

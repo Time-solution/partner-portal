@@ -13,6 +13,12 @@ public static class ZahyPermissions
         public const string Default = GroupName + ".Catalog";
         public const string Read = Default + ".Read";
         public const string Write = Default + ".Write";
+
+        /// <summary>Service partners — author own catalog items (tiers) only.</summary>
+        public const string AuthorSelf = Default + ".Author.Self";
+
+        /// <summary>Platform admin — author any partner catalog including managed purchase agreements.</summary>
+        public const string AuthorManaged = Default + ".Author.Managed";
     }
 
     public static class Orders
@@ -80,6 +86,8 @@ public static class ZahyPermissions
         {
             Catalog.Read,
             Catalog.Write,
+            Catalog.AuthorSelf,
+            Catalog.AuthorManaged,
             Orders.Read,
             Inventory.Write,
             Webhooks.Manage,

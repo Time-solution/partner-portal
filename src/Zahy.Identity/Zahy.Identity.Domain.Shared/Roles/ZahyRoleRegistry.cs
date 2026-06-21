@@ -28,6 +28,7 @@ public static class ZahyRoleRegistry
             {
                 ZahyPermissions.Partners.Manage,
                 ZahyPermissions.Catalog.Read,
+                ZahyPermissions.Catalog.AuthorManaged,
                 ZahyPermissions.Orders.Read,
                 ZahyPermissions.Roles.Manage
             },
@@ -137,6 +138,7 @@ public static class ZahyRoleRegistry
             {
                 ZahyPermissions.Catalog.Read,
                 ZahyPermissions.Catalog.Write,
+                ZahyPermissions.Catalog.AuthorSelf,
                 ZahyPermissions.Orders.Read,
                 ZahyPermissions.Inventory.Write,
                 ZahyPermissions.Webhooks.Manage,
@@ -157,6 +159,7 @@ public static class ZahyRoleRegistry
             {
                 ZahyPermissions.Catalog.Read,
                 ZahyPermissions.Catalog.Write,
+                ZahyPermissions.Catalog.AuthorSelf,
                 ZahyPermissions.Orders.Read,
                 ZahyPermissions.Inventory.Write,
                 ZahyPermissions.Webhooks.Manage,

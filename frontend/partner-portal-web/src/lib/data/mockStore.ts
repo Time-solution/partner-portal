@@ -1,7 +1,8 @@
 import type { PortalData } from "./types";
 import { createSeedData } from "./fixtures";
 
-const STORAGE_KEY = "zahy-portal-demo-v1";
+// Bumped to v7 for the four-way order split (Merchant + Delivery + ZahyMargin + NetVAT to ZATCA).
+const STORAGE_KEY = "zahy-portal-demo-v8";
 
 export function loadPersistedData(): PortalData | null {
   try {
@@ -34,6 +35,11 @@ export function loadOrSeedData(): PortalData {
     const seed = createSeedData();
     persisted.orgs = persisted.orgs ?? seed.orgs;
     persisted.orgUsers = persisted.orgUsers ?? seed.orgUsers;
+    migrated = true;
+  }
+  // Money-cycle migration — receipts collection added in v3.
+  if (!persisted.receipts) {
+    persisted.receipts = createSeedData().receipts;
     migrated = true;
   }
   if (migrated) savePersistedData(persisted);

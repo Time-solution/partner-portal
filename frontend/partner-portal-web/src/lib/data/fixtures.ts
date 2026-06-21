@@ -1,4 +1,5 @@
-import type { Org, OrgUser, PortalData, SettlementJournal } from "./types";
+import type { CollectionRemittance, Org, OrgUser, PortalData, ReflectedPartnerOrder } from "./types";
+import { buildCollectionJournal, buildResaleJournal } from "./types";
 import { OrgPermissions, presetPermissions } from "@/lib/org/orgModel";
 
 const sar = (amount: number, vatInclusive = true) => ({
@@ -9,23 +10,93 @@ const sar = (amount: number, vatInclusive = true) => ({
 
 const PARTNER_SALASA = "22222222-2222-2222-2222-222222222001";
 const PARTNER_JAHEZ = "22222222-2222-2222-2222-222222222004";
+const PARTNER_CHEFZ = "22222222-2222-2222-2222-222222222006";
 const TENANT_ALNOOR = "11111111-1111-1111-1111-111111111001";
 const TENANT_QUICKBITES = "11111111-1111-1111-1111-111111111003";
+const TENANT_SHAWARMA = "11111111-1111-1111-1111-111111111006";
+const TENANT_DEMO_MERCHANT = "11111111-1111-1111-1111-111111111099";
+const TENANT_PASTA = "11111111-1111-1111-1111-111111111007";
 
-/** Principal delivery journal — buy 10 → sell 13 (accountant-approved mock). */
-export const deliveryJournal: SettlementJournal = {
-  currency: "SAR",
+/** MOCK demo password for every seeded login account (localStorage only — NOT real auth). */
+export const DEMO_PASSWORD = "1q2w3E*";
+
+/**
+ * Principal resale journal — buy 10 → sell 13, clean NET + VAT (no gross/VAT
+ * double-presentation). Sell side totals 13.00, buy side 10.00; margin 2.60 and
+ * net VAT 0.40 are derived summary figures, not journal lines.
+ */
+export const deliveryJournal = buildResaleJournal({
+  sellGross: 13,
+  buyGross: 10,
   postedAt: "2026-06-18T14:22:00Z",
-  totalDebits: sar(14.3, false),
-  totalCredits: sar(14.3, false),
-  lines: [
-    { account: "AggregatorClearing", direction: "Debit", amount: sar(13, false) },
-    { account: "VatInput", direction: "Debit", amount: sar(1.3, false) },
-    { account: "DeliveryCost", direction: "Credit", amount: sar(10, false) },
-    { account: "ShippingMarginRevenue", direction: "Credit", amount: sar(2.6, false) },
-    { account: "VatOutput", direction: "Credit", amount: sar(1.7, false) },
-  ],
+});
+
+/**
+ * Canonical money model: customer pays 113 (items 100 + delivery 13). The collected total
+ * goes FOUR ways (3 parties + tax): 113.00 = 100.00 + 10.00 + 2.60 + 0.40
+ *   merchant 100 · delivery company 10 · Zahy margin 2.60 · ZATCA net VAT 0.40
+ *   (NetVAT = Output 1.70 − Input 1.30 = 0.40).
+ */
+const codCollection: CollectionRemittance = {
+  paymentMethod: "COD",
+  collectedBy: "DeliveryCompany",
+  totalCollected: sar(113),
+  deductions: [{ label: "Delivery cost retained", amount: sar(10, false), kind: "Flat" }],
+  netRemitted: sar(103),
+  split: { merchant: sar(100), deliveryCompany: sar(10), zahy: sar(2.6), zatca: sar(0.4) },
 };
+
+const onlineCollection: CollectionRemittance = {
+  paymentMethod: "Online",
+  collectedBy: "Gateway",
+  totalCollected: sar(113),
+  deductions: [],
+  netRemitted: sar(110),
+  split: { merchant: sar(100), deliveryCompany: sar(10), zahy: sar(2.6), zatca: sar(0.4) },
+  gatewayReference: "",
+  gatewayStatus: "",
+};
+
+/**
+ * Chefz ReflectionOnly transactions (Aug example process: menu 10 → list 13 → delivery 10 →
+ * customer paid 23). Zahy takes NO part of that money — its only revenue is the activation fee
+ * (1 SR incl, shown separately). These successful txns feed the per-partner bulk invoice (Task 5).
+ */
+function chefzReflectionOrders(): ReflectedPartnerOrder[] {
+  const detail = {
+    merchantMenuPrice: sar(10),
+    partnerListPrice: sar(13),
+    deliveryFee: sar(10),
+    customerPaid: sar(23),
+    zahyFeeInclusive: sar(1),
+    successful: true,
+  };
+  const rows: { id: string; tenant: string; merchant: string; at: string }[] = [
+    { id: "ref-chefz-1", tenant: TENANT_SHAWARMA, merchant: "Shawarma Time", at: "2026-06-03T13:05:00Z" },
+    { id: "ref-chefz-2", tenant: TENANT_SHAWARMA, merchant: "Shawarma Time", at: "2026-06-11T19:40:00Z" },
+    { id: "ref-chefz-3", tenant: TENANT_SHAWARMA, merchant: "Shawarma Time", at: "2026-06-22T20:15:00Z" },
+    { id: "ref-chefz-4", tenant: TENANT_PASTA, merchant: "Pasta Corner", at: "2026-06-14T18:00:00Z" },
+    { id: "ref-chefz-5", tenant: TENANT_PASTA, merchant: "Pasta Corner", at: "2026-06-27T21:30:00Z" },
+    {
+      id: "ref-chefz-demo",
+      tenant: TENANT_DEMO_MERCHANT,
+      merchant: "Al Rajhi Demo Store",
+      at: "2026-06-18T14:20:00Z",
+    },
+  ];
+  return rows.map((r, i) => ({
+    id: r.id,
+    partnerId: PARTNER_CHEFZ,
+    partnerName: "Chefz",
+    tenantId: r.tenant,
+    merchantName: r.merchant,
+    externalTransactionId: `order:chefz-${7100 + i}:v1`,
+    orderLineId: `chefz-${7100 + i}-l1`,
+    posSyncStatus: i % 2 === 0 ? "Acknowledged" : "Reflected",
+    reflectedAt: r.at,
+    reflection: { ...detail },
+  }));
+}
 
 export const mockPortalData: PortalData = {
   kpis: {
@@ -88,6 +159,27 @@ export const mockPortalData: PortalData = {
       participationMode: "Principal",
       accentClass: "border-l-violet-500",
     },
+    {
+      id: PARTNER_CHEFZ,
+      legalName: "The Chefz Food Delivery",
+      tradeName: "Chefz",
+      type: "Aggregator",
+      status: "Active",
+      primaryContactEmail: "partners@thechefz.co",
+      participationMode: "ReflectionOnly",
+      marketplaceCategory: "fnb",
+      accentClass: "border-l-rose-500",
+    },
+    {
+      id: "22222222-2222-2222-2222-222222222099",
+      legalName: "Dormant Carrier Co.",
+      tradeName: "Dormant",
+      type: "Carrier",
+      status: "Suspended",
+      primaryContactEmail: "closed@example.sa",
+      participationMode: "Principal",
+      accentClass: "border-l-gray-400",
+    },
   ],
   catalogItems: [
     {
@@ -115,13 +207,38 @@ export const mockPortalData: PortalData = {
     {
       id: "a1000003-0003-4000-8000-000000000003",
       partnerId: "22222222-2222-2222-2222-222222222004",
-      code: "SVC-SUB",
-      name: "Monthly integration channel",
+      code: "SVC-BASIC",
+      name: "Basic integration tier",
+      description: "Single channel, standard SLA",
+      offeringKind: "ServiceOneOff",
+      participationMode: "SubscriptionFee",
+      partnerCost: sar(49),
+      settlementBook: "Integration",
+      status: "Active",
+    },
+    {
+      id: "a1000003b-0003-4000-8000-00000000003b",
+      partnerId: "22222222-2222-2222-2222-222222222004",
+      code: "SVC-PRO",
+      name: "Pro integration tier",
+      description: "Multi-channel + webhooks",
       offeringKind: "ServiceSubscription",
       participationMode: "SubscriptionFee",
       partnerCost: sar(70),
       settlementBook: "Integration",
       status: "Active",
+    },
+    {
+      id: "a1000003c-0003-4000-8000-00000000003c",
+      partnerId: "22222222-2222-2222-2222-222222222004",
+      code: "SVC-ENT",
+      name: "Enterprise integration tier",
+      description: "Dedicated support + custom routing",
+      offeringKind: "ServiceSubscription",
+      participationMode: "SubscriptionFee",
+      partnerCost: sar(120),
+      settlementBook: "Integration",
+      status: "Draft",
     },
     {
       id: "a1000004-0004-4000-8000-000000000004",
@@ -142,6 +259,17 @@ export const mockPortalData: PortalData = {
       offeringKind: "ServiceOneOff",
       participationMode: "Principal",
       partnerCost: sar(49),
+      settlementBook: "Marketplace",
+      status: "Active",
+    },
+    {
+      id: "a1000006-0006-4000-8000-000000000006",
+      partnerId: PARTNER_CHEFZ,
+      code: "CHEFZ-LIST",
+      name: "Chefz marketplace listing",
+      offeringKind: "FnBItemsPerSale",
+      participationMode: "ReflectionOnly",
+      partnerCost: sar(0),
       settlementBook: "Marketplace",
       status: "Active",
     },
@@ -174,10 +302,14 @@ export const mockPortalData: PortalData = {
       tenantId: "11111111-1111-1111-1111-111111111003",
       merchantName: "Quick Bites Co.",
       catalogItemId: "a1000003-0003-4000-8000-000000000003",
-      catalogItemName: "Monthly integration channel",
+      catalogItemName: "Basic integration tier",
       resalePrice: sar(115),
       status: "Active",
       activatedAt: "2026-05-15T08:00:00Z",
+      fees: {
+        subscription: { enabled: true, amountInclusive: sar(40), payer: "Merchant" },
+        perTransaction: { enabled: false, amountInclusive: sar(1), payer: "Merchant" },
+      },
     },
     {
       id: "act-004",
@@ -188,6 +320,47 @@ export const mockPortalData: PortalData = {
       catalogItemName: "Standard delivery fulfilment",
       resalePrice: sar(13),
       status: "Pending",
+    },
+    {
+      id: "act-005",
+      partnerId: PARTNER_CHEFZ,
+      tenantId: TENANT_SHAWARMA,
+      merchantName: "Shawarma Time",
+      catalogItemId: "a1000006-0006-4000-8000-000000000006",
+      catalogItemName: "Chefz marketplace listing",
+      resalePrice: sar(0),
+      status: "Active",
+      activatedAt: "2026-05-20T08:00:00Z",
+      fees: {
+        subscription: { enabled: true, amountInclusive: sar(40), payer: "Merchant" },
+        perTransaction: { enabled: true, amountInclusive: sar(1), payer: "Partner" },
+      },
+    },
+    {
+      id: "act-006",
+      partnerId: PARTNER_CHEFZ,
+      tenantId: TENANT_PASTA,
+      merchantName: "Pasta Corner",
+      catalogItemId: "a1000006-0006-4000-8000-000000000006",
+      catalogItemName: "Chefz marketplace listing",
+      resalePrice: sar(0),
+      status: "Active",
+      activatedAt: "2026-05-25T08:00:00Z",
+      fees: {
+        subscription: { enabled: false, amountInclusive: sar(40), payer: "Partner" },
+        perTransaction: { enabled: true, amountInclusive: sar(1), payer: "Partner" },
+      },
+    },
+    {
+      id: "act-demo-merchant",
+      partnerId: PARTNER_JAHEZ,
+      tenantId: TENANT_DEMO_MERCHANT,
+      merchantName: "Al Rajhi Demo Store",
+      catalogItemId: "a1000003-0003-4000-8000-000000000003",
+      catalogItemName: "Basic integration tier",
+      resalePrice: sar(115),
+      status: "Active",
+      activatedAt: "2026-06-01T10:00:00Z",
     },
   ],
   activationWorkflows: [
@@ -250,6 +423,30 @@ export const mockPortalData: PortalData = {
       journal: deliveryJournal,
       createdAt: "2026-06-05T09:30:00Z",
     },
+    {
+      id: "stl-case-9001",
+      partnerId: PARTNER_SALASA,
+      partnerName: "Salasa Delivery",
+      tenantId: TENANT_QUICKBITES,
+      externalTransactionId: "order:ord-9001:v1",
+      book: "Marketplace",
+      state: "Allocated",
+      journal: buildCollectionJournal(codCollection, "2026-06-19T16:40:00Z"),
+      createdAt: "2026-06-19T16:40:00Z",
+      collection: codCollection,
+    },
+    {
+      id: "stl-case-9002",
+      partnerId: PARTNER_SALASA,
+      partnerName: "Salasa Delivery",
+      tenantId: TENANT_QUICKBITES,
+      externalTransactionId: "order:ord-9002:v1",
+      book: "Marketplace",
+      state: "Collected",
+      journal: buildCollectionJournal(onlineCollection, "2026-06-19T17:10:00Z"),
+      createdAt: "2026-06-19T17:10:00Z",
+      collection: onlineCollection,
+    },
   ],
   reversals: [],
   reflectedOrders: [
@@ -275,6 +472,7 @@ export const mockPortalData: PortalData = {
       posSyncStatus: "Reflected",
       reflectedAt: "2026-06-19T12:00:00Z",
     },
+    ...chefzReflectionOrders(),
   ],
   billingPeriods: [
     {
@@ -290,6 +488,17 @@ export const mockPortalData: PortalData = {
       invoiceNumber: "INV-2026-06-0042",
       journalBalanced: true,
       status: "Invoiced",
+      dueDate: "2026-07-15T00:00:00Z",
+      paymentStatus: "Partial",
+      payments: [
+        {
+          id: "pay-2026-06-001",
+          amount: sar(40),
+          date: "2026-06-18T10:30:00Z",
+          method: "Transfer",
+          reference: "TRF-553201",
+        },
+      ],
     },
     {
       id: "bill-2026-07",
@@ -303,6 +512,50 @@ export const mockPortalData: PortalData = {
       billingChargeId: "chg-2026-07-001",
       journalBalanced: true,
       status: "Charged",
+      dueDate: "2026-08-01T00:00:00Z",
+      paymentStatus: "Pending",
+      payments: [],
+    },
+    {
+      id: "bill-demo-2026-06",
+      partnerId: PARTNER_JAHEZ,
+      tenantId: TENANT_DEMO_MERCHANT,
+      merchantName: "Al Rajhi Demo Store",
+      periodKey: "2026-06",
+      feeInclusive: sar(115),
+      outputVat: 15,
+      netFee: 100,
+      billingChargeId: "chg-demo-2026-06",
+      invoiceNumber: "INV-DEMO-2026-06",
+      journalBalanced: true,
+      status: "Invoiced",
+      dueDate: "2026-07-15T00:00:00Z",
+      paymentStatus: "Partial",
+      payments: [
+        {
+          id: "pay-demo-2026-06",
+          amount: sar(50),
+          date: "2026-06-15T09:00:00Z",
+          method: "Transfer",
+          reference: "TRF-DEMO",
+        },
+      ],
+    },
+  ],
+  receipts: [
+    {
+      id: "rcpt-2026-06-001",
+      receiptNo: "ZR-2026-0001",
+      invoiceRef: "INV-2026-06-0042",
+      billingPeriodId: "bill-2026-06",
+      partnerId: "22222222-2222-2222-2222-222222222004",
+      tenantId: "11111111-1111-1111-1111-111111111003",
+      merchantName: "Quick Bites Co.",
+      amount: sar(40),
+      date: "2026-06-18T10:30:00Z",
+      method: "Transfer",
+      sent: true,
+      sentAt: "2026-06-18T10:35:00Z",
     },
   ],
   webhookEndpoints: [
@@ -498,6 +751,22 @@ function seedOrgs(): Org[] {
       status: "Active",
       createdAt: at,
     },
+    {
+      id: "org-partner-chefz",
+      level: "Partner",
+      name: "Chefz",
+      partnerId: PARTNER_CHEFZ,
+      status: "Active",
+      createdAt: at,
+    },
+    {
+      id: "org-merchant-shawarma",
+      level: "Merchant",
+      name: "Shawarma Time",
+      tenantId: TENANT_SHAWARMA,
+      status: "Active",
+      createdAt: at,
+    },
   ];
 }
 
@@ -508,7 +777,8 @@ function seedOrgUsers(): OrgUser[] {
       id: "ou-platform-admin",
       orgId: "org-platform",
       name: "Admin User",
-      email: "admin@zahy.sa",
+      email: "admin@zahy.dev",
+      password: DEMO_PASSWORD,
       rolePreset: "PlatformAdmin",
       permissions: presetPermissions("Platform", "PlatformAdmin"),
       status: "Active",
@@ -518,7 +788,8 @@ function seedOrgUsers(): OrgUser[] {
       id: "ou-platform-accountant",
       orgId: "org-platform",
       name: "Omar Finance",
-      email: "accountant@zahy.sa",
+      email: "accountant@zahy.dev",
+      password: DEMO_PASSWORD,
       rolePreset: "Accountant",
       permissions: presetPermissions("Platform", "Accountant"),
       status: "Active",
@@ -527,8 +798,9 @@ function seedOrgUsers(): OrgUser[] {
     {
       id: "ou-salasa-admin",
       orgId: "org-partner-salasa",
-      name: "Salasa Owner",
-      email: "owner@salasa.sa",
+      name: "Salasa Ops",
+      email: "ops@salasa.com",
+      password: DEMO_PASSWORD,
       rolePreset: "PartnerAdmin",
       permissions: presetPermissions("Partner", "PartnerAdmin"),
       status: "Active",
@@ -537,7 +809,8 @@ function seedOrgUsers(): OrgUser[] {
       id: "ou-jahez-finance",
       orgId: "org-partner-jahez",
       name: "Jahez Finance",
-      email: "finance@jahez.sa",
+      email: "finance@jahez.com",
+      password: DEMO_PASSWORD,
       rolePreset: "PartnerFinance",
       // Per-user override demo: add Webhooks.Manage on top of the finance preset.
       permissions: [...presetPermissions("Partner", "PartnerFinance"), OrgPermissions.WebhooksManage],
@@ -547,10 +820,21 @@ function seedOrgUsers(): OrgUser[] {
     {
       id: "ou-quickbites-admin",
       orgId: "org-merchant-quickbites",
-      name: "Quick Bites Owner",
-      email: "owner@quickbites.sa",
+      name: "Merchant Manager",
+      email: "manager@merchant.com",
+      password: DEMO_PASSWORD,
       rolePreset: "MerchantAdmin",
       permissions: presetPermissions("Merchant", "MerchantAdmin"),
+      status: "Active",
+    },
+    {
+      id: "ou-chefz-finance",
+      orgId: "org-partner-chefz",
+      name: "Chefz Finance",
+      email: "finance@thechefz.co",
+      password: DEMO_PASSWORD,
+      rolePreset: "PartnerFinance",
+      permissions: presetPermissions("Partner", "PartnerFinance"),
       status: "Active",
     },
   ];

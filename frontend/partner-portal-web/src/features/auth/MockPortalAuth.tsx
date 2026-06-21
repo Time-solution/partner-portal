@@ -77,7 +77,7 @@ export function MockPortalAuthProvider({ children }: { children: ReactNode }) {
   const loginWithEmail = useCallback(
     async (email: string, _password: string): Promise<MockLoginResult> => {
       if (!email.trim() || !_password.trim()) return { ok: false, error: "required" };
-      const match = await ds.authenticate(email);
+      const match = await ds.authenticate(email, _password);
       if (!match) return { ok: false, error: "invalid" };
       const next = buildOrgSession(match.org, match.orgUser);
       applySession(next);

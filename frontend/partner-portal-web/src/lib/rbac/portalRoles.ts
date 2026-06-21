@@ -18,7 +18,12 @@ export const MOCK_DEMO_ROLES: PortalRole[] = [...PORTAL_ROLES, "MerchantPreview"
 export const PortalPermissions = {
   Dashboard: { Read: "Zahy.Portal.Dashboard.Read" },
   Partners: { Read: "Zahy.Portal.Partners.Read", Manage: "Zahy.Portal.Partners.Manage" },
-  Catalog: { Read: "Zahy.Portal.Catalog.Read", Write: "Zahy.Portal.Catalog.Write" },
+  Catalog: {
+    Read: "Zahy.Portal.Catalog.Read",
+    Write: "Zahy.Portal.Catalog.Write",
+    AuthorSelf: "Zahy.Portal.Catalog.Author.Self",
+    AuthorManaged: "Zahy.Portal.Catalog.Author.Managed",
+  },
   Activations: {
     Read: "Zahy.Portal.Activations.Read",
     Request: "Zahy.Portal.Activations.Request",
@@ -63,6 +68,7 @@ export const rolePermissionMap: Record<PortalRole, readonly string[]> = {
   PartnerSuccessManager: [
     PortalPermissions.Partners.Read,
     PortalPermissions.Catalog.Read,
+    PortalPermissions.Catalog.AuthorManaged,
     PortalPermissions.Activations.Read,
     PortalPermissions.Activations.Request,
     PortalPermissions.Reflection.Read,
@@ -77,6 +83,7 @@ export const rolePermissionMap: Record<PortalRole, readonly string[]> = {
     PortalPermissions.Billing.Read,
     PortalPermissions.Settlement.Read,
     PortalPermissions.Catalog.Read,
+    PortalPermissions.Catalog.AuthorSelf,
     PortalPermissions.Activations.Read,
     PortalPermissions.Reflection.Read,
     PortalPermissions.Reversals.Read,

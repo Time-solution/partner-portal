@@ -104,6 +104,7 @@ export function scopePortalData(data: PortalData, ctx: OrgContext): PortalData {
   );
   const reflectedOrders = data.reflectedOrders.filter((o) => canSeeSharedFlow(o, ctx));
   const billingPeriods = data.billingPeriods.filter((b) => canSeeSharedFlow(b, ctx));
+  const receipts = data.receipts.filter((r) => canSeeSharedFlow(r, ctx));
 
   // Standalone partner-owned data — never shared with merchants.
   const webhookEndpoints = data.webhookEndpoints.filter((w) => canSeeStandalone(w, ctx));
@@ -130,6 +131,7 @@ export function scopePortalData(data: PortalData, ctx: OrgContext): PortalData {
     reversals,
     reflectedOrders,
     billingPeriods,
+    receipts,
     webhookEndpoints,
     webhookDeliveries,
     credentials,

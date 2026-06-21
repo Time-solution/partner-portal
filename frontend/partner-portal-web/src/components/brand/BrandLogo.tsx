@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Lang } from "@/lib/i18n";
 
 interface BrandLogoProps {
@@ -6,7 +6,10 @@ interface BrandLogoProps {
   variant?: "full" | "icon";
   className?: string;
   lang?: Lang;
-  /** Prefer dark-background artwork (e.g. header on navy). */
+  /**
+   * Force the dark-background artwork. Leave undefined to auto-follow the active
+   * theme (the `.dark` class on <html>) — the single place logo variant is decided.
+   */
   onDark?: boolean;
 }
 
@@ -23,15 +26,44 @@ const ASSETS = {
   },
 } as const;
 
+/**
+ * The light full-lockup logo path — the SINGLE place the raw brand asset URL lives. Non-React
+ * consumers that cannot render <BrandLogo /> (e.g. the proforma PDF's HTML string) import this
+ * instead of hard-coding the path, so brand asset references stay in one file.
+ */
+export const ZAHY_LOGO_SRC = ASSETS.full.light;
+
+/** Tracks the active theme by watching the `.dark` class on <html> (set by useTheme). */
+function useIsDarkTheme() {
+  const [isDark, setIsDark] = useState(
+    () => typeof document !== "undefined" && document.documentElement.classList.contains("dark"),
+  );
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const el = document.documentElement;
+    const sync = () => setIsDark(el.classList.contains("dark"));
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(el, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+
+  return isDark;
+}
+
 export function BrandLogo({
   variant = "full",
   className,
   lang = "ar",
-  onDark = false,
+  onDark,
 }: BrandLogoProps) {
   const [failed, setFailed] = useState(false);
+  const isDarkTheme = useIsDarkTheme();
   const pack = ASSETS[variant];
-  const src = onDark ? pack.dark : pack.light;
+  // Explicit prop wins; otherwise follow the active theme so the dark-bg art is
+  // used on the dark UI and the light-bg art on the light UI.
+  const src = (onDark ?? isDarkTheme) ? pack.dark : pack.light;
 
   if (failed) {
     const wordmark =

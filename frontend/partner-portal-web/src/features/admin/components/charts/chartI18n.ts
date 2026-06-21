@@ -1,9 +1,9 @@
 import type { Lang } from "@/lib/i18n";
+import { formatMoneyNumber } from "@/lib/format/moneyDisplay";
 
-/** Money tooltip — locale-correct currency suffix (no mixed EN "SAR" in Arabic UI). */
-export function formatMoneyTooltip(value: unknown, lang: Lang): string {
-  const amount = Number(value ?? 0).toFixed(2);
-  return lang === "ar" ? `${amount} ر.س` : `${amount} SAR`;
+/** @deprecated Chart tooltips use {@link MoneyChartTooltipContent} — numeric fallback only. */
+export function formatMoneyTooltip(value: unknown, _lang: Lang): string {
+  return formatMoneyNumber(Number(value ?? 0));
 }
 
 /** @deprecated Use formatMoneyTooltip(value, lang) */
@@ -32,8 +32,40 @@ export function chartMargins(isRtl: boolean, options: ChartMarginOptions = {}) {
 
 export function chartTick(isRtl: boolean) {
   return {
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: 500,
+    fill: "hsl(var(--foreground))",
     ...(isRtl ? { direction: "rtl" as const } : {}),
+  };
+}
+
+/** Larger, clearer legend with bigger swatches. */
+export function legendProps(isRtl: boolean) {
+  return {
+    iconSize: 14,
+    iconType: "circle" as const,
+    wrapperStyle: {
+      fontSize: 13,
+      fontWeight: 500,
+      paddingTop: 8,
+      direction: (isRtl ? "rtl" : "ltr") as "rtl" | "ltr",
+    },
+  };
+}
+
+/** Readable tooltip — solid surface, larger text, RTL-aware. */
+export function tooltipProps(isRtl: boolean) {
+  return {
+    contentStyle: {
+      fontSize: 13,
+      borderRadius: 8,
+      border: "1px solid hsl(var(--border))",
+      background: "hsl(var(--popover))",
+      color: "hsl(var(--popover-foreground))",
+      direction: (isRtl ? "rtl" : "ltr") as "rtl" | "ltr",
+    },
+    labelStyle: { fontWeight: 600, marginBottom: 4 },
+    cursor: { fill: "hsl(var(--muted))", fillOpacity: 0.4 },
   };
 }
 

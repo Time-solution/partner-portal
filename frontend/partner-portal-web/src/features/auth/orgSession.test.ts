@@ -3,6 +3,7 @@ import type { Org, OrgUser } from "@/lib/org/orgModel";
 import {
   MOCK_PARTNER_FINANCE_PARTNER_ID,
   MOCK_PARTNER_PSM_PARTNER_ID,
+  partnerHomePath,
 } from "@/lib/rbac/roleNavConfig";
 import {
   buildOrgSession,
@@ -82,7 +83,7 @@ describe("buildOrgSession", () => {
       partnerId: MOCK_PARTNER_PSM_PARTNER_ID,
       tenantId: undefined,
     });
-    expect(s.landing).toBe(`/partners/${MOCK_PARTNER_PSM_PARTNER_ID}`);
+    expect(s.landing).toBe(partnerHomePath(MOCK_PARTNER_PSM_PARTNER_ID));
   });
   it("platform session has no scopedPartnerId and dashboard landing", () => {
     const s = buildOrgSession(orgs[0], users[0]);
@@ -92,7 +93,7 @@ describe("buildOrgSession", () => {
   it("merchant session carries tenant ctx", () => {
     const s = buildOrgSession(orgs[3], users[4]);
     expect(s.ctx.tenantId).toBe("tenant-qb");
-    expect(s.landing).toBe("/merchant-preview");
+    expect(s.landing).toBe("/merchant-preview?tab=partners");
   });
 });
 

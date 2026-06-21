@@ -9,6 +9,7 @@ import {
   isPathAllowedForRole,
   isPartnerScopedRole,
   mockScopedPartnerId,
+  partnerHomePath,
 } from "@/lib/rbac/roleNavConfig";
 import { usePortalSession } from "@/features/auth/usePortalSession";
 import type { PortalRole } from "@/lib/rbac/portalRoles";
@@ -17,6 +18,8 @@ import type { Lang } from "@/lib/i18n";
 import { DashboardPage } from "./pages/DashboardPage";
 import { OrgAccountsPage } from "./pages/OrgAccountsPage";
 import { OrgUsersPage } from "./pages/OrgUsersPage";
+import { MerchantsListPage } from "./pages/MerchantsListPage";
+import { MerchantDetailPage } from "./pages/MerchantDetailPage";
 import { PartnersListPage } from "./pages/PartnersListPage";
 import { PartnerDetailPage } from "./pages/PartnerDetailPage";
 import { PartnerModulePage } from "./pages/PartnerModulePage";
@@ -84,12 +87,19 @@ function RequireAdminExperience({ children }: { children: React.ReactNode }) {
 }
 
 function ScopedRouteGuard({ children }: { children: React.ReactNode }) {
-  const { role } = usePortalSession();
+  const { role, scopedPartnerId } = usePortalSession();
   const location = useLocation();
   const portalRole = role as PortalRole;
 
-  if (!isPathAllowedForRole(location.pathname, portalRole)) {
-    return <Navigate to={defaultLandingPath(portalRole)} replace />;
+  // Pass the ACTUAL signed-in partner scope so a partner login cannot reach another
+  // partner's URL by direct entry (the guard no longer trusts the legacy demo mapping).
+  if (!isPathAllowedForRole(location.pathname, portalRole, scopedPartnerId)) {
+    return (
+      <Navigate
+        to={scopedPartnerId ? partnerHomePath(scopedPartnerId) : defaultLandingPath(portalRole)}
+        replace
+      />
+    );
   }
 
   return <>{children}</>;
@@ -101,10 +111,10 @@ function HomeRedirect() {
 }
 
 function PartnerAliasRedirect() {
-  const { role } = usePortalSession();
-  const partnerId = mockScopedPartnerId(role);
+  const { role, scopedPartnerId } = usePortalSession();
+  const partnerId = scopedPartnerId ?? mockScopedPartnerId(role);
   if (!partnerId) return <RoleFallback />;
-  return <Navigate to={`/partners/${partnerId}`} replace />;
+  return <Navigate to={partnerHomePath(partnerId)} replace />;
 }
 
 export function AdminRoutes({ lang }: { lang: Lang }) {
@@ -201,6 +211,27 @@ export function AdminRoutes({ lang }: { lang: Lang }) {
             >
               <PartnerDetailPage lang={lang} />
             </RequirePermission>
+          }
+        />
+
+        <Route
+          path="/merchants"
+          element={
+            <RequireAdminExperience>
+              <RequireOrgPermission permission={OrgPermissions.MerchantsView}>
+                <MerchantsListPage lang={lang} />
+              </RequireOrgPermission>
+            </RequireAdminExperience>
+          }
+        />
+        <Route
+          path="/merchants/:tenantId"
+          element={
+            <RequireAdminExperience>
+              <RequireOrgPermission permission={OrgPermissions.MerchantsView}>
+                <MerchantDetailPage lang={lang} />
+              </RequireOrgPermission>
+            </RequireAdminExperience>
           }
         />
 

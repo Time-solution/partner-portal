@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import type { Partner } from "@/lib/data/types";
 import {
   getVisibleModuleScreens,
@@ -7,6 +7,7 @@ import {
 import { usePortalSession } from "@/features/auth/usePortalSession";
 import type { Lang } from "@/lib/i18n";
 import { useTranslator } from "@/lib/i18n";
+import { isPathActive, tabBarClass, tabLinkClass } from "@/lib/ui/tabs";
 
 interface PartnerSubNavProps {
   partner: Partner;
@@ -17,31 +18,21 @@ interface PartnerSubNavProps {
 export function PartnerSubNav({ partner, lang }: PartnerSubNavProps) {
   const t = useTranslator(lang);
   const { user } = usePortalSession();
+  const { pathname } = useLocation();
   const moduleId = resolvePartnerModule(partner);
   const screens = getVisibleModuleScreens(moduleId, user?.permissions ?? []);
 
   return (
-    <nav
-      className="flex flex-wrap gap-1 border-b border-border pb-2"
-      aria-label={t("partnerSectionsNav" as never)}
-    >
-      {screens.map((screen) => (
-        <NavLink
-          key={screen.id}
-          to={`/partners/${partner.id}/${screen.path}`}
-          end={false}
-          className={({ isActive }) =>
-            [
-              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-              isActive
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground",
-            ].join(" ")
-          }
-        >
-          {t(screen.labelKey as never)}
-        </NavLink>
-      ))}
+    <nav className={tabBarClass} aria-label={t("partnerSectionsNav" as never)}>
+      {screens.map((screen) => {
+        const to = `/partners/${partner.id}/${screen.path}`;
+        // One shared active-state predicate (same as sidebar + finance tabs) → consistent Zahy-green pill.
+        return (
+          <NavLink key={screen.id} to={to} className={tabLinkClass(isPathActive(pathname, to))}>
+            {t(screen.labelKey as never)}
+          </NavLink>
+        );
+      })}
     </nav>
   );
 }

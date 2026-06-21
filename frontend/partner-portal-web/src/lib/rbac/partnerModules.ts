@@ -206,9 +206,11 @@ export { defaultLandingPath } from "./roleNavConfig";
 
 export type FinanceWorkspaceTabId =
   | "overview"
+  | "reports"
   | "settlements"
   | "reversals"
   | "billing"
+  | "balances"
   | "vat"
   | "pending-approvals";
 
@@ -220,9 +222,12 @@ export interface FinanceTabDef {
 
 export const FINANCE_WORKSPACE_TABS: readonly FinanceTabDef[] = [
   { id: "overview", path: "overview", labelKey: "financeTab_overview" },
+  // Same i18n key as the sidebar Reports entry — one label source, one destination.
+  { id: "reports", path: "reports", labelKey: "navReports" },
   { id: "settlements", path: "settlements", labelKey: "financeTab_settlements" },
   { id: "reversals", path: "reversals", labelKey: "financeTab_reversals" },
   { id: "billing", path: "billing", labelKey: "financeTab_billing" },
+  { id: "balances", path: "balances", labelKey: "financeTab_balances" },
   { id: "vat", path: "vat", labelKey: "financeTab_vat" },
   { id: "pending-approvals", path: "pending-approvals", labelKey: "financeTab_pendingApprovals" },
 ];

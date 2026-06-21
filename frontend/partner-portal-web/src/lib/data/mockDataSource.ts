@@ -1,6 +1,11 @@
-import type { IPortalDataSource, CreateActivationInput, RegisterWebhookInput } from "./IPortalDataSource";
+import type { CreateActivationInput, IPortalDataSource, RecordPaymentInput, RegisterWebhookInput } from "./IPortalDataSource";
 import { loadOrSeedData, resetToSeedData, savePersistedData } from "./mockStore";
+import {
+  buildMerchantActivationIdempotencyKey,
+  merchantListedSellPrice,
+} from "@/lib/catalog/merchantBrowse";
 import type {
+  ActivationFeeConfig,
   ActivationWorkflowState,
   AuditEntry,
   CreateOrgAccountInput,
@@ -12,6 +17,7 @@ import type {
   PortalData,
   PortalUser,
   PortalUserRole,
+  Receipt,
   SettlementReversal,
   SubscriptionBillingPeriod,
   UpdateOrgUserInput,
@@ -19,7 +25,7 @@ import type {
   WebhookDelivery,
   WebhookEndpoint,
 } from "./types";
-import { invertJournal } from "./types";
+import { deriveInvoicePayment, invertJournal } from "./types";
 import { notifyPortalDataChanged } from "./portalDataEvents";
 import { canGrantRole, roleRequiresPartner, type PortalRole } from "@/lib/rbac/portalRoles";
 import {
@@ -32,6 +38,12 @@ import {
   type OrgUser,
 } from "@/lib/org/orgModel";
 import { scopePortalData } from "@/lib/org/orgScope";
+import {
+  readOrgProfile,
+  resetOrgProfiles,
+  writeOrgProfile,
+} from "@/lib/profile/orgProfileStore";
+import type { OrgProfile, OrgProfileScope } from "@/lib/profile/orgProfile";
 
 const delay = (ms = 80) => new Promise((r) => setTimeout(r, ms));
 
@@ -129,6 +141,61 @@ export class MockPortalDataSource implements IPortalDataSource {
     return partnerId ? items.filter((i) => i.partnerId === partnerId) : [...items];
   }
 
+  async createCatalogItem(input: import("./IPortalDataSource").CreateCatalogItemInput) {
+    await delay();
+    const duplicate = this.data.catalogItems.some(
+      (i) => i.partnerId === input.partnerId && i.code === input.code.trim(),
+    );
+    if (duplicate) {
+      throw new Error("Duplicate catalog code for partner.");
+    }
+    const item = {
+      id: uid("cat"),
+      partnerId: input.partnerId,
+      code: input.code.trim(),
+      name: input.name.trim(),
+      description: input.description?.trim(),
+      offeringKind: input.offeringKind,
+      participationMode: input.participationMode ?? "Principal",
+      partnerCost: input.partnerCost,
+      settlementBook: input.settlementBook ?? "Integration",
+      status: "Draft" as const,
+    };
+    this.data.catalogItems.push(item);
+    this.persist();
+    return { ...item };
+  }
+
+  async updateCatalogItem(id: string, input: import("./IPortalDataSource").UpdateCatalogItemInput) {
+    await delay();
+    const item = this.data.catalogItems.find((i) => i.id === id);
+    if (!item) throw new Error("Catalog item not found.");
+    if (item.status !== "Draft") throw new Error("Only draft items can be updated.");
+    item.name = input.name.trim();
+    item.description = input.description?.trim();
+    item.partnerCost = input.partnerCost;
+    this.persist();
+    return { ...item };
+  }
+
+  async publishCatalogItem(id: string) {
+    await delay();
+    const item = this.data.catalogItems.find((i) => i.id === id);
+    if (!item) throw new Error("Catalog item not found.");
+    item.status = "Active";
+    this.persist();
+    return { ...item };
+  }
+
+  async archiveCatalogItem(id: string) {
+    await delay();
+    const item = this.data.catalogItems.find((i) => i.id === id);
+    if (!item) throw new Error("Catalog item not found.");
+    item.status = "Archived";
+    this.persist();
+    return { ...item };
+  }
+
   async getActivations(partnerId?: string) {
     await delay();
     const view = this.view();
@@ -160,6 +227,12 @@ export class MockPortalDataSource implements IPortalDataSource {
     await delay();
     const items = this.view().billingPeriods;
     return partnerId ? items.filter((b) => b.partnerId === partnerId) : [...items];
+  }
+
+  async getReceipts(partnerId?: string) {
+    await delay();
+    const items = this.view().receipts;
+    return partnerId ? items.filter((r) => r.partnerId === partnerId) : [...items];
   }
 
   async getWebhookEndpoints(partnerId?: string) {
@@ -319,12 +392,14 @@ export class MockPortalDataSource implements IPortalDataSource {
     return scopePortalData(structuredClone(this.data), ctx);
   }
 
-  /** Mock email/password auth — matches a seeded org user (password is not checked in mock). */
-  async authenticate(email: string) {
+  /** Mock email/password auth — matches a seeded org user against its demo password. */
+  async authenticate(email: string, password?: string) {
     await delay();
     const normalized = normalizeEmail(email);
     const user = this.data.orgUsers.find((u) => normalizeEmail(u.email) === normalized);
     if (!user || user.status === "Suspended") return undefined;
+    // MOCK demo credential check (localStorage only). If a seed password is set, it must match.
+    if (user.password && user.password !== (password ?? "")) return undefined;
     const org = this.data.orgs.find((o) => o.id === user.orgId);
     if (!org || org.status === "Suspended") return undefined;
     return {
@@ -526,18 +601,31 @@ export class MockPortalDataSource implements IPortalDataSource {
     if (!partner) throw new Error("Partner not found");
     if (partner.status !== "Active") throw new Error("Partner is not available for activation");
 
-    const duplicate = this.data.activations.find(
-      (a) =>
-        a.partnerId === input.partnerId &&
-        a.tenantId === input.tenantId &&
-        a.status !== "Ended",
-    );
-    if (duplicate) throw new Error("Partner already activated for this merchant");
-
     const catalogItem = this.data.catalogItems.find(
       (c) => c.id === input.catalogItemId && c.partnerId === input.partnerId && c.status === "Active",
     );
     if (!catalogItem) throw new Error("Catalog item not found");
+
+    const idempotencyKey = buildMerchantActivationIdempotencyKey(input.tenantId, input.catalogItemId);
+    const existing = this.data.activations.find(
+      (a) => a.idempotencyKey === idempotencyKey && a.status !== "Ended",
+    );
+    if (existing) {
+      return row(this.data, existing);
+    }
+
+    const ended = this.data.activations.find(
+      (a) =>
+        a.tenantId === input.tenantId &&
+        a.catalogItemId === input.catalogItemId &&
+        a.status === "Ended",
+    );
+    if (ended) {
+      throw new Error("This offering was previously ended and cannot be re-activated.");
+    }
+
+    const sell = input.resalePrice ?? merchantListedSellPrice(catalogItem);
+    const now = new Date().toISOString();
 
     const activation: MerchantActivation = {
       id: uid("act"),
@@ -546,16 +634,25 @@ export class MockPortalDataSource implements IPortalDataSource {
       merchantName: input.merchantName,
       catalogItemId: catalogItem.id,
       catalogItemName: catalogItem.name,
-      resalePrice: { ...catalogItem.partnerCost },
-      status: "Pending",
-      idempotencyKey: `preview-${input.partnerId}-${input.tenantId}`,
+      resalePrice: { ...sell },
+      status: "Active",
+      activatedAt: now,
+      idempotencyKey,
+      fees:
+        partner.participationMode === "SubscriptionFee"
+          ? {
+              subscription: { enabled: true, amountInclusive: { ...sell }, payer: "Merchant" },
+              perTransaction: { enabled: false, amountInclusive: { amount: 1, currency: "SAR", vatInclusive: true }, payer: "Merchant" },
+            }
+          : undefined,
     };
     this.data.activations.push(activation);
-    workflowFor(this.data, activation.id);
+    const wf = workflowFor(this.data, activation.id);
+    wf.stage = "Active";
     appendAudit(this.data, {
       actor: input.merchantName,
       role: "MerchantPreview",
-      action: "Requested partner activation (merchant preview)",
+      action: "Instant partner activation (merchant self-service)",
       target: activation.id,
     });
     this.persist();
@@ -575,6 +672,22 @@ export class MockPortalDataSource implements IPortalDataSource {
       actor: activation.merchantName,
       role: "MerchantPreview",
       action: "Ended partner activation",
+      target: activationId,
+    });
+    this.persist();
+    return row(this.data, activation);
+  }
+
+  async setActivationFees(activationId: string, fees: ActivationFeeConfig) {
+    await delay();
+    const activation = this.data.activations.find((a) => a.id === activationId);
+    if (!activation) throw new Error("Activation not found");
+    // Config + display only — never posts a journal (the fee journal stays OFF).
+    activation.fees = fees;
+    appendAudit(this.data, {
+      actor: actorNameSafe(),
+      role: "PlatformAdmin",
+      action: "Updated activation fee matrix (display only)",
       target: activationId,
     });
     this.persist();
@@ -833,11 +946,87 @@ export class MockPortalDataSource implements IPortalDataSource {
     return period;
   }
 
+  private nextReceiptNo(year: number): string {
+    const seq = this.data.receipts.length + 1;
+    return `ZR-${year}-${String(seq).padStart(4, "0")}`;
+  }
+
+  async recordPayment(periodId: string, input: RecordPaymentInput) {
+    await delay();
+    const period = this.data.billingPeriods.find((p) => p.id === periodId);
+    if (!period) throw new Error("Billing period not found");
+
+    const amount = Math.round(input.amount * 100) / 100;
+    if (!(amount > 0)) throw new Error("Payment amount must be positive");
+
+    const date = input.date || new Date().toISOString();
+    const payment = {
+      id: uid("pay"),
+      amount: { amount, currency: period.feeInclusive.currency, vatInclusive: true },
+      date,
+      method: input.method,
+      reference: input.reference.trim() || `${input.method}-${uid("ref").toUpperCase()}`,
+    };
+    period.payments = [...(period.payments ?? []), payment];
+    period.paymentStatus = deriveInvoicePayment(period).status;
+
+    const receipt: Receipt = {
+      id: uid("rcpt"),
+      receiptNo: this.nextReceiptNo(new Date(date).getFullYear()),
+      invoiceRef: period.invoiceNumber ?? period.billingChargeId,
+      billingPeriodId: period.id,
+      partnerId: period.partnerId,
+      tenantId: period.tenantId,
+      merchantName: period.merchantName,
+      amount: { ...payment.amount },
+      date,
+      method: input.method,
+      sent: false,
+    };
+    this.data.receipts.unshift(receipt);
+
+    appendAudit(this.data, {
+      actor: actorNameSafe(),
+      role: "Accountant",
+      action: "Recorded payment (BETA)",
+      target: period.id,
+    });
+    this.persist();
+    return { period: { ...period }, receipt: { ...receipt } };
+  }
+
+  async sendReceipt(receiptId: string) {
+    await delay();
+    const receipt = this.data.receipts.find((r) => r.id === receiptId);
+    if (!receipt) throw new Error("Receipt not found");
+    receipt.sent = true;
+    receipt.sentAt = new Date().toISOString();
+    appendAudit(this.data, {
+      actor: actorNameSafe(),
+      role: "Accountant",
+      action: "Sent receipt",
+      target: receipt.id,
+    });
+    this.persist();
+    return { ...receipt };
+  }
+
   async resetDemoData() {
     await delay();
     this.data = resetToSeedData();
+    resetOrgProfiles();
     recalcKpis(this.data);
     notifyPortalDataChanged();
+  }
+
+  async getOrgProfile(scope: OrgProfileScope) {
+    await delay();
+    return readOrgProfile(scope);
+  }
+
+  async saveOrgProfile(scope: OrgProfileScope, profile: OrgProfile) {
+    await delay();
+    return writeOrgProfile(scope, profile);
   }
 }
 

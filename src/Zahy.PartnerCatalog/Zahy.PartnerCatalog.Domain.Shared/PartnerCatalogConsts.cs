@@ -39,4 +39,10 @@ public static class PartnerCatalogErrorCodes
     public const string InvalidSubscriptionFee = Namespace + ":015";
     public const string ActivationAlreadyEnded = Namespace + ":016";
     public const string ActivationNotFound = Namespace + ":017";
+    public const string AuthoringNotPermitted = Namespace + ":018";
+    public const string OfferingKindNotAllowedForPartnerType = Namespace + ":019";
+    public const string DuplicateCatalogCode = Namespace + ":020";
+    public const string CatalogItemNotFound = Namespace + ":021";
+    public const string CannotUpdateNonDraft = Namespace + ":022";
+    public const string PartnerNotFound = Namespace + ":023";
 }

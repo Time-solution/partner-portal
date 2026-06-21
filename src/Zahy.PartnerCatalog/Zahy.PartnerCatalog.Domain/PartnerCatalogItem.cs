@@ -142,6 +142,58 @@ public class PartnerCatalogItem : FullAuditedAggregateRoot<Guid>, IMultiTenant
         return item;
     }
 
+    public void UpdateDraft(
+        string name,
+        string? description,
+        Money partnerCost,
+        SettlementBook? settlementBookOverride = null,
+        SettlementTriggerMode? settlementTriggerMode = null,
+        string? carrierServiceCode = null,
+        PartnerCatalogFulfilmentUnit? fulfilmentUnit = null,
+        string? externalMenuItemId = null,
+        string? menuCategoryCode = null,
+        SettlementParticipationMode? settlementParticipationMode = null,
+        ConsignmentOwnershipMode? consignmentOwnershipMode = null)
+    {
+        if (Status != PartnerCatalogItemStatus.Draft)
+        {
+            throw new BusinessException(PartnerCatalogErrorCodes.CannotUpdateNonDraft)
+                .WithData("Status", Status.ToString());
+        }
+
+        Name = NormalizeRequired(name, PartnerCatalogConsts.MaxNameLength, nameof(name));
+        Description = NormalizeOptional(description, PartnerCatalogConsts.MaxDescriptionLength);
+        SettlementBookOverride = settlementBookOverride;
+        if (settlementTriggerMode.HasValue)
+        {
+            SettlementTriggerMode = settlementTriggerMode.Value;
+        }
+
+        CarrierServiceCode = NormalizeOptional(carrierServiceCode, PartnerCatalogConsts.MaxCarrierServiceCodeLength);
+        if (OfferingKind == PartnerCatalogOfferingKind.DeliveryFulfilmentPerOrder)
+        {
+            FulfilmentUnit = fulfilmentUnit ?? FulfilmentUnit ?? PartnerCatalogFulfilmentUnit.PerShipment;
+        }
+
+        ExternalMenuItemId = NormalizeOptional(externalMenuItemId, PartnerCatalogConsts.MaxExternalMenuItemIdLength);
+        MenuCategoryCode = NormalizeOptional(menuCategoryCode, PartnerCatalogConsts.MaxMenuCategoryCodeLength);
+
+        if (OfferingKind == PartnerCatalogOfferingKind.ConsignmentFulfilment)
+        {
+            var resolvedOwnership = consignmentOwnershipMode ?? ConsignmentOwnershipMode;
+            SettlementParticipationMode = ConsignmentOwnershipModeRouting.ResolveParticipationMode(
+                resolvedOwnership!.Value);
+            ConsignmentOwnershipMode = resolvedOwnership;
+        }
+        else if (settlementParticipationMode.HasValue)
+        {
+            SettlementParticipationMode = settlementParticipationMode.Value;
+        }
+
+        AssignPartnerCost(partnerCost);
+        ValidateKindSpecificFields();
+    }
+
     public void Publish(DateTime atUtc)
     {
         TransitionTo(PartnerCatalogItemStatus.Active, atUtc);

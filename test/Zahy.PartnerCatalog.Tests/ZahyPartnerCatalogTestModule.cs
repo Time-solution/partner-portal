@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using Volo.Abp;
 using Volo.Abp.Authorization;
 using Volo.Abp.Autofac;
@@ -13,7 +14,9 @@ using Volo.Abp.EntityFrameworkCore;
 using Volo.Abp.EntityFrameworkCore.Sqlite;
 using Volo.Abp.Modularity;
 using Volo.Abp.Testing;
+using Zahy.Commission;
 using Zahy.Identity.Partners;
+using Zahy.Settlement;
 
 namespace Zahy.PartnerCatalog;
 
@@ -36,7 +39,24 @@ public class ZahyPartnerCatalogTestModule : AbpModule
         context.Services.AddSingleton<PartnerCatalogTestCurrentTenant>();
         context.Services.Replace(ServiceDescriptor.Singleton<Volo.Abp.MultiTenancy.ICurrentTenant>(sp =>
             sp.GetRequiredService<PartnerCatalogTestCurrentTenant>()));
-        context.Services.AddSingleton<Volo.Abp.Authorization.Permissions.IPermissionChecker, PartnerCatalogAllowAllPermissionChecker>();
+        context.Services.AddSingleton<PartnerCatalogTestPermissionChecker>();
+        context.Services.Replace(ServiceDescriptor.Singleton<Volo.Abp.Authorization.Permissions.IPermissionChecker>(sp =>
+            sp.GetRequiredService<PartnerCatalogTestPermissionChecker>()));
+        context.Services.AddSingleton<PartnerCatalogTestPartnerTypeLookup>();
+        context.Services.Replace(ServiceDescriptor.Singleton<IPartnerCatalogPartnerTypeLookup>(sp =>
+            sp.GetRequiredService<PartnerCatalogTestPartnerTypeLookup>()));
+
+        context.Services.AddSingleton<PartnerCatalogTestMerchantOptions>();
+        context.Services.Replace(ServiceDescriptor.Singleton<IOptionsMonitor<PartnerCatalogMerchantOptions>>(sp =>
+            sp.GetRequiredService<PartnerCatalogTestMerchantOptions>()));
+
+        context.Services.AddSingleton<PartnerCatalogTestSettlementCaseStore>();
+        context.Services.Replace(ServiceDescriptor.Singleton<ISettlementCaseStore>(sp =>
+            sp.GetRequiredService<PartnerCatalogTestSettlementCaseStore>()));
+
+        context.Services.AddSingleton<PartnerCatalogTestBillingChargeService>();
+        context.Services.Replace(ServiceDescriptor.Singleton<IBillingChargeService>(sp =>
+            sp.GetRequiredService<PartnerCatalogTestBillingChargeService>()));
 
         var sqliteConnection = CreateDatabaseAndGetConnection();
 

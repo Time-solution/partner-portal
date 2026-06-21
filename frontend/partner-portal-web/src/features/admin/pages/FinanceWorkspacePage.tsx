@@ -4,8 +4,10 @@ import { Navigate, NavLink, Route, Routes, useLocation } from "react-router-dom"
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getPortalDataSource } from "@/lib/data";
-import type { MerchantActivationRow, SettlementCase, SubscriptionBillingPeriod } from "@/lib/data/types";
-import { deriveSettlementSummary } from "@/lib/data/types";
+import type { MerchantActivationRow, PortalData, SubscriptionBillingPeriod } from "@/lib/data/types";
+import { MoneyAmount } from "@/components/MoneyAmount";
+import { BetaBadge } from "@/components/brand/BetaBadge";
+import { platformTotals, toReportEntries, vatControl } from "@/lib/reports/settlementReports";
 import { PortalPermissions } from "@/lib/rbac/portalRoles";
 import { FINANCE_WORKSPACE_TABS } from "@/lib/rbac/partnerModules";
 import { usePortalSession } from "@/features/auth/usePortalSession";
@@ -20,31 +22,23 @@ import {
   ReversalsImpactChart,
 } from "../components/charts/FinanceCharts";
 import { SettlementTrendChart } from "../components/charts/SettlementTrendChart";
-import { billingPeriodStatusLabel, settlementStateLabel } from "@/lib/i18n/domainLabels";
+import { billingPeriodStatusLabel } from "@/lib/i18n/domainLabels";
+import { isPathActive, tabBarClass, tabLinkClass } from "@/lib/ui/tabs";
+import { BalancesPage } from "./BalancesPage";
+import { ReportsPage } from "./ReportsPage";
+import { FinanceDrillDown } from "../components/FinanceDrillDown";
 
 function FinanceTabNav({ lang }: { lang: Lang }) {
   const t = useTranslator(lang);
   const location = useLocation();
 
   return (
-    <nav
-      className="flex flex-wrap gap-1 border-b border-border pb-2"
-      aria-label={t("navFinance" as never)}
-    >
+    <nav className={tabBarClass} aria-label={t("navFinance" as never)}>
       {FINANCE_WORKSPACE_TABS.map((tab) => {
         const to = `/finance/${tab.path}`;
-        const isActive = location.pathname === to || location.pathname.startsWith(`${to}/`);
+        const isActive = isPathActive(location.pathname, to);
         return (
-          <NavLink
-            key={tab.id}
-            to={to}
-            className={[
-              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-              isActive
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground",
-            ].join(" ")}
-          >
+          <NavLink key={tab.id} to={to} className={tabLinkClass(isActive)}>
             {t(tab.labelKey as never)}
           </NavLink>
         );
@@ -56,8 +50,13 @@ function FinanceTabNav({ lang }: { lang: Lang }) {
 function FinanceOverview({ lang }: { lang: Lang }) {
   const t = useTranslator(lang);
   const { analytics, loading } = usePortalAnalytics();
+  const [data, setData] = useState<PortalData | null>(null);
 
-  if (loading || !analytics) {
+  useEffect(() => {
+    void getPortalDataSource().getAll().then(setData);
+  }, []);
+
+  if (loading || !analytics || !data) {
     return (
       <div className="flex items-center gap-2 text-base text-muted-foreground">
         <Loader2 className="h-5 w-5 animate-spin" />
@@ -66,7 +65,12 @@ function FinanceOverview({ lang }: { lang: Lang }) {
     );
   }
 
-  const vatTotal = analytics.billingRevenue.reduce((sum, p) => sum + p.vatSar, 0);
+  // SINGLE SOURCE: every money figure reads settlementReports over the scoped dataset.
+  // Net VAT = VatControlReport (2200 − 1300); fee revenue = 4200; resale margin = 4100 − 5100.
+  // Never a flat 15% of a total.
+  const entries = toReportEntries(data);
+  const totals = platformTotals(entries, "all");
+  const vat = vatControl(entries, "all");
 
   return (
     <div className="space-y-6">
@@ -74,31 +78,38 @@ function FinanceOverview({ lang }: { lang: Lang }) {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t("financeKpiSettlements" as never)}
+              {t("reportsResaleMargin" as never)}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold tabular-nums">{analytics.settlementCaseCount}</p>
+            <p className="text-2xl font-bold tabular-nums">
+              <MoneyAmount amount={totals.resaleMargin} />
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t("financeKpiReversals" as never)}
+              {t("reportsFeeRevenue" as never)}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold tabular-nums">{analytics.reversalImpact.length}</p>
+            <p className="text-2xl font-bold tabular-nums">
+              <MoneyAmount amount={totals.feeRevenue} />
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t("financeKpiVat" as never)}
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              {t("reportsNetVat" as never)}
+              <BetaBadge lang={lang} />
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold tabular-nums">{vatTotal.toFixed(2)} SAR</p>
+            <p className="text-2xl font-bold tabular-nums">
+              <MoneyAmount amount={vat.netVatToZatca} />
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -124,6 +135,7 @@ function FinanceOverview({ lang }: { lang: Lang }) {
         <PendingApprovalsChart lang={lang} count={analytics.pendingApprovals} />
       </div>
       <ReversalsImpactChart lang={lang} data={analytics.reversalImpact} />
+      <FinanceDrillDown lang={lang} canOpenReports />
     </div>
   );
 }
@@ -161,7 +173,7 @@ function FinanceVatSummary({ lang }: { lang: Lang }) {
             <li key={p.id} className="flex flex-wrap justify-between gap-2 py-3">
               <span className="font-medium">{p.merchantName}</span>
               <span>
-                {t("billingVatLabel" as never)} {p.outputVat.toFixed(2)} SAR ·{" "}
+                {t("billingVatLabel" as never)} <MoneyAmount amount={p.outputVat} /> ·{" "}
                 {billingPeriodStatusLabel(lang, p.status)}
               </span>
             </li>
@@ -252,47 +264,6 @@ function FinancePendingApprovals({ lang }: { lang: Lang }) {
   );
 }
 
-function FinanceSettlementsList({ lang }: { lang: Lang }) {
-  const t = useTranslator(lang);
-  const [cases, setCases] = useState<SettlementCase[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    void getPortalDataSource()
-      .getSettlementCases()
-      .then(setCases)
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        {t("loadingData" as never)}
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      {cases.map((c) => {
-        const summary = deriveSettlementSummary(c.journal);
-        return (
-          <Card key={c.id}>
-            <CardHeader>
-              <CardTitle className="text-base">{c.partnerName}</CardTitle>
-              <CardDescription>
-                {c.externalTransactionId} · {settlementStateLabel(lang, c.state)} ·{" "}
-                {summary.sellPrice.amount.toFixed(2)} SAR
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        );
-      })}
-    </div>
-  );
-}
-
 export function FinanceWorkspacePage({ lang }: { lang: Lang }) {
   const t = useTranslator(lang);
 
@@ -307,17 +278,10 @@ export function FinanceWorkspacePage({ lang }: { lang: Lang }) {
       <Routes>
         <Route index element={<Navigate to="overview" replace />} />
         <Route path="overview" element={<FinanceOverview lang={lang} />} />
+        <Route path="reports" element={<ReportsPage lang={lang} />} />
         <Route
           path="settlements"
-          element={
-            <div className="space-y-4">
-              <FinanceSettlementsList lang={lang} />
-              <ModuleScreenRenderer
-                screenId="settlement"
-                context={{ lang, financeMode: true }}
-              />
-            </div>
-          }
+          element={<ModuleScreenRenderer screenId="settlement" context={{ lang, financeMode: true }} />}
         />
         <Route
           path="reversals"
@@ -327,6 +291,7 @@ export function FinanceWorkspacePage({ lang }: { lang: Lang }) {
           path="billing"
           element={<ModuleScreenRenderer screenId="billing" context={{ lang, financeMode: true }} />}
         />
+        <Route path="balances" element={<BalancesPage lang={lang} />} />
         <Route path="vat" element={<FinanceVatSummary lang={lang} />} />
         <Route path="pending-approvals" element={<FinancePendingApprovals lang={lang} />} />
         <Route path="*" element={<Navigate to="overview" replace />} />

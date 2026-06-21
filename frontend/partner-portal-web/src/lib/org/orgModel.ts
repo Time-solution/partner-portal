@@ -50,6 +50,8 @@ export interface OrgUser {
   status: OrgUserStatus;
   invitedAt?: string;
   lastLoginAt?: string;
+  /** MOCK demo password only (localStorage) — never real auth. Optional for invited users. */
+  password?: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -72,6 +74,7 @@ export const OrgPermissions = {
   CredentialsManage: "Credentials.Manage",
   UsersManage: "Users.Manage",
   OrgAccountsCreate: "OrgAccounts.Create",
+  MerchantsView: "Merchants.View",
 } as const;
 
 export type OrgPermission = (typeof OrgPermissions)[keyof typeof OrgPermissions];
@@ -89,6 +92,7 @@ const ALL: OrgLevel[] = ["Platform", "Partner", "Merchant"];
 export const PERMISSION_CATALOG: readonly PermissionCatalogEntry[] = [
   { key: OrgPermissions.PartnersView, group: "Partners", levels: ["Platform"] },
   { key: OrgPermissions.PartnersManage, group: "Partners", levels: ["Platform"] },
+  { key: OrgPermissions.MerchantsView, group: "Partners", levels: ["Platform"] },
   { key: OrgPermissions.OrgAccountsCreate, group: "Partners", levels: ["Platform"] },
 
   { key: OrgPermissions.ActivationsView, group: "Activations", levels: ALL },

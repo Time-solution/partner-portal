@@ -17,8 +17,10 @@ import {
 import { usePortalSession } from "@/features/auth/usePortalSession";
 import { PageHeader } from "../components/PageHeader";
 import { SettingsUsersSection } from "./SettingsUsersSection";
+import { OrgProfileForm } from "@/features/settings/profile/OrgProfileForm";
 import type { Lang } from "@/lib/i18n";
 import { useTranslator } from "@/lib/i18n";
+import { tabBarClass, tabLinkClass as tabLinkActiveClass } from "@/lib/ui/tabs";
 import { hasAnyPermission } from "@/lib/permissions";
 
 interface SettingsTab {
@@ -29,6 +31,12 @@ interface SettingsTab {
 }
 
 const SETTINGS_TABS: readonly SettingsTab[] = [
+  {
+    key: "profile",
+    path: "profile",
+    labelKey: "settingsTabProfile",
+    permissions: [PortalPermissions.Settings.Manage],
+  },
   {
     key: "roles",
     path: "roles",
@@ -101,14 +109,7 @@ export function SettingsPage({ lang }: { lang: Lang }) {
   const canReset = can(PortalPermissions.Settings.Manage);
   const defaultTab = visibleTabs[0]?.path ?? "roles";
 
-  const tabLinkClass = ({ isActive }: { isActive: boolean }) =>
-    [
-      "rounded-md px-3 py-2 text-base font-medium transition-colors",
-      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-      isActive
-        ? "bg-primary/10 text-primary"
-        : "text-muted-foreground hover:bg-muted hover:text-foreground",
-    ].join(" ");
+  const tabLinkClass = ({ isActive }: { isActive: boolean }) => tabLinkActiveClass(isActive);
 
   return (
     <div className="space-y-6">
@@ -129,10 +130,7 @@ export function SettingsPage({ lang }: { lang: Lang }) {
         </Card>
       ) : null}
 
-      <nav
-        className="flex flex-wrap gap-1 border-b border-border pb-2"
-        aria-label={t("navSettings" as never)}
-      >
+      <nav className={tabBarClass} aria-label={t("navSettings" as never)}>
         {visibleTabs.map((tab) => (
           <NavLink
             key={tab.key}
@@ -147,6 +145,18 @@ export function SettingsPage({ lang }: { lang: Lang }) {
 
       <Routes>
         <Route index element={<Navigate to={defaultTab} replace />} />
+        <Route
+          path="profile"
+          element={
+            <OrgProfileForm
+              lang={lang}
+              scope={{ kind: "platform", id: "zahy" }}
+              requireNationalNumber={false}
+              titleKey="orgProfilePlatformTitle"
+              descKey="orgProfilePlatformDesc"
+            />
+          }
+        />
         <Route
           path="roles"
           element={

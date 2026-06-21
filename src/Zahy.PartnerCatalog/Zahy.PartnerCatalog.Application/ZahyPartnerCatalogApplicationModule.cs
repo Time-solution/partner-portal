@@ -30,5 +30,6 @@ public class ZahyPartnerCatalogApplicationModule : AbpModule
         context.Services.AddTransient<IConsignmentSaleSettlementRouter, ConsignmentSaleSettlementRouter>();
         context.Services.AddTransient<ReflectionOnlyOrderBridge>();
         context.Services.AddTransient<SubscriptionFeeBillingBridge>();
+        context.Services.AddTransient<IPartnerCatalogPartnerTypeLookup, NullPartnerCatalogPartnerTypeLookup>();
     }
 }

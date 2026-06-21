@@ -13,7 +13,7 @@ import type { PendingDoneRow } from "@/lib/analytics/chartAnalytics";
 import type { Lang } from "@/lib/i18n";
 import { useTranslator } from "@/lib/i18n";
 import { ChartCard, ChartEmpty, CHART_COLORS } from "./ChartCard";
-import { chartMargins, chartTick, countTooltipFormatter } from "./chartI18n";
+import { chartMargins, chartTick, countTooltipFormatter, legendProps, tooltipProps } from "./chartI18n";
 
 interface PendingVsDoneChartProps {
   lang: Lang;
@@ -75,8 +75,8 @@ export function PendingVsDoneChart({ lang, data }: PendingVsDoneChartProps) {
                 tick={chartTick(isRtl)}
                 width={isRtl ? 48 : 40}
               />
-              <Tooltip formatter={countTooltipFormatter} />
-              <Legend />
+              <Tooltip {...tooltipProps(isRtl)} formatter={countTooltipFormatter} />
+              <Legend {...legendProps(isRtl)} />
               <Bar dataKey="done" name={labels.done} stackId="status" fill={CHART_COLORS.done} />
               <Bar dataKey="pending" name={labels.pending} stackId="status" fill={CHART_COLORS.pending} />
               <Bar dataKey="delivered" name={labels.delivered} stackId="status" fill={CHART_COLORS.done} />

@@ -18,7 +18,7 @@ public class MerchantCatalogWriteAppServiceTests : ZahyPartnerCatalogTestBase
     private static readonly Guid TenantB = Guid.Parse("11111111-1111-1111-1111-111111111002");
 
     [Fact]
-    public async Task Activate_Creates_Tenant_Scoped_Pending_Activation()
+    public async Task Activate_Creates_Tenant_Scoped_Active_Instantly()
     {
         await WithUnitOfWorkAsync(async () =>
         {
@@ -33,7 +33,8 @@ public class MerchantCatalogWriteAppServiceTests : ZahyPartnerCatalogTestBase
 
             dto.TenantId.ShouldBe(TenantA);
             dto.PartnerCatalogItemId.ShouldBe(item.Id);
-            dto.Status.ShouldBe(MerchantActivationStatus.Pending);
+            dto.Status.ShouldBe(MerchantActivationStatus.Active);
+            dto.ActivatedAt.ShouldNotBeNull();
             dto.ResalePrice.Amount.ShouldBe(70m);
         });
     }
@@ -62,6 +63,29 @@ public class MerchantCatalogWriteAppServiceTests : ZahyPartnerCatalogTestBase
             var count = await activationRepo.CountAsync(x =>
                 x.TenantId == TenantA && x.PartnerCatalogItemId == item.Id);
             count.ShouldBe(1);
+        });
+    }
+
+    [Fact]
+    public async Task Activate_Instant_Does_Not_Create_Snapshot()
+    {
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var item = await InsertActiveItemAsync("MERCH-NOSNAP");
+            SetTenant(TenantA);
+
+            var snapshotRepo = GetRequiredService<IRepository<SettlementCostMarkupSnapshot, Guid>>();
+            var before = await snapshotRepo.GetCountAsync();
+
+            var merchant = GetRequiredService<IPartnerCatalogMerchantAppService>();
+            var dto = await merchant.ActivateAsync(new ActivateMerchantOfferingInput
+            {
+                PartnerCatalogItemId = item.Id,
+            });
+
+            dto.Status.ShouldBe(MerchantActivationStatus.Active);
+            var after = await snapshotRepo.GetCountAsync();
+            after.ShouldBe(before);
         });
     }
 

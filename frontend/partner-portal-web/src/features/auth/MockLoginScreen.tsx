@@ -14,7 +14,7 @@ import { useMockPortalAuthState } from "@/features/auth/usePortalSession";
 import type { Lang } from "@/lib/i18n";
 import { useTranslator } from "@/lib/i18n";
 
-const DEMO_PASSWORD = "demo";
+const DEMO_PASSWORD = "1q2w3E*";
 
 const levelBadgeClass: Record<string, string> = {
   Platform: "bg-primary/15 text-primary",

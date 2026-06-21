@@ -1,6 +1,7 @@
 import {
   Building2,
   Calculator,
+  FileBarChart,
   Home,
   KeyRound,
   LayoutDashboard,
@@ -22,7 +23,7 @@ import {
   canAccessMerchantPreview,
 } from "@/lib/rbac/partnerModules";
 import type { PortalRole } from "@/lib/rbac/portalRoles";
-import { ROLE_NAV_KEYS, roleExperience } from "@/lib/rbac/roleNavConfig";
+import { ROLE_NAV_KEYS, roleExperience, partnerHomePath } from "@/lib/rbac/roleNavConfig";
 
 export interface AdminNavItem {
   key: string;
@@ -99,6 +100,16 @@ export const adminNav: readonly AdminNavItem[] = [
     path: "/finance/overview",
     labelKey: "navFinance",
     icon: Calculator,
+    permissions: [PP.Finance.Read],
+    roles: ["Accountant", "PlatformAdmin"],
+    section: "finance",
+  },
+  {
+    // Deep-link into the SAME Reports view inside /finance/* (not a second page).
+    key: "reports",
+    path: "/finance/reports",
+    labelKey: "navReports",
+    icon: FileBarChart,
     permissions: [PP.Finance.Read],
     roles: ["Accountant", "PlatformAdmin"],
     section: "finance",
@@ -180,7 +191,7 @@ export function navForRole(
 ): AdminNavItem[] {
   const items = filterNavByPermissions(adminNav, granted, role).map((item) => {
     if (item.key === "partner-home" && scopedPartnerId) {
-      return { ...item, path: `/partners/${scopedPartnerId}` };
+      return { ...item, path: partnerHomePath(scopedPartnerId) };
     }
     return item;
   });

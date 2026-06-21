@@ -14,6 +14,7 @@ export const ROLE_NAV_KEYS: Record<PortalRole, readonly string[]> = {
     "dashboard",
     "merchant-preview",
     "finance",
+    "reports",
     "delivery-service",
     "commerce",
     "fnb",
@@ -25,7 +26,7 @@ export const ROLE_NAV_KEYS: Record<PortalRole, readonly string[]> = {
     "credentials",
     "settings",
   ],
-  Accountant: ["finance", "settings"],
+  Accountant: ["finance", "reports", "settings"],
   PartnerSuccessManager: ["partner-home", "webhooks", "credentials"],
   PartnerFinance: ["partner-home", "webhooks", "credentials"],
   MerchantPreview: ["merchant-preview"],
@@ -49,13 +50,13 @@ export function mockScopedPartnerId(role: PortalRole | string): string | undefin
 }
 
 export function partnerHomePath(partnerId: string): string {
-  return `/partners/${partnerId}`;
+  return `/partners/${partnerId}/active-merchants`;
 }
 
 export function defaultLandingPath(role: PortalRole): string {
   switch (role) {
     case "MerchantPreview":
-      return "/merchant-preview";
+      return "/merchant-preview?tab=partners";
     case "Accountant":
       return "/finance/overview";
     case "PartnerSuccessManager":
@@ -77,7 +78,16 @@ export const ADMIN_ONLY_PATH_PREFIXES = [
   "/merchant-preview",
 ] as const;
 
-export function isPathAllowedForRole(pathname: string, role: PortalRole): boolean {
+export function isPathAllowedForRole(
+  pathname: string,
+  role: PortalRole,
+  /**
+   * The ACTUAL signed-in partner scope (from the org session). Falls back to the
+   * legacy demo mapping only when not supplied. Passing it hardens the guard so a
+   * partner login (e.g. Chefz) can never reach another partner's URL by direct entry.
+   */
+  scopedPartnerId?: string,
+): boolean {
   const experience = roleExperience(role);
 
   // Self-service org users area is reachable by any signed-in org admin (org-permission gated downstream).
@@ -87,7 +97,10 @@ export function isPathAllowedForRole(pathname: string, role: PortalRole): boolea
 
   if (experience === "merchant") {
     return (
-      pathname === "/merchant-preview" || pathname.startsWith("/merchant-preview/") || orgUsers
+      pathname === "/merchant-preview" ||
+      pathname.startsWith("/merchant-preview/") ||
+      pathname.startsWith("/merchant-preview?") ||
+      orgUsers
     );
   }
 
@@ -96,7 +109,7 @@ export function isPathAllowedForRole(pathname: string, role: PortalRole): boolea
   }
 
   if (experience === "partner") {
-    const partnerId = mockScopedPartnerId(role)!;
+    const partnerId = scopedPartnerId ?? mockScopedPartnerId(role)!;
     const ownPartner = pathname.startsWith(`/partners/${partnerId}`);
     const webhooks = pathname === "/webhooks" || pathname.startsWith("/webhooks/");
     const credentials = pathname === "/credentials" || pathname.startsWith("/credentials/");

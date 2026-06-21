@@ -14,7 +14,8 @@ import type { ModuleTransactionPoint } from "@/lib/analytics/chartAnalytics";
 import type { Lang } from "@/lib/i18n";
 import { useTranslator } from "@/lib/i18n";
 import { ChartCard, ChartEmpty, CHART_COLORS } from "./ChartCard";
-import { chartMargins, chartTick, volumeAmountTooltipFormatter } from "./chartI18n";
+import { MoneyChartTooltipContent } from "@/components/MoneyChartTooltip";
+import { chartMargins, chartTick, legendProps, tooltipProps } from "./chartI18n";
 
 interface TransactionsByModuleChartProps {
   lang: Lang;
@@ -88,8 +89,15 @@ export function TransactionsByModuleChart({ lang, data }: TransactionsByModuleCh
                   style: { fontSize: 11, textAnchor: "middle" },
                 }}
               />
-              <Tooltip formatter={volumeAmountTooltipFormatter(lang, t)} />
-              <Legend />
+              <Tooltip
+                {...tooltipProps(isRtl)}
+                content={
+                  <MoneyChartTooltipContent
+                    isMoneySeries={(name) => name === amountLabel || name === "amountSar"}
+                  />
+                }
+              />
+              <Legend {...legendProps(isRtl)} />
               <Bar
                 yAxisId="volume"
                 dataKey="volume"

@@ -38,19 +38,20 @@ export function ChartEmpty({ lang }: { lang: Lang }) {
   );
 }
 
-/** Shared chart colours — works in light/dark. */
+/** Shared chart colours — high-contrast, accessible, visually distinct in light/dark. */
 export const CHART_COLORS = {
-  primary: "hsl(var(--primary))",
-  volume: "#6366f1",
-  amount: "#0ea5e9",
-  pending: "#f59e0b",
-  done: "#10b981",
-  retrying: "#f97316",
-  dlq: "#ef4444",
-  margin: "#8b5cf6",
-  vat: "#14b8a6",
-  revenue: "#3b82f6",
-  reversal: "#ec4899",
+  primary: "#2563eb",
+  settlement: "#2563eb",
+  volume: "#4f46e5",
+  amount: "#0284c7",
+  pending: "#d97706",
+  done: "#059669",
+  retrying: "#ea580c",
+  dlq: "#dc2626",
+  margin: "#7c3aed",
+  vat: "#0d9488",
+  revenue: "#2563eb",
+  reversal: "#db2777",
 };
 
 export { chartMargins, formatMoneyTooltip, formatSarTooltip } from "./chartI18n";

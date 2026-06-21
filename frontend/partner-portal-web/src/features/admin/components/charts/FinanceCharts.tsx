@@ -12,8 +12,15 @@ import {
 import type { BillingRevenuePoint, ReversalImpactPoint } from "@/lib/analytics/chartAnalytics";
 import type { Lang } from "@/lib/i18n";
 import { useTranslator } from "@/lib/i18n";
+import { MoneyChartTooltipContent } from "@/components/MoneyChartTooltip";
 import { ChartCard, ChartEmpty, CHART_COLORS } from "./ChartCard";
-import { chartMargins, chartTick, countTooltipFormatter, moneyTooltipFormatter } from "./chartI18n";
+import {
+  chartMargins,
+  chartTick,
+  countTooltipFormatter,
+  legendProps,
+  tooltipProps,
+} from "./chartI18n";
 
 export function BillingRevenueChart({ lang, data }: { lang: Lang; data: BillingRevenuePoint[] }) {
   const t = useTranslator(lang);
@@ -33,8 +40,8 @@ export function BillingRevenueChart({ lang, data }: { lang: Lang; data: BillingR
               <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
               <XAxis dataKey="periodKey" tick={chartTick(isRtl)} tickMargin={8} />
               <YAxis orientation={isRtl ? "right" : "left"} tick={chartTick(isRtl)} width={56} />
-              <Tooltip formatter={moneyTooltipFormatter(lang)} />
-              <Legend />
+              <Tooltip {...tooltipProps(isRtl)} content={<MoneyChartTooltipContent />} />
+              <Legend {...legendProps(isRtl)} />
               <Bar dataKey="revenueSar" name={revenueLabel} fill={CHART_COLORS.revenue} radius={[4, 4, 0, 0]} />
               <Bar dataKey="vatSar" name={vatLabel} fill={CHART_COLORS.vat} radius={[4, 4, 0, 0]} />
             </BarChart>
@@ -71,7 +78,8 @@ export function ReversalsImpactChart({ lang, data }: { lang: Lang; data: Reversa
                 tick={chartTick(isRtl)}
                 orientation={isRtl ? "right" : "left"}
               />
-              <Tooltip formatter={moneyTooltipFormatter(lang)} />
+              <Tooltip {...tooltipProps(isRtl)} content={<MoneyChartTooltipContent />} />
+              <Legend {...legendProps(isRtl)} />
               <Bar
                 dataKey="amountSar"
                 name={amountLabel}
@@ -101,8 +109,8 @@ export function PendingApprovalsChart({ lang, count }: { lang: Lang; count: numb
             <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
             <XAxis dataKey="name" tick={chartTick(isRtl)} interval={0} height={48} tickMargin={8} />
             <YAxis orientation={isRtl ? "right" : "left"} allowDecimals={false} tick={chartTick(isRtl)} width={40} />
-            <Tooltip formatter={countTooltipFormatter} />
-            <Legend />
+            <Tooltip {...tooltipProps(isRtl)} formatter={countTooltipFormatter} />
+            <Legend {...legendProps(isRtl)} />
             <Bar dataKey="count" name={pendingLabel} fill={CHART_COLORS.pending} radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>

@@ -13,6 +13,7 @@ export function useLanguage() {
     const root = document.documentElement;
     root.lang = lang;
     root.dir = lang === "ar" ? "rtl" : "ltr";
+    document.title = lang === "ar" ? "Zahy — لوحة الإدارة" : "Zahy — Admin Console";
     window.localStorage.setItem(STORAGE_KEY, lang);
   }, [lang]);
 
