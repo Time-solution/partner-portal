@@ -45,4 +45,18 @@ public static class PartnerCatalogErrorCodes
     public const string CatalogItemNotFound = Namespace + ":021";
     public const string CannotUpdateNonDraft = Namespace + ":022";
     public const string PartnerNotFound = Namespace + ":023";
+
+    // U2 — usage package config/authoring.
+    public const string UsagePackageNotFound = Namespace + ":024";
+    public const string InvalidUsagePackage = Namespace + ":025";
+    public const string InvalidUsagePackageStatusTransition = Namespace + ":026";
+
+    // U4 — merchant package selection / activation link.
+    public const string UsagePackageNotPublished = Namespace + ":027";
+    public const string UsagePackageSelectionNotFound = Namespace + ":028";
+    public const string UsagePackageSelectionAlreadyEnded = Namespace + ":029";
+    public const string InvalidUsagePackageSelection = Namespace + ":030";
+
+    // U5 — optional volume tiers on a package's overage.
+    public const string InvalidUsagePackageTier = Namespace + ":031";
 }

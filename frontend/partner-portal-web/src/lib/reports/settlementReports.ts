@@ -23,7 +23,11 @@ import type {
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
-/** Standard KSA VAT rate. THE ONLY place this literal is allowed to live. */
+/**
+ * VAT rate — single source for frontend math. Backend authoritative source is VatMath /
+ * FinanceVatOptions. THE ONLY place this literal is allowed to live on the frontend; every other
+ * module imports it from here rather than re-typing 0.15 / 1.15.
+ */
 export const VAT_RATE = 0.15;
 
 /** Round to 2dp, away-from-zero (matches the backend money policy; identical to half-up for positives). */

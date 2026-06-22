@@ -27,6 +27,7 @@ public class FinanceAccessGuard : DomainService
 
     public async Task EnsureCanAccessPartnerAccountAsync(Guid partnerId)
     {
+        // A partner principal is scoped to its OWN partner's payable side — never another partner's.
         if (_currentPartner.Id != null)
         {
             if (_currentPartner.Id != partnerId)
@@ -37,7 +38,9 @@ public class FinanceAccessGuard : DomainService
             return;
         }
 
-        if (await _permissionChecker.IsGrantedAsync(ZahyPermissions.Partners.Manage))
+        // Cross-entity "see all" is the accountant/admin Finance.ReadAll capability — NOT Partners.Manage.
+        // Partner-ops (Partners.Manage) is partner administration, not finance, and must not read ledgers.
+        if (await _permissionChecker.IsGrantedAsync(ZahyPermissions.Finance.ReadAll))
         {
             return;
         }
@@ -47,6 +50,7 @@ public class FinanceAccessGuard : DomainService
 
     public async Task EnsureCanAccessMerchantAccountAsync(Guid tenantId)
     {
+        // A merchant principal is scoped to its OWN tenant's ledger — never another merchant's.
         if (_currentTenant.Id != null)
         {
             if (_currentTenant.Id != tenantId)
@@ -57,7 +61,9 @@ public class FinanceAccessGuard : DomainService
             return;
         }
 
-        if (await _permissionChecker.IsGrantedAsync(ZahyPermissions.Partners.Manage))
+        // Only the accountant/admin (Finance.ReadAll) may read an arbitrary merchant ledger. Previously
+        // this allowed Partners.Manage (partner-ops), which leaked every merchant's finance ledger.
+        if (await _permissionChecker.IsGrantedAsync(ZahyPermissions.Finance.ReadAll))
         {
             return;
         }

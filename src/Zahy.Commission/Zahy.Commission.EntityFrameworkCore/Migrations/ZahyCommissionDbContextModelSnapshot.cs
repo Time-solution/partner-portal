@@ -101,6 +101,9 @@ namespace Zahy.Commission.EntityFrameworkCore.Migrations
                     b.Property<DateTime?>("ApprovedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid?>("ApprovedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<decimal>("BasisAmount")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");

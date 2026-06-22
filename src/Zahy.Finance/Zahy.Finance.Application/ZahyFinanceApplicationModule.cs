@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.Application;
 using Volo.Abp.Auditing;
@@ -38,11 +39,16 @@ public class ZahyFinanceApplicationModule : AbpModule
         context.Services.AddTransient<IZatcaInvoiceShaper, LocalZatcaInvoiceShaper>();
         context.Services.AddTransient<IZatcaSubmitter, NullZatcaSubmitter>();
         context.Services.Configure<FinanceBrandingOptions>(_ => { });
+        // VAT rate is config-driven (default 0.15) and applied as a VAT-INCLUSIVE back-out — the SAME
+        // convention as the Settlement engine, so Finance + Settlement split an identical amount identically.
+        context.Services.Configure<FinanceVatOptions>(
+            context.Services.GetConfiguration().GetSection("Finance:Vat"));
         context.Services.AddTransient<FinancePlatformSettingsProvider>();
         context.Services.AddTransient<IFinanceInvoiceNumberAllocator, FinanceInvoiceNumberAllocator>();
         context.Services.AddTransient<DefaultFinanceInvoicePdfGenerator>();
         context.Services.AddTransient<IFinanceInvoicePdfGenerator, DefaultFinanceInvoicePdfGenerator>();
         context.Services.AddTransient<IFinanceInvoiceGenerationService, FinanceInvoiceGenerationService>();
+        context.Services.AddTransient<IFinanceDocumentAppService, FinanceManualInvoiceAppService>();
         context.Services.AddTransient<IInvoiceTrigger, BillingChargeInvoiceTrigger>();
         context.Services.AddTransient<IFinanceAccountStatusService, FinanceAccountStatusService>();
         context.Services.AddTransient<IMerchantOperationalStatusService, MerchantOperationalStatusService>();
@@ -50,5 +56,9 @@ public class ZahyFinanceApplicationModule : AbpModule
         context.Services.AddTransient<FinanceDocumentDownloadService>();
         context.Services.AddTransient<IFinancePartnerPortalAppService, FinancePartnerPortalAppService>();
         context.Services.AddTransient<IFinanceMerchantPortalAppService, FinanceMerchantPortalAppService>();
+        // Per-transaction VAT export (Accountant / PlatformAdmin only). The journal source is a seam —
+        // the default returns nothing because no posted VAT-coded GL exists yet (compute-only, flag OFF).
+        context.Services.AddTransient<IFinanceVatJournalProvider, NullFinanceVatJournalProvider>();
+        context.Services.AddTransient<IFinanceVatExportAppService, FinanceVatExportAppService>();
     }
 }

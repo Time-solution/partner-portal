@@ -1,11 +1,16 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Guids;
 using Volo.Abp.Uow;
+using Volo.Abp.Users;
+using Zahy.Identity.Permissions;
 
 namespace Zahy.Commission;
 
@@ -61,37 +66,84 @@ public class CommissionLedgerService : ApplicationService, ICommissionLedgerServ
         return result;
     }
 
+    [Authorize(ZahyPermissions.Finance.ReadAll)]
+    public virtual async Task<List<CommissionLedgerEntryDto>> GetListAsync(
+        CommissionLedgerListInput input,
+        CancellationToken cancellationToken = default)
+    {
+        var queryable = await _ledgerRepository.GetQueryableAsync();
+
+        if (input.Status.HasValue)
+        {
+            queryable = queryable.Where(x => x.Status == input.Status.Value);
+        }
+
+        if (input.PartnerId.HasValue)
+        {
+            queryable = queryable.Where(x => x.PartnerId == input.PartnerId.Value);
+        }
+
+        if (input.From.HasValue)
+        {
+            queryable = queryable.Where(x => x.CreatedAt >= input.From.Value);
+        }
+
+        if (input.To.HasValue)
+        {
+            queryable = queryable.Where(x => x.CreatedAt <= input.To.Value);
+        }
+
+        var rows = queryable
+            .OrderByDescending(x => x.CreatedAt)
+            .ToList();
+
+        return rows.Select(ToDto).ToList();
+    }
+
+    [Authorize(ZahyPermissions.Commission.Approve)]
     [UnitOfWork]
     public virtual async Task<CommissionLedgerEntryDto> ApproveAsync(
         Guid entryId,
         CancellationToken cancellationToken = default)
     {
         var entry = await GetAccrualEntryAsync(entryId);
-        entry.Approve(Clock.Now);
+        entry.Approve(Clock.Now, CurrentUser.GetId());
         await _ledgerRepository.UpdateAsync(entry, autoSave: true, cancellationToken: cancellationToken);
         return ToDto(entry);
     }
 
+    [Authorize(ZahyPermissions.Commission.Approve)]
     [UnitOfWork]
     public virtual async Task<CommissionLedgerEntryDto> MarkPaidAsync(
         Guid entryId,
         CancellationToken cancellationToken = default)
     {
+        await AuthorizationService.CheckAsync(ZahyPermissions.Finance.ReadAll);
+
         var entry = await GetAccrualEntryAsync(entryId);
-        entry.MarkPaid(Clock.Now);
+        entry.MarkPaid(Clock.Now, CurrentUser.GetId());
         await _ledgerRepository.UpdateAsync(entry, autoSave: true, cancellationToken: cancellationToken);
         return ToDto(entry);
     }
 
+    [Authorize(ZahyPermissions.Commission.Approve)]
     [UnitOfWork]
     public virtual async Task<CommissionLedgerReversalResult> ReverseAsync(
         Guid originalEntryId,
+        ReverseCommissionLedgerInput input,
         CancellationToken cancellationToken = default)
     {
+        Check.NotNull(input, nameof(input));
+        if (string.IsNullOrWhiteSpace(input.Reason) || input.Reason.Trim().Length < 10)
+        {
+            throw new BusinessException(CommissionErrorCodes.ReversalReasonRequired)
+                .WithData("MinLength", 10);
+        }
+
         var original = await _ledgerRepository.FindAsync(originalEntryId, cancellationToken: cancellationToken);
         if (original == null)
         {
-            throw new Volo.Abp.BusinessException(CommissionErrorCodes.LedgerEntryNotFound)
+            throw new BusinessException(CommissionErrorCodes.LedgerEntryNotFound)
                 .WithData("EntryId", originalEntryId);
         }
 
@@ -121,7 +173,7 @@ public class CommissionLedgerService : ApplicationService, ICommissionLedgerServ
         var entry = await _ledgerRepository.FindAsync(entryId);
         if (entry == null)
         {
-            throw new Volo.Abp.BusinessException(CommissionErrorCodes.LedgerEntryNotFound)
+            throw new BusinessException(CommissionErrorCodes.LedgerEntryNotFound)
                 .WithData("EntryId", entryId);
         }
 
@@ -162,13 +214,21 @@ public class CommissionLedgerService : ApplicationService, ICommissionLedgerServ
         new()
         {
             Id = entry.Id,
+            PartnerId = entry.PartnerId,
+            TenantId = entry.TenantId,
+            SourceType = entry.SourceType,
+            SourceId = entry.SourceId,
             Direction = entry.Direction,
             BasisAmount = entry.BasisAmount,
             ComputedCommission = entry.ComputedCommission,
+            Currency = entry.Currency,
             Status = entry.Status,
             EntryKind = entry.EntryKind,
+            CreatedAt = entry.CreatedAt,
             ApprovedAt = entry.ApprovedAt,
-            PaidAt = entry.PaidAt
+            ApprovedByUserId = entry.ApprovedByUserId,
+            PaidAt = entry.PaidAt,
+            ReversesEntryId = entry.ReversesEntryId
         };
 
     private Task NotifyFinanceAsync(

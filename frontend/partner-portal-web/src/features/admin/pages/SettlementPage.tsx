@@ -6,10 +6,12 @@ import { MoneyAmount } from "@/components/MoneyAmount";
 import { BetaBadge } from "@/components/brand/BetaBadge";
 import { getPortalDataSource } from "@/lib/data";
 import {
+  codNetTransferred,
   collectionCashFlow,
   deriveSettlementSummary,
   type CollectionRemittance,
   type SettlementCase,
+  type SettlementReversal,
 } from "@/lib/data/types";
 import { canDisburse } from "@/lib/rbac/portalRoles";
 import { usePortalSession } from "@/features/auth/usePortalSession";
@@ -42,6 +44,7 @@ export function SettlementPage({ lang, moduleId, partnerId, financeMode }: Modul
   const [cases, setCases] = useState<SettlementCase[]>([]);
   const [merchantByTenant, setMerchantByTenant] = useState<Map<string, string>>(new Map());
   const [reversedIds, setReversedIds] = useState<Set<string>>(new Set());
+  const [reversals, setReversals] = useState<SettlementReversal[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -51,13 +54,15 @@ export function SettlementPage({ lang, moduleId, partnerId, financeMode }: Modul
     setLoading(true);
     try {
       const ds = getPortalDataSource();
-      const [caseList, reversals, activations] = await Promise.all([
+      const [caseList, reversalList, activations] = await Promise.all([
         ds.getSettlementCases(scopedPartnerId ?? partnerId),
         ds.getReversals(scopedPartnerId ?? partnerId),
         ds.getActivations(),
       ]);
       setCases(filterByPartnerIds(caseList, scopeIds));
-      setReversedIds(new Set(reversals.map((r) => r.originalCaseId)));
+      const scopedReversals = filterByPartnerIds(reversalList, scopeIds);
+      setReversals(scopedReversals);
+      setReversedIds(new Set(scopedReversals.map((r) => r.originalCaseId)));
       setMerchantByTenant(
         new Map(activations.map(({ activation: a }) => [a.tenantId, a.merchantName])),
       );
@@ -106,7 +111,7 @@ export function SettlementPage({ lang, moduleId, partnerId, financeMode }: Modul
   const doExportXlsx = async () => {
     setExporting(true);
     try {
-      await downloadSettlementXlsx(exportInput);
+      await downloadSettlementXlsx(exportInput, reversals);
     } finally {
       setExporting(false);
     }
@@ -151,7 +156,7 @@ export function SettlementPage({ lang, moduleId, partnerId, financeMode }: Modul
               size="sm"
               variant="outline"
               disabled={loading || cases.length === 0}
-              onClick={() => downloadSettlementCsv(exportInput)}
+              onClick={() => downloadSettlementCsv(exportInput, reversals)}
             >
               <FileDown className="h-4 w-4" />
               {t("exportCsv" as never)}
@@ -365,7 +370,7 @@ function CollectionPanel({ collection, lang }: { collection: CollectionRemittanc
         />
         <MoneyStat
           label={isCod ? t("netRemittedLabel" as never) : t("netPaidOutLabel" as never)}
-          amount={c.netRemitted.amount}
+          amount={isCod ? codNetTransferred(c) : c.netRemitted.amount}
           accent="text-emerald-700 dark:text-emerald-400"
         />
       </div>

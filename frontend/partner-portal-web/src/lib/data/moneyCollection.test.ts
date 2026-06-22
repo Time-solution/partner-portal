@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  assertCodReconciles,
   buildCollectionJournal,
+  codNetTransferred,
   collectionCashFlow,
   deriveSettlementSummary,
   sumDeductions,
   type CollectionRemittance,
   type SettlementJournalLine,
 } from "./types";
+import { mockPortalData } from "./fixtures";
 
 const sar = (amount: number) => ({ amount, currency: "SAR", vatInclusive: true });
 
@@ -118,6 +121,44 @@ describe("buildCollectionJournal — COD", () => {
       (l) => l.account === "Cash" && l.direction === "Debit" && l.entry === "Remittance",
     );
     expect(cash?.amount.amount).toBe(103);
+  });
+});
+
+describe("COD reconciliation — net transferred is collected − delivery, no money unaccounted", () => {
+  it("net transferred = collected − delivery fee = 103 (computed, not seeded)", () => {
+    expect(codNetTransferred(cod)).toBe(103);
+  });
+
+  it("net transferred fully reconciles to Merchant + Zahy + ZATCA (delivery retained, not transferred)", () => {
+    const recipients = r2(cod.split.merchant.amount + cod.split.zahy.amount + cod.split.zatca.amount);
+    expect(recipients).toBe(103);
+    expect(() => assertCodReconciles(cod)).not.toThrow();
+  });
+
+  it("the COD journal trial balance nets to zero (DR = CR)", () => {
+    const j = buildCollectionJournal(cod);
+    const { dr, cr } = overallTotals(j.lines);
+    expect(dr).toBe(cr);
+    expect(r2(dr - cr)).toBe(0);
+  });
+
+  it("REJECTS the old funds-short seed (95) — the unexplained 8 SAR is caught", () => {
+    const short: CollectionRemittance = { ...cod, netRemitted: sar(95) };
+    expect(() => assertCodReconciles(short)).toThrow(/imbalance|unaccounted/i);
+  });
+
+  it("EVERY seeded COD order reconciles cleanly — no silent gap anywhere", () => {
+    const codCases = mockPortalData.settlementCases.filter(
+      (c) => c.collection?.paymentMethod === "COD",
+    );
+    expect(codCases.length).toBeGreaterThan(0);
+    for (const c of codCases) {
+      const col = c.collection!;
+      expect(codNetTransferred(col)).toBe(
+        r2(col.split.merchant.amount + col.split.zahy.amount + col.split.zatca.amount),
+      );
+      expect(() => assertCodReconciles(col)).not.toThrow();
+    }
   });
 });
 

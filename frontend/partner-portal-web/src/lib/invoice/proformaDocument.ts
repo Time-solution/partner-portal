@@ -17,6 +17,10 @@ import type { OrgProfile } from "@/lib/profile/orgProfile";
 import type { PartnerStatement } from "@/lib/reports/settlementReports";
 import { ReportAccount } from "@/lib/reports/settlementReports";
 import type { Lang } from "@/lib/i18n";
+import {
+  rollupPartnerPayableVat,
+  splitPartnerPayableInclusive,
+} from "@/lib/statements/partnerPayableVat";
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -217,29 +221,36 @@ function entryPayable(lines: { account: string; direction: string; amount: { amo
 export function buildStatementProforma(input: StatementProformaInput): ProformaDocument {
   const { statement, lang } = input;
 
-  const lines: ProformaLine[] = statement.entries
+  const lineSplits = statement.entries
     .filter((e) => e.financial)
     .map((e) => {
       const net = entryPayable(e.lines);
-      return {
-        serviceType: e.merchantName || e.orderRef,
-        billingType: L(lang, "تسوية شريك", "Partner settlement"),
-        basis: e.orderRef,
-        exVat: net,
-        vat: 0,
-        inclusive: net,
-      } satisfies ProformaLine;
+      return { entry: e, split: splitPartnerPayableInclusive(net) };
     })
-    .filter((l) => l.inclusive !== 0);
+    .filter(({ split }) => split.inclusive !== 0);
+
+  const lines: ProformaLine[] = lineSplits.map(({ entry: e, split }) => ({
+    serviceType: e.merchantName || e.orderRef,
+    billingType: L(lang, "تسوية شريك", "Partner settlement"),
+    basis: e.orderRef,
+    exVat: split.exVat,
+    vat: split.inputVat,
+    inclusive: split.inclusive,
+  }));
+
+  const rolled = rollupPartnerPayableVat(
+    lineSplits.map(({ split }) => split),
+    statement.payable,
+  );
 
   const periodLabel = String(statement.period);
   const totals: ProformaTotals = {
-    subtotalExVat: statement.payable,
-    totalVat: 0,
-    grandTotalInclusive: statement.payable,
+    subtotalExVat: rolled.exVat,
+    totalVat: rolled.inputVat,
+    grandTotalInclusive: rolled.inclusive,
     // Frontend mock has no disbursement ledger — nothing settled yet; remaining = full payable.
     paidToDate: 0,
-    remaining: statement.payable,
+    remaining: rolled.inclusive,
   };
 
   return buildProforma({

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -79,6 +80,126 @@ public static class FinanceExcelExportGenerator
         sheet.Cell(rowIndex, 4).Value = "Total";
         sheet.Cell(rowIndex, 5).Value = ledger.PostingSum;
         sheet.Cell(rowIndex, 6).Value = ledger.Currency;
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        return stream.ToArray();
+    }
+}
+
+/// <summary>
+/// Per-transaction VAT export (CSV). One row per VAT journal line × counter-leg, showing
+/// source → destination. Reuses the same CSV escaping / UTF-8 pipeline as the postings exporter;
+/// the postings exporter above is untouched.
+/// </summary>
+public static class FinanceVatCsvExportGenerator
+{
+    public static readonly IReadOnlyList<string> Headers = new[]
+    {
+        "PostedAt",
+        "SourceModule",
+        "SourceType",
+        "SourceId",
+        "JournalEntryId",
+        "VatAccountCode",
+        "VatAccountName",
+        "VatDirection",
+        "VatAmount",
+        "CounterAccountCode",
+        "CounterAccountName",
+        "CounterAmount",
+        "RelatedPartnerId",
+        "RelatedMerchantId",
+        "RelatedDocumentRef"
+    };
+
+    public static byte[] Generate(IReadOnlyList<FinanceVatExportRow> rows)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine(string.Join(",", Headers));
+
+        foreach (var row in rows)
+        {
+            builder.Append(CsvEscape(row.PostedAt.ToString("O", CultureInfo.InvariantCulture)));
+            builder.Append(',');
+            builder.Append(CsvEscape(row.SourceModule));
+            builder.Append(',');
+            builder.Append(CsvEscape(row.SourceType));
+            builder.Append(',');
+            builder.Append(CsvEscape(row.SourceId));
+            builder.Append(',');
+            builder.Append(CsvEscape(row.JournalEntryId.ToString()));
+            builder.Append(',');
+            builder.Append(CsvEscape(row.VatAccountCode));
+            builder.Append(',');
+            builder.Append(CsvEscape(row.VatAccountName));
+            builder.Append(',');
+            builder.Append(CsvEscape(row.VatDirection));
+            builder.Append(',');
+            builder.Append(row.VatAmount.ToString("0.00", CultureInfo.InvariantCulture));
+            builder.Append(',');
+            builder.Append(CsvEscape(row.CounterAccountCode));
+            builder.Append(',');
+            builder.Append(CsvEscape(row.CounterAccountName));
+            builder.Append(',');
+            builder.Append(row.CounterAmount.ToString("0.00", CultureInfo.InvariantCulture));
+            builder.Append(',');
+            builder.Append(CsvEscape(row.RelatedPartnerId?.ToString() ?? string.Empty));
+            builder.Append(',');
+            builder.Append(CsvEscape(row.RelatedMerchantId?.ToString() ?? string.Empty));
+            builder.Append(',');
+            builder.AppendLine(CsvEscape(row.RelatedDocumentRef ?? string.Empty));
+        }
+
+        return Encoding.UTF8.GetBytes(builder.ToString());
+    }
+
+    private static string CsvEscape(string value)
+    {
+        if (value.Contains('"') || value.Contains(',') || value.Contains('\n'))
+        {
+            return $"\"{value.Replace("\"", "\"\"")}\"";
+        }
+
+        return value;
+    }
+}
+
+/// <summary>Per-transaction VAT export (XLSX). Same row shape as the CSV exporter.</summary>
+public static class FinanceVatExcelExportGenerator
+{
+    public static IReadOnlyList<string> Headers => FinanceVatCsvExportGenerator.Headers;
+
+    public static byte[] Generate(IReadOnlyList<FinanceVatExportRow> rows)
+    {
+        using var workbook = new XLWorkbook();
+        var sheet = workbook.AddWorksheet("VatTransactions");
+
+        for (var c = 0; c < Headers.Count; c++)
+        {
+            sheet.Cell(1, c + 1).Value = Headers[c];
+        }
+
+        var rowIndex = 2;
+        foreach (var row in rows)
+        {
+            sheet.Cell(rowIndex, 1).Value = row.PostedAt;
+            sheet.Cell(rowIndex, 2).Value = row.SourceModule;
+            sheet.Cell(rowIndex, 3).Value = row.SourceType;
+            sheet.Cell(rowIndex, 4).Value = row.SourceId;
+            sheet.Cell(rowIndex, 5).Value = row.JournalEntryId.ToString();
+            sheet.Cell(rowIndex, 6).Value = row.VatAccountCode;
+            sheet.Cell(rowIndex, 7).Value = row.VatAccountName;
+            sheet.Cell(rowIndex, 8).Value = row.VatDirection;
+            sheet.Cell(rowIndex, 9).Value = row.VatAmount;
+            sheet.Cell(rowIndex, 10).Value = row.CounterAccountCode;
+            sheet.Cell(rowIndex, 11).Value = row.CounterAccountName;
+            sheet.Cell(rowIndex, 12).Value = row.CounterAmount;
+            sheet.Cell(rowIndex, 13).Value = row.RelatedPartnerId?.ToString() ?? string.Empty;
+            sheet.Cell(rowIndex, 14).Value = row.RelatedMerchantId?.ToString() ?? string.Empty;
+            sheet.Cell(rowIndex, 15).Value = row.RelatedDocumentRef ?? string.Empty;
+            rowIndex++;
+        }
 
         using var stream = new MemoryStream();
         workbook.SaveAs(stream);

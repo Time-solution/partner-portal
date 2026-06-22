@@ -48,6 +48,61 @@ public sealed record SettlementAllocationSnapshot
         };
     }
 
+    /// <summary>
+    /// Produces the compensating mirror of this snapshot: every Dr leg becomes Cr (and vice versa),
+    /// totals swap, and the summary aggregates negate. Posting this alongside the original nets every
+    /// account back to zero — the append-only correction pattern.
+    /// </summary>
+    public SettlementAllocationSnapshot Invert() =>
+        new()
+        {
+            Currency = Currency,
+            MerchantPayout = -MerchantPayout,
+            PlatformCommissionNet = -PlatformCommissionNet,
+            DeliveryCost = -DeliveryCost,
+            VatOutput = -VatOutput,
+            VatInput = -VatInput,
+            NetVatToZatca = -NetVatToZatca,
+            TotalDebits = TotalCredits,
+            TotalCredits = TotalDebits,
+            Legs = Legs.Select(l => new SettlementJournalLegDto
+            {
+                Account = l.Account,
+                Direction = string.Equals(l.Direction, "Debit", System.StringComparison.OrdinalIgnoreCase)
+                    ? "Credit"
+                    : "Debit",
+                Amount = l.Amount
+            }).ToList()
+        };
+
+    /// <summary>
+    /// True when posting <paramref name="reversal"/> on top of this snapshot nets every account to
+    /// zero: matching currency, mirrored totals, and per-account signed sums all zero.
+    /// </summary>
+    public bool NetsToZeroWith(SettlementAllocationSnapshot reversal)
+    {
+        if (reversal == null || !string.Equals(Currency, reversal.Currency, System.StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (TotalDebits != reversal.TotalCredits || TotalCredits != reversal.TotalDebits)
+        {
+            return false;
+        }
+
+        var net = new Dictionary<string, decimal>(System.StringComparer.OrdinalIgnoreCase);
+        foreach (var leg in Legs.Concat(reversal.Legs))
+        {
+            var signed = string.Equals(leg.Direction, "Debit", System.StringComparison.OrdinalIgnoreCase)
+                ? leg.Amount
+                : -leg.Amount;
+            net[leg.Account] = net.TryGetValue(leg.Account, out var running) ? running + signed : signed;
+        }
+
+        return net.Values.All(v => v == 0m);
+    }
+
     public string ToJson() => JsonSerializer.Serialize(this);
 
     public static SettlementAllocationSnapshot? FromJson(string? json) =>

@@ -34,4 +34,13 @@ public static class SettlementDisbursementErrorCodes
     public const string EmptyIdempotencyKey = Namespace + ":055";
 
     public const string InvalidReversalLink = Namespace + ":056";
+
+    /// <summary>
+    /// Two-person rule — the human RELEASING a payout is the SAME person who RECONCILED the batch. Even a
+    /// PlatformAdmin holding both privileges is blocked from doing both gates on the same item.
+    /// </summary>
+    public const string DisburseBlockedSameActorAsReconciler = Namespace + ":057";
+
+    /// <summary>A reversal was requested for a disbursement that is not in the Released state.</summary>
+    public const string DisburseReversalRequiresReleased = Namespace + ":058";
 }

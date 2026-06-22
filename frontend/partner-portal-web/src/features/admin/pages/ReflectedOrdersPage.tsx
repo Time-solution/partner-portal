@@ -13,24 +13,34 @@ import { useTranslator, type Lang } from "@/lib/i18n";
 import { formatOrderRef } from "@/lib/format/recordId";
 import { buildPartnerBulkInvoice, type BulkInvoice } from "@/lib/reports/activationFees";
 import { periodOf } from "@/lib/reports/settlementReports";
+import { filterByDate } from "@/lib/filters/dateRange";
 import type { ModuleScopeProps } from "../moduleScope";
 import { filterByPartnerIds, useScopePartnerIds } from "../hooks/useScopePartnerIds";
+import { useDateRange } from "../hooks/useDateRange";
+import { DateRangeFilter } from "../components/DateRangeFilter";
 
 export function ReflectedOrdersPage({ lang, moduleId, partnerId, financeMode }: ModuleScopeProps) {
   const t = useTranslator(lang);
   const isRtl = lang === "ar";
   const scopeIds = useScopePartnerIds(moduleId, partnerId);
-  const [orders, setOrders] = useState<ReflectedPartnerOrder[]>([]);
+  const { range, setRange } = useDateRange();
+  const [allOrders, setAllOrders] = useState<ReflectedPartnerOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const showHeader = !moduleId && !partnerId && !financeMode;
   const Caret = isRtl ? ChevronRight : ChevronDown;
 
+  // Date filter layers ON TOP of org/partner scope — narrows by the order's reflected date.
+  const orders = useMemo(
+    () => filterByDate(allOrders, range, (o) => o.reflectedAt),
+    [allOrders, range],
+  );
+
   useEffect(() => {
     void getPortalDataSource()
       .getReflectedOrders(partnerId)
       .then((all) => filterByPartnerIds(all, scopeIds))
-      .then(setOrders)
+      .then(setAllOrders)
       .finally(() => setLoading(false));
   }, [partnerId, scopeIds?.join(",")]);
 
@@ -65,9 +75,12 @@ export function ReflectedOrdersPage({ lang, moduleId, partnerId, financeMode }: 
       ))}
 
       <Card>
-        <CardHeader>
-          <CardTitle>{t("reflectedListTitle" as never)}</CardTitle>
-          <CardDescription>{t("reflectedNoMoney" as never)}</CardDescription>
+        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle>{t("reflectedListTitle" as never)}</CardTitle>
+            <CardDescription>{t("reflectedNoMoney" as never)}</CardDescription>
+          </div>
+          <DateRangeFilter range={range} onChange={setRange} lang={lang} />
         </CardHeader>
         <CardContent>
           {loading ? (

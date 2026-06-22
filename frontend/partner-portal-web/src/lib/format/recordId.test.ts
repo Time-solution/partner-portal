@@ -36,8 +36,8 @@ describe("toArabicDigits", () => {
 
 describe("formatTenantRef", () => {
   it("prefers a known org name", () => {
-    expect(formatTenantRef("11111111-1111-1111-1111-111111111003", "en", "Quick Bites Co.")).toBe(
-      "Quick Bites Co.",
+    expect(formatTenantRef("11111111-1111-1111-1111-111111111003", "en", "Pizza House")).toBe(
+      "Pizza House",
     );
   });
   it("masks the raw guid when no org name", () => {

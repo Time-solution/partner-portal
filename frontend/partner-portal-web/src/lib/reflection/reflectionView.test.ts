@@ -8,7 +8,7 @@ import {
   reflectionDetailLabelKeys,
 } from "./reflectionView";
 
-const TENANT_DEMO = "11111111-1111-1111-1111-111111111099";
+const TENANT_BURGER = "11111111-1111-1111-1111-111111111001";
 const PARTNER_CHEFZ = "22222222-2222-2222-2222-222222222006";
 
 function t(lang: Lang) {
@@ -23,16 +23,16 @@ function chefzDemoOrder() {
 
 describe("filterMerchantReflectionOrders", () => {
   it("returns only reflection rows for the requested tenant", () => {
-    const scoped = filterMerchantReflectionOrders(mockPortalData.reflectedOrders, TENANT_DEMO);
+    const scoped = filterMerchantReflectionOrders(mockPortalData.reflectedOrders, TENANT_BURGER);
     expect(scoped.length).toBeGreaterThan(0);
-    expect(scoped.every((o) => o.tenantId === TENANT_DEMO)).toBe(true);
+    expect(scoped.every((o) => o.tenantId === TENANT_BURGER)).toBe(true);
     expect(scoped.every((o) => o.reflection != null)).toBe(true);
   });
 
   it("does not include other tenants' Chefz reflections", () => {
-    const scoped = filterMerchantReflectionOrders(mockPortalData.reflectedOrders, TENANT_DEMO);
+    const scoped = filterMerchantReflectionOrders(mockPortalData.reflectedOrders, TENANT_BURGER);
     expect(scoped.some((o) => o.partnerId === PARTNER_CHEFZ)).toBe(true);
-    expect(scoped.some((o) => o.id === "ref-chefz-1")).toBe(false);
+    expect(scoped.some((o) => o.id === "ref-hunger-001")).toBe(false);
   });
 });
 

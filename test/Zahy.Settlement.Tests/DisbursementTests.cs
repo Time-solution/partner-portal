@@ -83,7 +83,7 @@ public class DisbursementTests
         var ctx = Context(merchantPaid: 100m, reconciled: true);
         var disb = Disbursements.CreateOrGet(Guid.NewGuid(), Partner, Period, Incl(70m), "DISB-1", At, ctx, Array.Empty<Disbursement>());
 
-        disb.Release("platform-admin", actorHasDisbursePrivilege: true, At);
+        disb.Release("platform-admin", actorHasDisbursePrivilege: true, reconciledBy: "accountant", At);
 
         disb.State.ShouldBe(DisbursementState.Released);
         var journal = disb.ComputeJournal();
@@ -163,7 +163,8 @@ public class DisbursementTests
         var disb = Disbursements.CreateOrGet(Guid.NewGuid(), Partner, Period, Incl(70m), "DISB-1", At, ctx, Array.Empty<Disbursement>());
 
         // The accountant lacks the Disburse privilege.
-        Should.Throw<BusinessException>(() => disb.Release("accountant", actorHasDisbursePrivilege: false, At))
+        Should.Throw<BusinessException>(() =>
+                disb.Release("accountant", actorHasDisbursePrivilege: false, reconciledBy: "accountant", At))
             .Code.ShouldBe(SettlementDisbursementErrorCodes.DisburseBlockedNotAuthorized);
 
         disb.State.ShouldBe(DisbursementState.Locked);
@@ -177,11 +178,11 @@ public class DisbursementTests
         var ctx = Context(merchantPaid: 100m, reconciled: true);
         var disb = Disbursements.CreateOrGet(Guid.NewGuid(), Partner, Period, Incl(70m), "DISB-1", At, ctx, Array.Empty<Disbursement>());
 
-        disb.Release("platform-admin", true, At);
+        disb.Release("platform-admin", true, reconciledBy: "accountant", At);
         disb.ReleasedBy.ShouldBe("platform-admin");
         disb.ReleasedAt.ShouldBe(At);
 
-        Should.NotThrow(() => disb.Release("someone-else", true, At.AddDays(1)));
+        Should.NotThrow(() => disb.Release("someone-else", true, reconciledBy: "accountant", At.AddDays(1)));
         disb.ReleasedBy.ShouldBe("platform-admin");
         disb.ReleasedAt.ShouldBe(At);
     }
@@ -207,9 +208,9 @@ public class DisbursementTests
     {
         var ctx = Context(merchantPaid: 100m, reconciled: true);
         var disb = Disbursements.CreateOrGet(Guid.NewGuid(), Partner, Period, Incl(70m), "DISB-1", At, ctx, Array.Empty<Disbursement>());
-        disb.Release("platform-admin", true, At);
+        disb.Release("platform-admin", true, reconciledBy: "accountant", At);
 
-        var reversal = Disbursement.CreateReversal(Guid.NewGuid(), disb, "DISB-1-REV", At.AddDays(1));
+        var reversal = Disbursement.CreateReversal(Guid.NewGuid(), disb, "DISB-1-REV", actorHasDisbursePrivilege: true, At.AddDays(1));
         reversal.IsReversal.ShouldBeTrue();
         reversal.ReversalOf.ShouldBe(disb.Id);
 
@@ -233,7 +234,7 @@ public class DisbursementTests
 
         var ctx = Context(merchantPaid: 100m, reconciled: true);
         var disb = Disbursements.CreateOrGet(Guid.NewGuid(), Partner, Period, Incl(70m), "DISB-1", At, ctx, Array.Empty<Disbursement>());
-        disb.Release("platform-admin", true, At);
+        disb.Release("platform-admin", true, reconciledBy: "accountant", At);
 
         var trial = SettlementReports.TrialBalanceFor(new[] { order, payment, disb.ComputeJournal() }, Period);
         trial.IsBalanced.ShouldBeTrue();
@@ -242,6 +243,88 @@ public class DisbursementTests
         // Partner payable (net 2100) nets down by the 70 paid out: 70 booked − 70 disbursed = 0.
         SettlementReports.Partner(new[] { order, payment, disb.ComputeJournal() }, Partner, Period)
             .TotalPayable.Amount.ShouldBe(0m);
+    }
+
+    // ── Two-person rule: the reconciler may NOT release the same item ─────────────────────────────
+
+    [Fact]
+    public void Same_Actor_Cannot_Both_Reconcile_And_Release_The_Same_Item()
+    {
+        // The batch was reconciled by "accountant" (see Context). Even WITH the Disburse privilege, the
+        // SAME human is blocked from releasing — separation of duties is enforced by actor id, not role.
+        var ctx = Context(merchantPaid: 100m, reconciled: true);
+        var disb = Disbursements.CreateOrGet(Guid.NewGuid(), Partner, Period, Incl(70m), "DISB-1", At, ctx, Array.Empty<Disbursement>());
+
+        Should.Throw<BusinessException>(() =>
+                disb.Release("accountant", actorHasDisbursePrivilege: true, reconciledBy: "accountant", At))
+            .Code.ShouldBe(SettlementDisbursementErrorCodes.DisburseBlockedSameActorAsReconciler);
+
+        // Even a PlatformAdmin holding BOTH privileges is the SAME person on this item → still blocked
+        // (and the comparison is case-insensitive / trimmed).
+        Should.Throw<BusinessException>(() =>
+                disb.Release(" Accountant ", actorHasDisbursePrivilege: true, reconciledBy: "accountant", At))
+            .Code.ShouldBe(SettlementDisbursementErrorCodes.DisburseBlockedSameActorAsReconciler);
+
+        disb.State.ShouldBe(DisbursementState.Locked);
+        disb.ReleasedBy.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Different_Actors_For_Reconcile_And_Release_Are_Allowed()
+    {
+        var ctx = Context(merchantPaid: 100m, reconciled: true); // reconciled by "accountant"
+        var disb = Disbursements.CreateOrGet(Guid.NewGuid(), Partner, Period, Incl(70m), "DISB-1", At, ctx, Array.Empty<Disbursement>());
+
+        disb.Release("platform-admin", actorHasDisbursePrivilege: true, reconciledBy: "accountant", At);
+
+        disb.State.ShouldBe(DisbursementState.Released);
+        disb.ReleasedBy.ShouldBe("platform-admin");
+    }
+
+    // ── Reversal gates: requires Disburse privilege AND a Released original ────────────────────────
+
+    [Fact]
+    public void Reversal_Without_Disburse_Privilege_Is_Blocked()
+    {
+        var ctx = Context(merchantPaid: 100m, reconciled: true);
+        var disb = Disbursements.CreateOrGet(Guid.NewGuid(), Partner, Period, Incl(70m), "DISB-1", At, ctx, Array.Empty<Disbursement>());
+        disb.Release("platform-admin", true, reconciledBy: "accountant", At);
+
+        Should.Throw<BusinessException>(() =>
+                Disbursement.CreateReversal(Guid.NewGuid(), disb, "DISB-1-REV", actorHasDisbursePrivilege: false, At.AddDays(1)))
+            .Code.ShouldBe(SettlementDisbursementErrorCodes.DisburseBlockedNotAuthorized);
+    }
+
+    [Fact]
+    public void Reversal_Of_A_Locked_Never_Released_Disbursement_Is_Blocked()
+    {
+        var ctx = Context(merchantPaid: 100m, reconciled: true);
+        var locked = Disbursements.CreateOrGet(Guid.NewGuid(), Partner, Period, Incl(70m), "DISB-1", At, ctx, Array.Empty<Disbursement>());
+
+        // The payout never went out (still Locked) — there is nothing to reverse.
+        locked.State.ShouldBe(DisbursementState.Locked);
+        Should.Throw<BusinessException>(() =>
+                Disbursement.CreateReversal(Guid.NewGuid(), locked, "DISB-1-REV", actorHasDisbursePrivilege: true, At.AddDays(1)))
+            .Code.ShouldBe(SettlementDisbursementErrorCodes.DisburseReversalRequiresReleased);
+    }
+
+    // ── Idempotent CreateOrGet: replay dedupes; new keys re-evaluate the gates ─────────────────────
+
+    [Fact]
+    public void CreateOrGet_Replays_Idempotently_And_Re_Evaluates_Gates_For_New_Keys()
+    {
+        var ctx = Context(merchantPaid: 100m, reconciled: true); // payable 70
+        var first = Disbursements.CreateOrGet(Guid.NewGuid(), Partner, Period, Incl(40m), "DISB-1", At, ctx, Array.Empty<Disbursement>());
+
+        // Replay with the SAME key → the same row, no second payout (no double-disburse on replay).
+        var replay = Disbursements.CreateOrGet(Guid.NewGuid(), Partner, Period, Incl(40m), "DISB-1", At, ctx, new[] { first });
+        replay.Id.ShouldBe(first.Id);
+        Disbursements.NetDisbursed(Partner, Period, new[] { first }).ShouldBe(40.00m);
+
+        // A NEW key re-evaluates the gates against the running total: 40 + 40 = 80 > 70 payable → blocked.
+        Should.Throw<BusinessException>(() =>
+                Disbursements.CreateOrGet(Guid.NewGuid(), Partner, Period, Incl(40m), "DISB-2", At, ctx, new[] { first }))
+            .Code.ShouldBe(SettlementDisbursementErrorCodes.DisburseBlockedExceedsPayable);
     }
 
     // ── Guardrail: nothing live ──────────────────────────────────────────────────────────────────

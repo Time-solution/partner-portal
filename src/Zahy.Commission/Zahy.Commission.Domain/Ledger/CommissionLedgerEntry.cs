@@ -42,6 +42,8 @@ public class CommissionLedgerEntry : AggregateRoot<Guid>
 
     public DateTime? ApprovedAt { get; private set; }
 
+    public Guid? ApprovedByUserId { get; private set; }
+
     public DateTime? PaidAt { get; private set; }
 
     protected CommissionLedgerEntry()
@@ -128,7 +130,7 @@ public class CommissionLedgerEntry : AggregateRoot<Guid>
         };
     }
 
-    public void Approve(DateTime approvedAt)
+    public void Approve(DateTime approvedAt, Guid approvedByUserId)
     {
         EnsureAccrual();
         if (Status != CommissionLedgerStatus.Accrued)
@@ -140,9 +142,13 @@ public class CommissionLedgerEntry : AggregateRoot<Guid>
 
         Status = CommissionLedgerStatus.Approved;
         ApprovedAt = approvedAt;
+        ApprovedByUserId = approvedByUserId;
     }
 
-    public void MarkPaid(DateTime paidAt)
+    /// <summary>
+    /// Two-person rule: the payer must NOT be the same actor who approved this entry.
+    /// </summary>
+    public void MarkPaid(DateTime paidAt, Guid paidByUserId)
     {
         EnsureAccrual();
         if (Status != CommissionLedgerStatus.Approved)
@@ -150,6 +156,12 @@ public class CommissionLedgerEntry : AggregateRoot<Guid>
             throw new BusinessException(CommissionErrorCodes.InvalidStatusTransition)
                 .WithData("From", Status.ToString())
                 .WithData("To", CommissionLedgerStatus.Paid.ToString());
+        }
+
+        if (ApprovedByUserId.HasValue && ApprovedByUserId.Value == paidByUserId)
+        {
+            throw new BusinessException(CommissionErrorCodes.MarkPaidSameActorAsApprover)
+                .WithData("Actor", paidByUserId);
         }
 
         Status = CommissionLedgerStatus.Paid;

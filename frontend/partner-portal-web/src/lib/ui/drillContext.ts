@@ -1,4 +1,5 @@
 import type { OrgLevel } from "@/lib/org/orgModel";
+import { describeRange, type DateRange } from "@/lib/filters/dateRange";
 
 /**
  * DISPLAY-ONLY context resolution for the finance drill-down. The drill-down always
@@ -21,4 +22,22 @@ export function drillScopeLabel(
 /** "{Entity} · {Period}" — the period falls back to an "all periods" label when empty. */
 export function drillContextText(entity: string, period: string, allPeriodsLabel: string): string {
   return `${entity} · ${period || allPeriodsLabel}`;
+}
+
+/**
+ * HONEST "showing data for" label for the finance summary/drill-down. When a real selection is active
+ * (period / day / from-to range) it reflects that exact window via {@link describeRange}. When the filter
+ * is "All dates" the figures still collapse to the latest period (back-compat), so we say so plainly —
+ * "{All dates} · {latest period} {YYYY-MM}" — instead of printing a stray single period as if it were the
+ * chosen range. Display only; the range itself is never altered.
+ */
+export function drillShowingLabel(
+  range: DateRange,
+  fallbackPeriod: string,
+  labels: { allDates: string; latestPeriodNote: string },
+): string {
+  if (range.mode !== "all") {
+    return describeRange(range, fallbackPeriod);
+  }
+  return fallbackPeriod ? `${labels.allDates} · ${labels.latestPeriodNote} ${fallbackPeriod}` : labels.allDates;
 }

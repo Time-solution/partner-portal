@@ -208,23 +208,38 @@ describe("Direction 2 — partner settlement statement is a SEPARATE document (n
     ],
   };
 
-  it("reads payable straight from the read model and stays distinct from the invoice", () => {
+  it("reads payable straight from the read model and splits VAT on the statement document", () => {
     const stmt = buildStatementProforma({ statement, issuer, billTo: issuer, lang: "ar" });
     const inv = twoLineInvoiceDoc();
 
     expect(stmt.kind).toBe("statement");
     expect(stmt.totals.grandTotalInclusive).toBe(70.0); // = payable, passthrough
     expect(stmt.totals.remaining).toBe(70.0); // nothing disbursed on the mock
-    expect(stmt.lines[0].inclusive).toBe(70.0); // from the PartnerPayable journal line
+    expect(stmt.totals.subtotalExVat).toBe(60.87);
+    expect(stmt.totals.totalVat).toBe(9.13);
+    expect(stmt.totals.totalVat).not.toBe(0);
+    expect(stmt.lines[0].exVat).toBe(60.87);
+    expect(stmt.lines[0].vat).toBe(9.13);
+    expect(stmt.lines[0].inclusive).toBe(70.0);
 
     // distinct documents
     expect(stmt.kind).not.toBe(inv.kind);
     expect(stmt.docNumber).not.toBe(inv.docNumber);
     expect(stmt.docNumber).toContain("PSTMT");
 
-    // statement is also a BETA proforma, never a tax invoice
+    // statement is also a BETA proforma, never a tax invoice — PDF/HTML shows the VAT split
     const html = buildProformaHtml(stmt);
     expect(html).toContain("بيان / Statement");
     expect(html.toLowerCase()).not.toContain("tax invoice");
+    expect(html).toContain(moneyMarkup(60.87));
+    expect(html).toContain(moneyMarkup(9.13));
+    expect(html).toContain(moneyMarkup(70));
+
+    const matrix = buildProformaSheetMatrix(stmt);
+    const numbers = matrix.flat().filter((c): c is number => typeof c === "number");
+    expect(numbers).toContain(60.87);
+    expect(numbers).toContain(9.13);
+    expect(numbers).toContain(70.0);
+    expect(stmt.totals.totalVat).not.toBe(0);
   });
 });

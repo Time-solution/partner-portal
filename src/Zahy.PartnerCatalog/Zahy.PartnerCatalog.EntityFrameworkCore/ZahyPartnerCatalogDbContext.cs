@@ -22,6 +22,10 @@ public class ZahyPartnerCatalogDbContext : AbpDbContext<ZahyPartnerCatalogDbCont
 
     public DbSet<ReflectedPartnerOrder> ReflectedPartnerOrders => Set<ReflectedPartnerOrder>();
 
+    public DbSet<UsagePackage> UsagePackages => Set<UsagePackage>();
+
+    public DbSet<UsagePackageSelection> UsagePackageSelections => Set<UsagePackageSelection>();
+
     public ZahyPartnerCatalogDbContext(DbContextOptions<ZahyPartnerCatalogDbContext> options)
         : base(options)
     {
@@ -155,6 +159,61 @@ public class ZahyPartnerCatalogDbContext : AbpDbContext<ZahyPartnerCatalogDbCont
 
             b.HasIndex(x => x.PartnerCatalogItemId);
             b.HasIndex(x => x.TenantId);
+        });
+
+        builder.Entity<UsagePackage>(b =>
+        {
+            b.ToTable("PcatUsagePackages");
+            b.ConfigureByConvention();
+
+            b.Property(x => x.PartnerId).IsRequired();
+            b.Property(x => x.Name).IsRequired().HasMaxLength(UsagePackageConsts.MaxNameLength);
+            b.Property(x => x.UnitLabel).IsRequired().HasMaxLength(UsagePackageConsts.MaxUnitLabelLength);
+            b.Property(x => x.Mode).IsRequired();
+            b.Property(x => x.Currency).IsRequired().HasMaxLength(3);
+            b.Property(x => x.IncludedQuantity).HasPrecision(18, 2);
+            b.Property(x => x.BaseBuyAmount).HasPrecision(18, 2);
+            b.Property(x => x.BaseSellAmount).HasPrecision(18, 2);
+            b.Property(x => x.OverageBuyAmount).HasPrecision(18, 2);
+            b.Property(x => x.OverageSellAmount).HasPrecision(18, 2);
+            b.Property(x => x.Payer).IsRequired();
+            b.Property(x => x.Status).IsRequired();
+            // U5 — optional volume tiers stored as JSON (null = flat overage; provider-agnostic). The
+            // deserialized Tiers collection is computed, not a navigation — map only the JSON column.
+            b.Property(x => x.TiersJson);
+            b.Ignore(x => x.Tiers);
+
+            // Multiple packages per partner are allowed — index, NOT unique.
+            b.HasIndex(x => x.PartnerId);
+            b.HasIndex(x => new { x.PartnerId, x.Status });
+
+            b.HasQueryFilter(x =>
+                !IsPartnerFilterEnabled ||
+                CurrentPartnerId == null ||
+                x.PartnerId == CurrentPartnerId);
+        });
+
+        builder.Entity<UsagePackageSelection>(b =>
+        {
+            b.ToTable("PcatUsagePackageSelections");
+            b.ConfigureByConvention();
+
+            b.Property(x => x.PartnerId).IsRequired();
+            b.Property(x => x.TenantId).IsRequired();
+            b.Property(x => x.UsagePackageId).IsRequired();
+            b.Property(x => x.MerchantName).HasMaxLength(PartnerCatalogConsts.MaxNameLength);
+            b.Property(x => x.Status).IsRequired();
+            b.Property(x => x.ActivatedAt).IsRequired();
+
+            b.HasIndex(x => x.PartnerId);
+            b.HasIndex(x => x.TenantId);
+            b.HasIndex(x => new { x.TenantId, x.PartnerId });
+            b.HasIndex(x => new { x.TenantId, x.UsagePackageId });
+
+            b.HasQueryFilter(x =>
+                !IsPartnerFilterEnabled ||
+                CurrentPartnerId == null ||
+                x.PartnerId == CurrentPartnerId);
         });
 
         builder.Entity<ReflectedPartnerOrder>(b =>

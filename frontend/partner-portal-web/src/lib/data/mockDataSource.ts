@@ -8,10 +8,13 @@ import type {
   ActivationFeeConfig,
   ActivationWorkflowState,
   AuditEntry,
+  CreateManualInvoiceInput,
   CreateOrgAccountInput,
   CreateOrgUserInput,
   CreatePortalUserInput,
   LoginAccount,
+  ManualInvoice,
+  ManualInvoiceFilter,
   MerchantActivation,
   MerchantActivationRow,
   PortalData,
@@ -25,7 +28,14 @@ import type {
   WebhookDelivery,
   WebhookEndpoint,
 } from "./types";
-import { deriveInvoicePayment, invertJournal } from "./types";
+import { computeManualInvoiceLines, computeManualInvoiceTotals } from "@/lib/invoice/manualInvoice";
+import { DEFAULT_MERCHANT_PROFILES, DEFAULT_PARTNER_PROFILES } from "@/lib/profile/orgProfile";
+import {
+  deriveInvoicePayment,
+  invertJournal,
+  assertPaymentWithinOutstanding,
+  findDuplicatePayment,
+} from "./types";
 import { notifyPortalDataChanged } from "./portalDataEvents";
 import { canGrantRole, roleRequiresPartner, type PortalRole } from "@/lib/rbac/portalRoles";
 import {
@@ -44,6 +54,17 @@ import {
   writeOrgProfile,
 } from "@/lib/profile/orgProfileStore";
 import type { OrgProfile, OrgProfileScope } from "@/lib/profile/orgProfile";
+import {
+  createBankAccount as createBankAccountStore,
+  listBankAccounts as listBankAccountsStore,
+  resetBankRegistry,
+  setBankAccountStatus as setBankAccountStatusStore,
+  updateBankAccount as updateBankAccountStore,
+} from "@/lib/banks/bankRegistryStore";
+import type { BankAccountInput, BankAccountStatus } from "@/lib/banks/bankAccount";
+import { resetUsageRecords } from "@/lib/usage/usageStore";
+import { resetUsagePackages } from "@/lib/usage/usagePackageStore";
+import { resetUsagePackageSelections } from "@/lib/usage/usagePackageSelectionStore";
 
 const delay = (ms = 80) => new Promise((r) => setTimeout(r, ms));
 
@@ -960,12 +981,44 @@ export class MockPortalDataSource implements IPortalDataSource {
     if (!(amount > 0)) throw new Error("Payment amount must be positive");
 
     const date = input.date || new Date().toISOString();
+    const reference = input.reference.trim() || `${input.method}-${uid("ref").toUpperCase()}`;
+
+    // (2) Idempotency: a re-submit with the same reference is a NO-OP — return the existing receipt
+    // rather than recording a duplicate payment (mirrors the backend Payment idempotency key).
+    const duplicate = findDuplicatePayment(period, reference);
+    if (duplicate) {
+      const existingReceipt = this.data.receipts.find((r) => r.billingPeriodId === period.id);
+      const receiptView: Receipt = existingReceipt
+        ? { ...existingReceipt }
+        : {
+            id: uid("rcpt"),
+            receiptNo: this.nextReceiptNo(new Date(duplicate.date).getFullYear()),
+            invoiceRef: period.invoiceNumber ?? period.billingChargeId,
+            billingPeriodId: period.id,
+            partnerId: period.partnerId,
+            tenantId: period.tenantId,
+            merchantName: period.merchantName,
+            amount: { ...duplicate.amount },
+            date: duplicate.date,
+            method: duplicate.method,
+            sent: false,
+            bankAccountId: duplicate.bankAccountId,
+          };
+      return { period: { ...period }, receipt: receiptView };
+    }
+
+    // (1) Overpayment guard — reject a receipt that exceeds the outstanding balance (mirrors the
+    // backend PaymentLedger.EnsureWithinRemaining), enforced here rather than left to the caller/UI.
+    assertPaymentWithinOutstanding(period, amount);
+
     const payment = {
       id: uid("pay"),
       amount: { amount, currency: period.feeInclusive.currency, vatInclusive: true },
       date,
       method: input.method,
-      reference: input.reference.trim() || `${input.method}-${uid("ref").toUpperCase()}`,
+      reference,
+      // Track B — the bank this receipt landed in (compute-only routing; live chart change still gated).
+      bankAccountId: input.bankAccountId,
     };
     period.payments = [...(period.payments ?? []), payment];
     period.paymentStatus = deriveInvoicePayment(period).status;
@@ -982,6 +1035,7 @@ export class MockPortalDataSource implements IPortalDataSource {
       date,
       method: input.method,
       sent: false,
+      bankAccountId: input.bankAccountId,
     };
     this.data.receipts.unshift(receipt);
 
@@ -1015,6 +1069,10 @@ export class MockPortalDataSource implements IPortalDataSource {
     await delay();
     this.data = resetToSeedData();
     resetOrgProfiles();
+    resetBankRegistry();
+    resetUsageRecords();
+    resetUsagePackages();
+    resetUsagePackageSelections();
     recalcKpis(this.data);
     notifyPortalDataChanged();
   }
@@ -1027,6 +1085,239 @@ export class MockPortalDataSource implements IPortalDataSource {
   async saveOrgProfile(scope: OrgProfileScope, profile: OrgProfile) {
     await delay();
     return writeOrgProfile(scope, profile);
+  }
+
+  // ── Track B: accountant-managed bank registry (mock; sibling store, platform-level) ──────────────
+  async listBankAccounts() {
+    await delay();
+    return listBankAccountsStore();
+  }
+
+  async createBankAccount(input: BankAccountInput) {
+    await delay();
+    const bank = createBankAccountStore(input);
+    appendAudit(this.data, {
+      actor: actorNameSafe(),
+      role: "Accountant",
+      action: "Added bank account (BETA)",
+      target: `${bank.code} · ${bank.name}`,
+    });
+    this.persist();
+    return bank;
+  }
+
+  async updateBankAccount(id: string, input: BankAccountInput) {
+    await delay();
+    const bank = updateBankAccountStore(id, input);
+    appendAudit(this.data, {
+      actor: actorNameSafe(),
+      role: "Accountant",
+      action: "Updated bank account (BETA)",
+      target: `${bank.code} · ${bank.name}`,
+    });
+    this.persist();
+    return bank;
+  }
+
+  async setBankAccountStatus(id: string, status: BankAccountStatus) {
+    await delay();
+    const bank = setBankAccountStatusStore(id, status);
+    appendAudit(this.data, {
+      actor: actorNameSafe(),
+      role: "Accountant",
+      action: status === "Active" ? "Activated bank account (BETA)" : "Deactivated bank account (BETA)",
+      target: `${bank.code} · ${bank.name}`,
+    });
+    this.persist();
+    return bank;
+  }
+
+  /* ---- Manual (ad-hoc) invoices — mock preview (Source=Manual) ---- */
+
+  private resolveRecipientName(input: CreateManualInvoiceInput): string {
+    const override = input.recipientNameOverride?.trim();
+    if (input.recipientType === "External") {
+      if (!override) throw new Error("Recipient name is required for an external recipient.");
+      return override;
+    }
+    if (override) return override;
+    const ref = input.recipientReference;
+    if (!ref) throw new Error("Recipient reference is required.");
+    const map = input.recipientType === "Partner" ? DEFAULT_PARTNER_PROFILES : DEFAULT_MERCHANT_PROFILES;
+    return map[ref]?.name?.trim() || ref;
+  }
+
+  private nextManualInvoiceNumber(year: number): string {
+    const prefix = `ZMI-${year}-`;
+    const seq = this.data.manualInvoices.filter((m) => m.invoiceNumber.startsWith(prefix)).length + 1;
+    return `${prefix}${String(seq).padStart(4, "0")}`;
+  }
+
+  async createManualInvoice(input: CreateManualInvoiceInput): Promise<ManualInvoice> {
+    await delay();
+    const key = (input.idempotencyKey ?? "").trim();
+    if (!key) throw new Error("An idempotency key is required.");
+
+    // Idempotency — a re-submit with the same key resolves to the existing invoice
+    // (mirrors the backend manual-invoice idempotency key).
+    const existing = this.data.manualInvoices.find((m) => m.idempotencyKey === key);
+    if (existing) return structuredClone(existing);
+
+    if (!input.lines || input.lines.length === 0) {
+      // Mirrors backend Zahy.Finance:081 (ManualInvoiceInvalidLines).
+      throw new Error("At least one line is required.");
+    }
+    for (const line of input.lines) {
+      if (!line.description?.trim()) throw new Error("Each line needs a description.");
+      if (!(line.quantity > 0)) throw new Error("Line quantity must be greater than zero.");
+      if (!(line.unitPriceInclusive > 0)) throw new Error("Line unit price must be greater than zero.");
+    }
+
+    const recipient = this.resolveRecipientName(input);
+    const issueDate = input.issueDate ?? new Date().toISOString();
+    const currency = (input.currency ?? "SAR").trim() || "SAR";
+    const lines = computeManualInvoiceLines(input.lines);
+    const totals = computeManualInvoiceTotals(lines);
+    const year = new Date(issueDate).getFullYear();
+
+    const invoice: ManualInvoice = {
+      id: uid("minv"),
+      invoiceNumber: this.nextManualInvoiceNumber(year),
+      source: "Manual",
+      recipientType: input.recipientType,
+      recipientReference: input.recipientType === "External" ? undefined : input.recipientReference,
+      recipient,
+      issueDate,
+      currency,
+      lines,
+      subtotalNet: totals.subtotalNet,
+      vatTotal: totals.vatTotal,
+      grandTotalInclusive: totals.grandTotalInclusive,
+      notes: input.notes?.trim() || undefined,
+      createdAt: new Date().toISOString(),
+      createdByName: actorNameSafe(),
+      idempotencyKey: key,
+    };
+
+    this.data.manualInvoices.unshift(invoice);
+    appendAudit(this.data, {
+      actor: actorNameSafe(),
+      role: "Accountant",
+      action: "Created manual invoice (BETA)",
+      target: `${invoice.invoiceNumber} · ${invoice.recipient}`,
+    });
+    this.persist();
+    return structuredClone(invoice);
+  }
+
+  async listInvoices(filter?: ManualInvoiceFilter): Promise<ManualInvoice[]> {
+    await delay();
+    let rows = [...this.data.manualInvoices];
+    if (filter?.source) rows = rows.filter((m) => m.source === filter.source);
+    if (filter?.recipientType) rows = rows.filter((m) => m.recipientType === filter.recipientType);
+    return rows.map((m) => structuredClone(m));
+  }
+
+  async getManualInvoice(id: string): Promise<ManualInvoice | undefined> {
+    await delay();
+    const found = this.data.manualInvoices.find((m) => m.id === id);
+    return found ? structuredClone(found) : undefined;
+  }
+
+  async listCommissionLedger(filter?: import("./types").CommissionLedgerFilter) {
+    await delay();
+    let rows = [...this.data.commissionLedger];
+    if (filter?.status) {
+      rows = rows.filter((r) => {
+        if (filter.status === "Reversed") {
+          return r.entryKind === "Reversal" || r.status === "Reversed";
+        }
+        if (filter.status === "Accrued") {
+          const reversed = this.data.commissionLedger.some(
+            (rev) => rev.reversesEntryId === r.id && rev.entryKind === "Reversal",
+          );
+          return r.status === "Accrued" && r.entryKind === "Accrual" && !reversed;
+        }
+        return r.status === filter.status && r.entryKind === "Accrual";
+      });
+    }
+    if (filter?.partnerId) rows = rows.filter((r) => r.partnerId === filter.partnerId);
+    if (filter?.from) rows = rows.filter((r) => r.entryDate >= filter.from!);
+    if (filter?.to) rows = rows.filter((r) => r.entryDate <= filter.to!);
+    return rows.map((r) => structuredClone(r));
+  }
+
+  async approveCommissionEntry(id: string, actorUserId: string, actorName: string) {
+    await delay();
+    const entry = this.data.commissionLedger.find((r) => r.id === id);
+    if (!entry || entry.entryKind !== "Accrual") throw new Error("Commission entry not found");
+    if (entry.status !== "Accrued") throw new Error("Only Accrued entries can be approved");
+    entry.status = "Approved";
+    entry.approvedAt = new Date().toISOString();
+    entry.approvedByUserId = actorUserId;
+    entry.approvedByName = actorName;
+    appendAudit(this.data, {
+      actor: actorName,
+      role: "Accountant",
+      action: "Approved commission ledger entry",
+      target: entry.id,
+    });
+    this.persist();
+    return structuredClone(entry);
+  }
+
+  async reverseCommissionEntry(id: string, reason: string, actorName: string) {
+    await delay();
+    if (!reason || reason.trim().length < 10) throw new Error("Reversal reason must be at least 10 characters");
+    const original = this.data.commissionLedger.find((r) => r.id === id && r.entryKind === "Accrual");
+    if (!original) throw new Error("Commission entry not found");
+    const existing = this.data.commissionLedger.find((r) => r.reversesEntryId === id);
+    if (existing) return structuredClone(existing);
+    const reversal: import("./types").CommissionLedgerRow = {
+      id: `cl-rev-${id}`,
+      partnerId: original.partnerId,
+      partnerName: original.partnerName,
+      tenantId: original.tenantId,
+      merchantName: original.merchantName,
+      entryDate: new Date().toISOString().slice(0, 10),
+      basisAmount: original.basisAmount,
+      commissionAmount: -original.commissionAmount,
+      currency: original.currency,
+      status: "Reversed",
+      entryKind: "Reversal",
+      accruedAt: new Date().toISOString(),
+      reversesEntryId: original.id,
+      reversalReason: reason.trim(),
+    };
+    this.data.commissionLedger.push(reversal);
+    appendAudit(this.data, {
+      actor: actorName,
+      role: "Accountant",
+      action: "Reversed commission ledger entry",
+      target: `${original.id} → ${reversal.id}`,
+    });
+    this.persist();
+    return structuredClone(reversal);
+  }
+
+  async markCommissionPaid(id: string, actorUserId: string, actorName: string) {
+    await delay();
+    const entry = this.data.commissionLedger.find((r) => r.id === id && r.entryKind === "Accrual");
+    if (!entry) throw new Error("Commission entry not found");
+    if (entry.status !== "Approved") throw new Error("Only Approved entries can be marked paid");
+    if (entry.approvedByUserId && entry.approvedByUserId === actorUserId) {
+      throw new Error("Two-person rule: another user must mark paid");
+    }
+    entry.status = "Paid";
+    entry.paidAt = new Date().toISOString();
+    appendAudit(this.data, {
+      actor: actorName,
+      role: "PlatformAdmin",
+      action: "Marked commission ledger entry paid",
+      target: entry.id,
+    });
+    this.persist();
+    return structuredClone(entry);
   }
 }
 

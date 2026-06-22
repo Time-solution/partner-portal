@@ -32,6 +32,12 @@ public class SettlementCase : AggregateRoot<Guid>
     /// <summary>When set, this case reverses the referenced original (append-only correction trail).</summary>
     public Guid? ReversesSettlementCaseId { get; private set; }
 
+    /// <summary>Operator-supplied justification for a reversal case (null on ordinary cases).</summary>
+    public string? Reason { get; private set; }
+
+    /// <summary>The user who triggered a reversal (null on ordinary cases).</summary>
+    public Guid? ReversedByUserId { get; private set; }
+
     public IReadOnlyList<SettlementStateTransition> History => new ReadOnlyCollection<SettlementStateTransition>(_history);
 
     /// <summary>Stable dedupe key. Trimmed + lower-cased so casing/whitespace can't create duplicates.</summary>
@@ -104,6 +110,45 @@ public class SettlementCase : AggregateRoot<Guid>
         }
 
         ReversesSettlementCaseId = originalSettlementCaseId;
+    }
+
+    /// <summary>
+    /// States from which a settlement case may be reversed by an append-only compensating case.
+    /// A freshly Collected case has nothing posted yet, and a Reconciled case is terminal — neither
+    /// is reversible through this path.
+    /// </summary>
+    public static bool IsReversibleState(SettlementCaseState state) =>
+        state is SettlementCaseState.Allocated
+            or SettlementCaseState.Invoiced
+            or SettlementCaseState.Cleared
+            or SettlementCaseState.Disbursed;
+
+    /// <summary>
+    /// Creates a new append-only reversal case linked to <paramref name="original"/>. The reversal
+    /// stores the operator <paramref name="reason"/> and <paramref name="reversedByUserId"/>. The
+    /// inverted journal is posted separately on the event log (the case itself holds no journal).
+    /// </summary>
+    public static SettlementCase StartReversal(
+        Guid id,
+        SettlementCase original,
+        string externalTransactionId,
+        string reason,
+        Guid? reversedByUserId,
+        DateTime createdAt)
+    {
+        Check.NotNull(original, nameof(original));
+
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length < SettlementReversalErrorCodes.MinReasonLength)
+        {
+            throw new BusinessException(SettlementReversalErrorCodes.ReasonRequired)
+                .WithData("MinLength", SettlementReversalErrorCodes.MinReasonLength);
+        }
+
+        var reversal = new SettlementCase(id, original.Book, original.PartnerId, externalTransactionId?.Trim() ?? string.Empty, createdAt);
+        reversal.LinkReversal(original.Id);
+        reversal.Reason = reason.Trim();
+        reversal.ReversedByUserId = reversedByUserId;
+        return reversal;
     }
 
     public static string BuildIdempotencyKey(SettlementBook book, string externalTransactionId) =>

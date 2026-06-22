@@ -11,7 +11,7 @@ import type { PortalData, SettlementCase } from "@/lib/data/types";
 import { settlementAccountLabel } from "@/lib/i18n/domainLabels";
 import { formatOrderRef } from "@/lib/format/recordId";
 import { usePortalSession } from "@/features/auth/usePortalSession";
-import { drillContextText, drillScopeLabel } from "@/lib/ui/drillContext";
+import { drillContextText, drillScopeLabel, drillShowingLabel } from "@/lib/ui/drillContext";
 import { useTranslator, type Lang } from "@/lib/i18n";
 import {
   aggregateAccounts,
@@ -22,11 +22,26 @@ import {
   partnersIn,
   platformTotals,
   toReportEntries,
+  vatControl,
   type ReportEntry,
 } from "@/lib/reports/settlementReports";
+import { scopeReportEntries } from "@/lib/reports/reportScope";
 import { statementProformaFromPartner } from "@/lib/invoice/proformaSources";
 import { downloadProformaPdf } from "@/lib/invoice/proformaPdf";
 import { downloadProformaXlsx } from "@/lib/invoice/proformaExcel";
+import { applyDateRangeToParams } from "@/lib/filters/dateRange";
+import {
+  accountVisible,
+  financeSideScope,
+  marginVisible,
+  netVatVisible,
+  purchaseVisible,
+  salesVisible,
+} from "@/lib/filters/financeSide";
+import { useDateRange } from "../hooks/useDateRange";
+import { useFinanceSide } from "../hooks/useFinanceSide";
+import { DateRangeFilter } from "./DateRangeFilter";
+import { PurchaseSalesFilter } from "./PurchaseSalesFilter";
 import { JournalTable } from "./JournalTable";
 
 type Company =
@@ -51,7 +66,10 @@ export function FinanceDrillDown({
 }) {
   const t = useTranslator(lang);
   const navigate = useNavigate();
-  const { org } = usePortalSession();
+  const { org, role } = usePortalSession();
+  const { range, setRange } = useDateRange();
+  const { side, setSide } = useFinanceSide();
+  const sideScope = useMemo(() => financeSideScope(role), [role]);
   const [data, setData] = useState<PortalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [company, setCompany] = useState<Company | null>(null);
@@ -66,18 +84,31 @@ export function FinanceDrillDown({
 
   const entries = useMemo(() => (data ? toReportEntries(data) : []), [data]);
   const periods = useMemo(() => listPeriods(entries), [entries]);
-  const period = periods[0] || "";
+  const fallbackPeriod = periods[0] ?? "";
+  // SALES / PURCHASE = day-to-day (source-array filtered); VAT = period/month-overlap. Engine untouched.
+  const { effectiveRange, entries: dayEntries, vatEntries, dayGrain } = useMemo(
+    () =>
+      data
+        ? scopeReportEntries(data, range, fallbackPeriod)
+        : { effectiveRange: range, entries: [], vatEntries: [], dayGrain: false },
+    [data, range, fallbackPeriod],
+  );
+  // HONEST header: a real period/day/range reflects that window; "All dates" says it shows the latest
+  // period (the figures collapse to it for back-compat) instead of a stray single period. Display only.
+  const rangeLabel = drillShowingLabel(range, fallbackPeriod, {
+    allDates: t("dateFilterAll" as never),
+    latestPeriodNote: t("drillLatestPeriodNote" as never),
+  });
+  // Net VAT stays a period/filing figure — month-overlap entries, never day-sliced.
+  const vat = useMemo(() => vatControl(vatEntries), [vatEntries]);
   const Back = lang === "ar" ? ChevronRight : ChevronLeft;
   const Fwd = lang === "ar" ? ChevronLeft : ChevronRight;
 
-  const periodEntries = useMemo(
-    () => entries.filter((e) => !period || e.period === period),
-    [entries, period],
-  );
-
   const openReports = (c: Company) => {
-    const entity = `${c.kind}:${c.id}`;
-    navigate(`/finance/reports?entity=${encodeURIComponent(entity)}&period=${encodeURIComponent(period)}`);
+    // Carry the FULL active range (day/range/period) to Reports — not a collapsed single month.
+    const params = applyDateRangeToParams(new URLSearchParams(), effectiveRange);
+    params.set("entity", `${c.kind}:${c.id}`);
+    navigate(`/finance/reports?${params.toString()}`);
   };
 
   if (loading || !data) {
@@ -100,7 +131,17 @@ export function FinanceDrillDown({
               {formatOrderRef(orderRef, lang)}
               <BetaBadge lang={lang} />
             </CardTitle>
-            <CardDescription>{company.name}</CardDescription>
+            <CardDescription>
+              {company.name}
+              {c?.createdAt ? (
+                <>
+                  {" · "}
+                  <span className="tabular-nums">
+                    {new Date(c.createdAt).toLocaleString(lang === "ar" ? "ar-SA" : "en-GB")}
+                  </span>
+                </>
+              ) : null}
+            </CardDescription>
           </div>
           <Button size="sm" variant="ghost" onClick={() => setOrderRef(null)}>
             <Back className="h-4 w-4" />
@@ -112,7 +153,7 @@ export function FinanceDrillDown({
           {c ? (
             <JournalTable lang={lang} lines={c.journal.lines} caption={t("settlementJournalCaption" as never)} />
           ) : (
-            <OrderJournalFromEntries entries={periodEntries} orderRef={orderRef} lang={lang} />
+            <OrderJournalFromEntries entries={dayEntries} orderRef={orderRef} lang={lang} />
           )}
         </CardContent>
       </Card>
@@ -121,24 +162,25 @@ export function FinanceDrillDown({
 
   // -------- L2: company statement --------
   if (company) {
-    const own = periodEntries.filter((e) =>
+    const own = dayEntries.filter((e) =>
       company.kind === "partner" ? e.partnerId === company.id : e.tenantId === company.id,
     );
-    const accounts = aggregateAccounts(own);
+    // Purchase/Sales narrows which account rows show; forbidden sides stay absent (never widens).
+    const accounts = aggregateAccounts(own).filter((a) => accountVisible(a.account, side, sideScope));
     const orderRefs = Array.from(new Set(own.filter((e) => e.financial).map((e) => e.orderRef)));
     const totals =
       company.kind === "partner"
-        ? partnerStatement(periodEntries, company.id, period)
-        : merchantStatement(periodEntries, company.id, period);
+        ? partnerStatement(own, company.id, "all")
+        : merchantStatement(own, company.id, "all");
     // Direction 2 — Zahy-owes-partner settlement statement (a SEPARATE proforma document).
-    const partnerStmt = company.kind === "partner" ? partnerStatement(periodEntries, company.id, period) : null;
+    const partnerStmt = company.kind === "partner" ? partnerStatement(own, company.id, "all") : null;
     return (
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
           <div>
             <CardTitle className="text-lg">{company.name}</CardTitle>
             <CardDescription>
-              {period} · {t("reportsOrders" as never)}: {totals.orderCount}
+              {rangeLabel} · {t("reportsOrders" as never)}: {totals.orderCount}
             </CardDescription>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -223,9 +265,9 @@ export function FinanceDrillDown({
   }
 
   // -------- L1: summary cards --------
-  const platform = platformTotals(periodEntries, period || "all");
-  const partners = partnersIn(periodEntries);
-  const merchants = merchantsIn(periodEntries);
+  const platform = platformTotals(dayEntries, "all");
+  const partners = partnersIn(dayEntries);
+  const merchants = merchantsIn(dayEntries);
 
   // DISPLAY-ONLY context header: the same drill-down renders on several dashboards, so
   // show WHOSE (already-scoped) data is on screen + which period. Scope is not changed here.
@@ -240,9 +282,19 @@ export function FinanceDrillDown({
         <Eye className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
         <span className="text-muted-foreground">{t("drillContextLabel" as never)}:</span>
         <span className="font-semibold text-foreground">
-          {drillContextText(scopeName, period, t("drillAllPeriods" as never))}
+          {drillContextText(scopeName, rangeLabel, t("drillAllPeriods" as never))}
         </span>
+        <DateRangeFilter range={range} onChange={setRange} lang={lang} className="ms-auto" />
+        <PurchaseSalesFilter side={side} onChange={setSide} lang={lang} />
       </div>
+      {dayGrain ? (
+        <div
+          className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-950 dark:text-amber-100"
+          dir={lang === "ar" ? "rtl" : "ltr"}
+        >
+          {t("reportsSubscriptionMonthNote" as never)}
+        </div>
+      ) : null}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
@@ -250,41 +302,56 @@ export function FinanceDrillDown({
             <BetaBadge lang={lang} />
           </CardTitle>
         <CardDescription>
-          {period} · {t("reportsResaleMargin" as never)}: {sar(platform.resaleMargin)} ·{" "}
-          {t("reportsNetVat" as never)}: {sar(platform.netVatToZatca)}
+          {rangeLabel}
+          {marginVisible(side, sideScope) ? (
+            <> · {t("reportsResaleMargin" as never)}: {sar(platform.resaleMargin)}</>
+          ) : null}
+          {netVatVisible(side) ? (
+            <>
+              {" · "}
+              {t("reportsNetVat" as never)}: {sar(vat.netVatToZatca)}{" "}
+              <span className="text-xs">({t("reportsNetVatPeriodNote" as never)})</span>
+            </>
+          ) : null}
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {partners.map((p) => {
-          const s = partnerStatement(periodEntries, p.partnerId, period);
-          return (
-            <CompanyCard
-              key={`p-${p.partnerId}`}
-              title={s.partnerName || p.partnerName}
-              subtitle={`${t("reportsPayable" as never)}`}
-              value={sar(s.payable)}
-              meta={`${t("reportsOrders" as never)}: ${s.orderCount}`}
-              label={t("drillViewStatement" as never)}
-              Fwd={Fwd}
-              onClick={() => setCompany({ kind: "partner", id: p.partnerId, name: s.partnerName || p.partnerName })}
-            />
-          );
-        })}
-        {merchants.map((m) => {
-          const s = merchantStatement(periodEntries, m.tenantId, period);
-          return (
-            <CompanyCard
-              key={`m-${m.tenantId}`}
-              title={s.merchantName || m.merchantName}
-              subtitle={`${t("reportsReceivable" as never)}`}
-              value={sar(s.receivable)}
-              meta={`${t("reportsOrders" as never)}: ${s.orderCount}`}
-              label={t("drillViewStatement" as never)}
-              Fwd={Fwd}
-              onClick={() => setCompany({ kind: "merchant", id: m.tenantId, name: s.merchantName || m.merchantName })}
-            />
-          );
-        })}
+        {/* Partner cards = PURCHASE/payable; gated by side + role (a merchant never sees these) */}
+        {purchaseVisible(side, sideScope)
+          ? partners.map((p) => {
+              const s = partnerStatement(dayEntries, p.partnerId, "all");
+              return (
+                <CompanyCard
+                  key={`p-${p.partnerId}`}
+                  title={s.partnerName || p.partnerName}
+                  subtitle={`${t("reportsPayable" as never)}`}
+                  value={sar(s.payable)}
+                  meta={`${t("reportsOrders" as never)}: ${s.orderCount}`}
+                  label={t("drillViewStatement" as never)}
+                  Fwd={Fwd}
+                  onClick={() => setCompany({ kind: "partner", id: p.partnerId, name: s.partnerName || p.partnerName })}
+                />
+              );
+            })
+          : null}
+        {/* Merchant cards = SALES/receivable; gated by side + role (a partner never sees these) */}
+        {salesVisible(side, sideScope)
+          ? merchants.map((m) => {
+              const s = merchantStatement(dayEntries, m.tenantId, "all");
+              return (
+                <CompanyCard
+                  key={`m-${m.tenantId}`}
+                  title={s.merchantName || m.merchantName}
+                  subtitle={`${t("reportsReceivable" as never)}`}
+                  value={sar(s.receivable)}
+                  meta={`${t("reportsOrders" as never)}: ${s.orderCount}`}
+                  label={t("drillViewStatement" as never)}
+                  Fwd={Fwd}
+                  onClick={() => setCompany({ kind: "merchant", id: m.tenantId, name: s.merchantName || m.merchantName })}
+                />
+              );
+            })
+          : null}
         </CardContent>
       </Card>
     </div>

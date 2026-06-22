@@ -60,6 +60,7 @@ function baseData(over: Partial<PortalData>): PortalData {
     reflectedOrders: [],
     billingPeriods: [],
     receipts: [],
+    commissionLedger: [],
     webhookEndpoints: [],
     webhookDeliveries: [],
     credentials: [],
@@ -68,6 +69,7 @@ function baseData(over: Partial<PortalData>): PortalData {
     users: [],
     orgs: [],
     orgUsers: [],
+    manualInvoices: [],
     kpis: {
       totalPartners: 0,
       activeActivations: 0,

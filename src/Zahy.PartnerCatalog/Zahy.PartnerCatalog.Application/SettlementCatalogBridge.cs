@@ -12,7 +12,7 @@ namespace Zahy.PartnerCatalog;
 /// </summary>
 public sealed class SettlementCatalogBridge : ISettlementCatalogBridge, ITransientDependency
 {
-    private const decimal DefaultVatRate = 0.15m;
+    private const decimal DefaultVatRate = SettlementVatOptions.DefaultStandardRate;
 
     private readonly ISettlementResaleTriggerPort _settlementTrigger;
 

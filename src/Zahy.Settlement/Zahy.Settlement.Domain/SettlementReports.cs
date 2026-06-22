@@ -82,6 +82,47 @@ public sealed record VatControlReport(
     Money NetVatPayable);
 
 /// <summary>
+/// Track B — per-bank ledger view. Each registered bank's 110x sub-account is reported separately,
+/// plus any cash booked directly to the 1100 parent (un-routed fallback). The roll-up = parent direct
+/// + sum of children, so 1100 still equals the sum of its bank sub-accounts and the trial balance is
+/// unchanged. Pure aggregation over existing postings — no money math is altered.
+/// </summary>
+public sealed record BankLedgerReport(
+    SettlementPeriod Period,
+    IReadOnlyList<AccountBalance> PerBank,
+    AccountBalance ParentDirect,
+    Money RollupDebits,
+    Money RollupCredits)
+{
+    public decimal RollupNet => SettlementMoney.Round(RollupDebits.Amount - RollupCredits.Amount);
+}
+
+/// <summary>
+/// Per-partner ledger view — the partner analogue of <see cref="BankLedgerReport"/>. Each partner's
+/// payable sub-account (2101+) and receivable sub-account (1251+) is reported separately, with the
+/// 2100/1250 parents' direct (un-routed) balances alongside. Each roll-up = parent direct + Σ children,
+/// so 2100 still equals the sum of its payable sub-accounts (and 1250 its receivable sub-accounts) and
+/// the trial balance is unchanged. Pure aggregation over existing postings — no money math is altered.
+/// </summary>
+public sealed record PartnerLedgerReport(
+    SettlementPeriod Period,
+    IReadOnlyList<AccountBalance> PerPartnerPayable,
+    IReadOnlyList<AccountBalance> PerPartnerReceivable,
+    AccountBalance PayableParentDirect,
+    AccountBalance ReceivableParentDirect,
+    Money PayableRollupDebits,
+    Money PayableRollupCredits,
+    Money ReceivableRollupDebits,
+    Money ReceivableRollupCredits)
+{
+    /// <summary>AP-Partner is credit-normal: net payable = credits − debits across parent + children.</summary>
+    public decimal PayableRollupNet => SettlementMoney.Round(PayableRollupCredits.Amount - PayableRollupDebits.Amount);
+
+    /// <summary>AR-Partner is debit-normal: net receivable = debits − credits across parent + children.</summary>
+    public decimal ReceivableRollupNet => SettlementMoney.Round(ReceivableRollupDebits.Amount - ReceivableRollupCredits.Amount);
+}
+
+/// <summary>
 /// Pure read-model reports over a set of (tagged) <see cref="PostingResult"/> journals. Reflection-only
 /// entries carry no financial lines and therefore contribute nothing to any financial figure — only to
 /// the reflection count. Every level uses real chart codes and the trial balance nets to zero.
@@ -189,6 +230,73 @@ public static class SettlementReports
             Money.Of(output),
             Money.Of(input),
             Money.Of(SettlementMoney.Round(output - input)));
+    }
+
+    /// <summary>
+    /// Track B — per-bank balances + 1100 roll-up. Each 110x bank sub-account is listed separately and
+    /// the 1100 parent's direct (un-routed) balance is reported alongside; the roll-up sums both so the
+    /// parent total = direct + Σ children. Reconcile/reporting can read each bank in isolation while the
+    /// trial balance still nets to zero. Pure aggregation — no money math is changed.
+    /// </summary>
+    public static BankLedgerReport BankLedger(IEnumerable<PostingResult> entries, SettlementPeriod period)
+    {
+        var accounts = Aggregate(Financial(entries, period));
+
+        var perBank = accounts
+            .Where(a => BankLedgerCoding.IsBankSubAccount(a.AccountCode))
+            .OrderBy(a => a.AccountCode, StringComparer.Ordinal)
+            .ToList();
+
+        var parent = accounts.FirstOrDefault(a => a.AccountCode == BankLedgerCoding.ParentCode)
+            ?? new AccountBalance(BankLedgerCoding.ParentCode, 0m, 0m);
+
+        var rollupDebits = SettlementMoney.Round(parent.Debit + perBank.Sum(b => b.Debit));
+        var rollupCredits = SettlementMoney.Round(parent.Credit + perBank.Sum(b => b.Credit));
+
+        return new BankLedgerReport(
+            period,
+            perBank,
+            parent,
+            Money.Of(rollupDebits),
+            Money.Of(rollupCredits));
+    }
+
+    /// <summary>
+    /// Per-partner payable/receivable sub-account balances + 2100/1250 roll-ups. Each partner sub-account
+    /// (2101+ / 1251+) is listed separately and each parent's direct (un-routed) balance is reported
+    /// alongside; the roll-up sums both so the parent total = direct + Σ children. Multi-3PL payable is
+    /// then ledger-correct (its own line) AND reconciles to the parent. Pure aggregation — no money math.
+    /// </summary>
+    public static PartnerLedgerReport PartnerLedger(IEnumerable<PostingResult> entries, SettlementPeriod period)
+    {
+        var accounts = Aggregate(Financial(entries, period));
+
+        var payableSubs = accounts
+            .Where(a => PartnerLedgerCoding.IsPayableSubAccount(a.AccountCode))
+            .OrderBy(a => a.AccountCode, StringComparer.Ordinal)
+            .ToList();
+
+        var receivableSubs = accounts
+            .Where(a => PartnerLedgerCoding.IsReceivableSubAccount(a.AccountCode))
+            .OrderBy(a => a.AccountCode, StringComparer.Ordinal)
+            .ToList();
+
+        var apParent = accounts.FirstOrDefault(a => a.AccountCode == PartnerLedgerCoding.PayableParentCode)
+            ?? new AccountBalance(PartnerLedgerCoding.PayableParentCode, 0m, 0m);
+
+        var arParent = accounts.FirstOrDefault(a => a.AccountCode == PartnerLedgerCoding.ReceivableParentCode)
+            ?? new AccountBalance(PartnerLedgerCoding.ReceivableParentCode, 0m, 0m);
+
+        return new PartnerLedgerReport(
+            period,
+            payableSubs,
+            receivableSubs,
+            apParent,
+            arParent,
+            Money.Of(SettlementMoney.Round(apParent.Debit + payableSubs.Sum(s => s.Debit))),
+            Money.Of(SettlementMoney.Round(apParent.Credit + payableSubs.Sum(s => s.Credit))),
+            Money.Of(SettlementMoney.Round(arParent.Debit + receivableSubs.Sum(s => s.Debit))),
+            Money.Of(SettlementMoney.Round(arParent.Credit + receivableSubs.Sum(s => s.Credit))));
     }
 
     private static IEnumerable<PostingResult> Financial(IEnumerable<PostingResult> entries, SettlementPeriod period) =>

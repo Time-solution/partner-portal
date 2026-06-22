@@ -13,6 +13,16 @@ public static class FinanceConsts
     public const int MaxDescriptionLength = 512;
     public const int MaxSourceTypeLength = 64;
     public const int MaxSourceIdLength = 256;
+
+    // ----- Manual (ad-hoc) invoice line items -----
+    public const int MaxRecipientLength = 200;
+    public const int MaxRecipientReferenceLength = 64;
+    public const int MaxNotesLength = 2000;
+    public const int MaxLineDescriptionLength = 500;
+    public const int MaxAccountCodeLength = 32;
+
+    /// <summary>Default chart account for manual-invoice lines when none is supplied (4200 — Fee Revenue).</summary>
+    public const string DefaultManualLineAccountCode = "4200";
 }
 
 public static class FinanceMoney
@@ -21,6 +31,38 @@ public static class FinanceMoney
 
     public static decimal RoundPosting(decimal value) =>
         Math.Round(value, PostingScale, MidpointRounding.AwayFromZero);
+}
+
+/// <summary>
+/// VAT-inclusive back-out arithmetic for Zahy.Finance documents. This is the SAME convention used by the
+/// Settlement engine (Zahy.Settlement.VatMath / the frontend splitInclusiveVat): money amounts crossing
+/// the module boundary (billing charges, commission accruals) are VAT-INCLUSIVE, so a Finance invoice and
+/// a Settlement journal split the SAME inclusive amount into the SAME net + VAT.
+///
+/// net = round(inclusive / (1 + rate), 2) and vat = round(inclusive − net, 2). The back-out (inclusive − net)
+/// — rather than net × rate — keeps inclusive == net + vat exactly at 2dp. Rounding is 2dp AwayFromZero
+/// (FinanceMoney.RoundPosting), byte-identical to SettlementMoney.Round.
+/// </summary>
+public static class FinanceVat
+{
+    public static void EnsureValidRate(decimal rate)
+    {
+        if (rate < 0m || rate >= 1m)
+        {
+            throw new ArgumentOutOfRangeException(nameof(rate), rate, "VAT rate must be in [0, 1).");
+        }
+    }
+
+    /// <summary>Net (VAT-exclusive) amount of a VAT-inclusive price, rounded per line.</summary>
+    public static decimal NetOfInclusive(decimal inclusiveAmount, decimal rate)
+    {
+        EnsureValidRate(rate);
+        return FinanceMoney.RoundPosting(inclusiveAmount / (1m + rate));
+    }
+
+    /// <summary>VAT portion of a VAT-inclusive price (back-out): inclusive − net.</summary>
+    public static decimal VatOfInclusive(decimal inclusiveAmount, decimal rate) =>
+        FinanceMoney.RoundPosting(inclusiveAmount - NetOfInclusive(inclusiveAmount, rate));
 }
 
 public static class FinancePostingIdempotency
@@ -46,6 +88,12 @@ public static class FinanceErrorCodes
     public const string KycSubmissionNotFound = Namespace + ":008";
     public const string IllegalStatusTransition = Namespace + ":009";
     public const string InvoiceGenerationFailed = Namespace + ":010";
+
+    /// <summary>A manual invoice's declared PostingSum does not equal the sum of its line totals (inclusive).</summary>
+    public const string ManualInvoiceTotalsImbalanced = Namespace + ":080";
+
+    /// <summary>A manual invoice was submitted with no line items, or a line failed validation.</summary>
+    public const string ManualInvoiceInvalidLines = Namespace + ":081";
 }
 
 public static class FinanceDocumentIdempotency

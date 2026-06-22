@@ -11,7 +11,7 @@ namespace Zahy.PartnerCatalog;
 
 public sealed class SubscriptionFeeBillingBridge : ITransientDependency
 {
-    private const decimal DefaultVatRate = 0.15m;
+    private const decimal DefaultVatRate = SettlementVatOptions.DefaultStandardRate;
 
     private readonly IBillingChargeService _billingChargeService;
     private readonly ISettlementFlowProfileResolver _profileResolver;

@@ -3,6 +3,7 @@ namespace Zahy.Settlement;
 public static class SettlementCaseConsts
 {
     public const int MaxExternalTransactionIdLength = 256;
+    public const int MaxReasonLength = 512;
 }
 
 /// <summary>

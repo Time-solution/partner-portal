@@ -167,6 +167,30 @@ public class ZahyFinanceDbContext : AbpDbContext<ZahyFinanceDbContext>
             b.Property(x => x.DocumentKind).IsRequired();
             b.Property(x => x.GeneratedAt).IsRequired();
 
+            // Manual (ad-hoc) invoice columns — nullable / defaulted, so existing LedgerDerived rows are unaffected.
+            b.Property(x => x.Source).IsRequired().HasDefaultValue(FinanceDocumentSource.LedgerDerived);
+            b.Property(x => x.Recipient).HasMaxLength(FinanceConsts.MaxRecipientLength);
+            b.Property(x => x.RecipientType);
+            b.Property(x => x.RecipientReference);
+            b.Property(x => x.Notes).HasMaxLength(FinanceConsts.MaxNotesLength);
+
+            b.OwnsMany(x => x.Lines, line =>
+            {
+                line.ToTable("FinInvoiceLines");
+                line.WithOwner().HasForeignKey("FinanceDocumentId");
+                line.HasKey("FinanceDocumentId", "LineNo");
+
+                line.Property(x => x.LineNo).IsRequired().ValueGeneratedNever();
+                line.Property(x => x.Description).IsRequired().HasMaxLength(FinanceConsts.MaxLineDescriptionLength);
+                line.Property(x => x.Quantity).HasPrecision(18, 4);
+                line.Property(x => x.UnitPriceInclusive).HasPrecision(18, 2);
+                line.Property(x => x.LineTotalInclusive).HasPrecision(18, 2);
+                line.Property(x => x.VatNet).HasPrecision(18, 2);
+                line.Property(x => x.VatAmount).HasPrecision(18, 2);
+                line.Property(x => x.AccountCode).IsRequired().HasMaxLength(FinanceConsts.MaxAccountCodeLength);
+            });
+            b.Navigation(x => x.Lines).UsePropertyAccessMode(PropertyAccessMode.Field);
+
             b.HasIndex(x => x.IdempotencyKey).IsUnique();
             b.HasIndex(x => new { x.AccountKind, x.AccountId });
 

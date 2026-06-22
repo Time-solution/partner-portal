@@ -22,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Zahy.Commission\Zahy.Commission.Application\Zahy.Commission.Application.csproj" />
     <ProjectReference Include="..\..\src\Zahy.Commission\Zahy.Commission.EntityFrameworkCore\Zahy.Commission.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\..\src\Zahy.Identity\Zahy.Identity.Domain.Shared\Zahy.Identity.Domain.Shared.csproj" />
     <ProjectReference Include="..\..\src\Zahy.OrderLedger\Zahy.OrderLedger.Application\Zahy.OrderLedger.Application.csproj" />
     <ProjectReference Include="..\..\src\Zahy.OrderLedger\Zahy.OrderLedger.EntityFrameworkCore\Zahy.OrderLedger.EntityFrameworkCore.csproj" />
   </ItemGroup>

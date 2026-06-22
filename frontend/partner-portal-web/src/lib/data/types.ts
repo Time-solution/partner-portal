@@ -234,6 +234,10 @@ export interface SettlementReversal {
   journal: SettlementJournal;
   netsToZero: boolean;
   createdAt: string;
+  /** Operator justification (mirrors backend SettlementCase.Reason). */
+  reason?: string;
+  /** Actor who triggered the reversal (mirrors backend ReversedByUserId). */
+  reversedBy?: string;
 }
 
 /**
@@ -289,6 +293,8 @@ export interface InvoicePayment {
   method: PaymentMethod;
   /** Bank/gateway/COD reference (free text). */
   reference: string;
+  /** Track B — the bank account this payment landed in (BankAccount.id); absent → 1100 parent. */
+  bankAccountId?: string;
 }
 
 /** Proof of payment — SEPARATE from the invoice (invoice = request; receipt = proof paid). */
@@ -308,6 +314,8 @@ export interface Receipt {
   method: PaymentMethod;
   sent: boolean;
   sentAt?: string;
+  /** Track B — the bank account the payment landed in (BankAccount.id); display-only on the receipt. */
+  bankAccountId?: string;
 }
 
 export interface SubscriptionBillingPeriod {
@@ -444,6 +452,8 @@ export interface PortalData {
   billingPeriods: SubscriptionBillingPeriod[];
   /** Money cycle — proof-of-payment records issued when a payment is recorded. */
   receipts: Receipt[];
+  /** Platform commission ledger — approval workflow (Accrued → Approved → Paid). */
+  commissionLedger: CommissionLedgerRow[];
   webhookEndpoints: WebhookEndpoint[];
   webhookDeliveries: WebhookDelivery[];
   credentials: PartnerCredential[];
@@ -454,6 +464,112 @@ export interface PortalData {
   /** Multi-org accounts (Platform / Partner / Merchant) + their self-managed users. */
   orgs: Org[];
   orgUsers: OrgUser[];
+  /** Manual (ad-hoc) invoices — Source=Manual previews of the backend Finance pipeline. */
+  manualInvoices: ManualInvoice[];
+}
+
+/* ------------------------------------------------------------------ */
+/* Manual (ad-hoc) invoices (Gate 3) — MOCK PREVIEW.                    */
+/* The backend Finance manual-invoice pipeline stays authoritative for */
+/* all money; the frontend only previews + lists. Source is "Manual".  */
+/* Mirrors backend FinanceDocumentRecipientType + the keyed line model. */
+/* ------------------------------------------------------------------ */
+
+export type ManualInvoiceRecipientType = "Partner" | "Merchant" | "External";
+
+export type ManualInvoiceSource = "Manual" | "LedgerDerived";
+
+/** Raw line as captured in the form — unit price is VAT-INCLUSIVE. */
+export interface ManualInvoiceLineInput {
+  description: string;
+  quantity: number;
+  unitPriceInclusive: number;
+  /** Optional GL account; defaults to the fee-revenue account when omitted. */
+  accountCode?: string;
+}
+
+/** Computed line — VAT split via the locked inclusive back-out (round-per-line). */
+export interface ManualInvoiceLine {
+  lineNo: number;
+  description: string;
+  quantity: number;
+  unitPriceInclusive: number;
+  lineTotalInclusive: number;
+  vatNet: number;
+  vatAmount: number;
+  accountCode: string;
+}
+
+export interface ManualInvoice {
+  id: string;
+  invoiceNumber: string;
+  source: ManualInvoiceSource;
+  recipientType: ManualInvoiceRecipientType;
+  /** Partner/Merchant id when the recipient is internal; absent for External. */
+  recipientReference?: string;
+  recipient: string;
+  issueDate: string;
+  currency: string;
+  lines: ManualInvoiceLine[];
+  subtotalNet: number;
+  vatTotal: number;
+  grandTotalInclusive: number;
+  notes?: string;
+  createdAt: string;
+  createdByName?: string;
+  /** Idempotency — a re-submit with the same key resolves to the existing invoice. */
+  idempotencyKey: string;
+}
+
+export interface CreateManualInvoiceInput {
+  recipientType: ManualInvoiceRecipientType;
+  /** Partner/Merchant id (required for Partner/Merchant; ignored for External). */
+  recipientReference?: string;
+  /** Free-text recipient name (required for External; overrides lookup otherwise). */
+  recipientNameOverride?: string;
+  lines: ManualInvoiceLineInput[];
+  notes?: string;
+  issueDate?: string;
+  currency?: string;
+  idempotencyKey: string;
+}
+
+export interface ManualInvoiceFilter {
+  source?: ManualInvoiceSource;
+  recipientType?: ManualInvoiceRecipientType;
+}
+
+export type CommissionLedgerStatus = "Accrued" | "Approved" | "Paid" | "Reversed";
+
+export type CommissionEntryKind = "Accrual" | "Reversal";
+
+export interface CommissionLedgerFilter {
+  status?: CommissionLedgerStatus;
+  partnerId?: string;
+  from?: string;
+  to?: string;
+}
+
+/** Mock commission ledger row — mirrors backend CommissionLedgerEntryDto + display names. */
+export interface CommissionLedgerRow {
+  id: string;
+  partnerId: string;
+  partnerName: string;
+  tenantId?: string;
+  merchantName?: string;
+  entryDate: string;
+  basisAmount: number;
+  commissionAmount: number;
+  currency: string;
+  status: CommissionLedgerStatus;
+  entryKind: CommissionEntryKind;
+  accruedAt: string;
+  approvedAt?: string;
+  approvedByUserId?: string;
+  approvedByName?: string;
+  paidAt?: string;
+  reversalReason?: string;
+  reversesEntryId?: string;
 }
 
 /** Central-admin creates a Partner or Merchant org account after approval. */
@@ -651,6 +767,48 @@ export function collectionCashFlow(c: CollectionRemittance): "Inbound" | "Outbou
   return c.paymentMethod === "COD" ? "Inbound" : "Outbound";
 }
 
+/** Sum of a collection's deductions (e.g. the delivery cost the company retains). */
+export function deductionsTotal(c: CollectionRemittance): number {
+  return round2(c.deductions.reduce((s, d) => s + d.amount.amount, 0));
+}
+
+/**
+ * COD "net transferred to Zahy" — COMPUTED, never hand-seeded: collected − delivery deductions.
+ * (113 − 10 = 103.) The delivery company retains its fee and remits the remainder; that remainder
+ * is exactly what reconciles to Merchant + Zahy margin + Net VAT, with NO unaccounted amount.
+ */
+export function codNetTransferred(c: CollectionRemittance): number {
+  return round2(c.totalCollected.amount - deductionsTotal(c));
+}
+
+/**
+ * COD reconciliation invariant — proves no money goes missing:
+ *   1. collected − delivery fee  = net transferred                 (computed remittance)
+ *   2. net transferred           = Merchant + Zahy margin + Net VAT (delivery is retained, not transferred)
+ * Together with {@link assertSplitBalances} (collected = all four recipients) this leaves zero remainder.
+ * Throws if the seeded `netRemitted` drifts from the computed transfer or a stray amount appears.
+ */
+export function assertCodReconciles(c: CollectionRemittance): void {
+  assertSplitBalances(c.totalCollected, c.split);
+
+  const transferred = codNetTransferred(c);
+  const seeded = round2(c.netRemitted.amount);
+  if (seeded !== transferred) {
+    throw new Error(
+      `COD remittance imbalance: net transferred ${seeded.toFixed(2)} ≠ collected − delivery ` +
+        `${transferred.toFixed(2)} — net transferred must be COMPUTED as collected − delivery fee.`,
+    );
+  }
+
+  const recipients = round2(c.split.merchant.amount + c.split.zahy.amount + c.split.zatca.amount);
+  if (recipients !== transferred) {
+    throw new Error(
+      `COD unaccounted amount: net transferred ${transferred.toFixed(2)} ≠ Merchant + Zahy + ZATCA ` +
+        `${recipients.toFixed(2)} (remainder ${round2(transferred - recipients).toFixed(2)}).`,
+    );
+  }
+}
+
 /**
  * Build the collection + remittance journal — grouped, balanced entries, each totalling
  * the REAL money it represents (no clearing account opened-and-closed within one entry).
@@ -765,6 +923,38 @@ export function deriveInvoicePayment(
     else status = overdue ? "Overdue" : "Pending";
   }
   return { total, amountPaid, amountOutstanding, status };
+}
+
+/**
+ * FE mirror of the backend `PaymentLedger.EnsureWithinRemaining` — a receipt must not push cumulative
+ * receipts past the invoice total. Demo and backend reject overpayment identically. Paying exactly the
+ * outstanding balance is allowed; anything beyond it throws.
+ */
+export function assertPaymentWithinOutstanding(
+  period: SubscriptionBillingPeriod,
+  amount: number,
+): void {
+  const state = deriveInvoicePayment(period);
+  if (round2(state.amountPaid + amount) > state.total) {
+    throw new Error(
+      `Overpayment rejected: ${round2(amount).toFixed(2)} exceeds the outstanding ` +
+        `${state.amountOutstanding.toFixed(2)} on this invoice.`,
+    );
+  }
+}
+
+/**
+ * FE mirror of the backend idempotency key — a re-submit carrying the SAME (non-empty) reference is a
+ * double-submit and resolves to the existing receipt instead of recording a duplicate. An empty/auto
+ * reference is treated as unique (matches the backend default key per row), so it never dedupes.
+ */
+export function findDuplicatePayment(
+  period: SubscriptionBillingPeriod,
+  reference: string,
+): InvoicePayment | undefined {
+  const key = (reference ?? "").trim().toLowerCase();
+  if (!key) return undefined;
+  return (period.payments ?? []).find((p) => (p.reference ?? "").trim().toLowerCase() === key);
 }
 
 export interface MoneyBalanceRow {

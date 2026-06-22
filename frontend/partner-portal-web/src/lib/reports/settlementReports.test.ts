@@ -18,7 +18,7 @@ import {
 } from "./settlementReports";
 
 const CHEFZ_PARTNER = "22222222-2222-2222-2222-222222222006";
-const TENANT_SHAWARMA = "11111111-1111-1111-1111-111111111006";
+const TENANT_BURGER = "11111111-1111-1111-1111-111111111001";
 
 const PARTNER_A = "partner-a";
 const PARTNER_B = "partner-b";
@@ -261,7 +261,7 @@ const r2 = (n: number) => Math.round(n * 100) / 100;
 
 describe("settlementReports — RBAC scoping (ties to org scope used by dashboards)", () => {
   const partnerCtx: OrgContext = { orgId: "org-partner-chefz", level: "Partner", partnerId: CHEFZ_PARTNER };
-  const merchantCtx: OrgContext = { orgId: "org-merchant-shawarma", level: "Merchant", tenantId: TENANT_SHAWARMA };
+  const merchantCtx: OrgContext = { orgId: "org-merchant-burger", level: "Merchant", tenantId: TENANT_BURGER };
 
   it("partner scope only ever yields its own entries", () => {
     const scoped = scopePortalData(structuredClone(mockPortalData), partnerCtx);
@@ -274,7 +274,7 @@ describe("settlementReports — RBAC scoping (ties to org scope used by dashboar
     const scoped = scopePortalData(structuredClone(mockPortalData), merchantCtx);
     const entries = toReportEntries(scoped);
     expect(entries.length).toBeGreaterThan(0);
-    expect(entries.every((e) => e.tenantId === TENANT_SHAWARMA)).toBe(true);
+    expect(entries.every((e) => e.tenantId === TENANT_BURGER)).toBe(true);
   });
 
   it("platform scope sees more entities than a single partner", () => {

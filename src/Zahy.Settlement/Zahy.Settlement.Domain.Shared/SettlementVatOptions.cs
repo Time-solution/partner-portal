@@ -13,8 +13,16 @@ public class SettlementVatOptions
 {
     public const string SectionName = "Settlement:Vat";
 
+    /// <summary>
+    /// The single canonical default VAT rate for the Settlement module — the ONE place the 0.15 literal
+    /// lives. Compile-time constant so call sites that need a default (DTO initialisers, the compute-only
+    /// <see cref="ActivationFeeComputer"/>) reference this instead of re-typing the number. The live rate
+    /// is still <see cref="StandardRate"/>, overridable via config.
+    /// </summary>
+    public const decimal DefaultStandardRate = 0.15m;
+
     /// <summary>Standard VAT rate (e.g. 0.15). Overridable via config; not hardcoded in the engine.</summary>
-    public decimal StandardRate { get; set; } = 0.15m;
+    public decimal StandardRate { get; set; } = DefaultStandardRate;
 
     public Dictionary<SettlementBook, VatTreatment> TreatmentByBook { get; set; } = new();
 

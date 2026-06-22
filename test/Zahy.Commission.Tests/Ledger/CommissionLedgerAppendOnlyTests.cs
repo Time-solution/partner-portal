@@ -13,11 +13,13 @@ public class CommissionLedgerAppendOnlyTests : ZahyCommissionTestBase
 {
     private readonly ICommissionLedgerService _ledgerService;
     private readonly IRepository<CommissionLedgerEntry, Guid> _ledgerRepository;
+    private readonly CommissionTestCurrentUser _currentUser;
 
     public CommissionLedgerAppendOnlyTests()
     {
         _ledgerService = GetRequiredService<ICommissionLedgerService>();
         _ledgerRepository = GetRequiredService<IRepository<CommissionLedgerEntry, Guid>>();
+        _currentUser = GetRequiredService<CommissionTestCurrentUser>();
     }
 
     [Fact]
@@ -63,12 +65,16 @@ public class CommissionLedgerAppendOnlyTests : ZahyCommissionTestBase
 
         await WithUnitOfWorkAsync(async () =>
         {
+            _currentUser.UserId = Guid.NewGuid();
             accrual = await _ledgerService.AccrueAsync(
                 CreateAccrualRequest(partnerId, ruleId, 250m, 25m, CommissionDirection.PartnerEarns));
             await _ledgerService.ApproveAsync(accrual.EntryId);
+            _currentUser.UserId = Guid.NewGuid();
             await _ledgerService.MarkPaidAsync(accrual.EntryId);
 
-            reversal = await _ledgerService.ReverseAsync(accrual.EntryId);
+            reversal = await _ledgerService.ReverseAsync(
+                accrual.EntryId,
+                new ReverseCommissionLedgerInput { Reason = "Order cancelled for append-only test" });
             reversal.IsNew.ShouldBeTrue();
             reversal.OriginalComputedCommission.ShouldBe(25m);
             reversal.ReversalComputedCommission.ShouldBe(-25m);
@@ -130,7 +136,9 @@ public class CommissionLedgerAppendOnlyTests : ZahyCommissionTestBase
 
         await WithUnitOfWorkAsync(async () =>
         {
+            _currentUser.UserId = Guid.NewGuid();
             await _ledgerService.ApproveAsync(accrual.EntryId);
+            _currentUser.UserId = Guid.NewGuid();
             await _ledgerService.MarkPaidAsync(accrual.EntryId);
         });
 

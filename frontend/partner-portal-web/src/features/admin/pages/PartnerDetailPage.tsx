@@ -17,6 +17,7 @@ import { isPartnerScopedRole, partnerHomePath } from "@/lib/rbac/roleNavConfig";
 import { ModuleScreenRenderer } from "../moduleScreenRegistry";
 import { FinanceDrillDown } from "../components/FinanceDrillDown";
 import { PartnerActiveMerchantsPanel } from "../components/PartnerActiveMerchantsPanel";
+import { PartnerStatementView } from "../components/PartnerStatementView";
 import { PageHeader } from "../components/PageHeader";
 import type { Lang } from "@/lib/i18n";
 import { useTranslator } from "@/lib/i18n";
@@ -104,6 +105,12 @@ export function PartnerDetailPage({ lang }: { lang: Lang }) {
           >
             {t("partnerActiveMerchantsTitle" as never)}
           </NavLink>
+          <NavLink
+            to={`/partners/${id}/statement`}
+            className={({ isActive }) => tabLinkClass(isActive)}
+          >
+            {t("partnerTabStatement" as never)}
+          </NavLink>
           <NavLink to={`/partners/${id}/profile`} className={() => tabLinkClass(true)}>
             {t("partnerTab_profile" as never)}
           </NavLink>
@@ -140,6 +147,12 @@ export function PartnerDetailPage({ lang }: { lang: Lang }) {
               {t("partnerActiveMerchantsTitle" as never)}
             </NavLink>
             <NavLink
+              to={`/partners/${id}/statement`}
+              className={({ isActive }) => tabLinkClass(isActive)}
+            >
+              {t("partnerTabStatement" as never)}
+            </NavLink>
+            <NavLink
               to={`/partners/${id}/profile`}
               className={({ isActive }) => tabLinkClass(isActive)}
             >
@@ -148,6 +161,46 @@ export function PartnerDetailPage({ lang }: { lang: Lang }) {
           </nav>
         ) : null}
         <PartnerActiveMerchantsPanel lang={lang} partnerId={id} />
+      </div>
+    );
+  }
+
+  if (tab === "statement") {
+    return (
+      <div className="space-y-6">
+        {!partnerScoped ? (
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/partners">
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+              {t("navPartners" as never)}
+            </Link>
+          </Button>
+        ) : null}
+        <PageHeader
+          title={partner.tradeName ?? partner.legalName}
+          description={t("partnerStatementDesc" as never)}
+          lang={lang}
+        />
+        {partnerScoped ? (
+          <nav className={tabBarClass} aria-label={t("partnerDashboardNav" as never)}>
+            <NavLink
+              to={`/partners/${id}/active-merchants`}
+              className={({ isActive }) => tabLinkClass(isActive)}
+            >
+              {t("partnerActiveMerchantsTitle" as never)}
+            </NavLink>
+            <NavLink to={`/partners/${id}/statement`} className={() => tabLinkClass(true)}>
+              {t("partnerTabStatement" as never)}
+            </NavLink>
+            <NavLink
+              to={`/partners/${id}/profile`}
+              className={({ isActive }) => tabLinkClass(isActive)}
+            >
+              {t("partnerTab_profile" as never)}
+            </NavLink>
+          </nav>
+        ) : null}
+        <PartnerStatementView lang={lang} partnerId={id} />
       </div>
     );
   }
@@ -184,12 +237,20 @@ export function PartnerDetailPage({ lang }: { lang: Lang }) {
 
       <nav className={tabBarClass} aria-label={t("moduleScreensNav" as never)}>
         {!partnerScoped ? (
-          <NavLink
-            to={`/partners/${id}/active-merchants`}
-            className={({ isActive }) => tabLinkClass(isActive)}
-          >
-            {t("partnerActiveMerchantsTitle" as never)}
-          </NavLink>
+          <>
+            <NavLink
+              to={`/partners/${id}/active-merchants`}
+              className={({ isActive }) => tabLinkClass(isActive)}
+            >
+              {t("partnerActiveMerchantsTitle" as never)}
+            </NavLink>
+            <NavLink
+              to={`/partners/${id}/statement`}
+              className={({ isActive }) => tabLinkClass(isActive)}
+            >
+              {t("partnerTabStatement" as never)}
+            </NavLink>
+          </>
         ) : null}
         {screens.map((screen) => (
           <NavLink

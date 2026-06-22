@@ -14,7 +14,9 @@ using Volo.Abp.EntityFrameworkCore.Sqlite;
 using Volo.Abp.Modularity;
 using Volo.Abp.Testing;
 using Volo.Abp.Uow;
+using Volo.Abp.Users;
 using Zahy.Commission;
+using Zahy.Identity.Auditing;
 using Zahy.Identity.Partners;
 using Zahy.PartnerCatalog;
 
@@ -38,6 +40,15 @@ public class ZahySettlementReadTestModule : AbpModule
         context.Services.AddSingleton<SettlementReadTestCurrentPartner>();
         context.Services.Replace(ServiceDescriptor.Singleton<ICurrentPartner>(sp =>
             sp.GetRequiredService<SettlementReadTestCurrentPartner>()));
+
+        // Settlement write tests need a mutable actor + a capturing audit trail (the real
+        // AdminAuditLogger persists to the Identity DB schema, which is not loaded here).
+        context.Services.AddSingleton<SettlementTestCurrentUser>();
+        context.Services.Replace(ServiceDescriptor.Singleton<ICurrentUser>(sp =>
+            sp.GetRequiredService<SettlementTestCurrentUser>()));
+        context.Services.AddSingleton<RecordingSettlementAuditLogger>();
+        context.Services.Replace(ServiceDescriptor.Singleton<IAdminAuditLogger>(sp =>
+            sp.GetRequiredService<RecordingSettlementAuditLogger>()));
 
         var sqliteConnection = CreateDatabaseAndGetConnection();
 

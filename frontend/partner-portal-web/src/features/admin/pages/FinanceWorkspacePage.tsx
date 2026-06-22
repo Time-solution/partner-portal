@@ -26,6 +26,8 @@ import { billingPeriodStatusLabel } from "@/lib/i18n/domainLabels";
 import { isPathActive, tabBarClass, tabLinkClass } from "@/lib/ui/tabs";
 import { BalancesPage } from "./BalancesPage";
 import { ReportsPage } from "./ReportsPage";
+import { CommissionApprovalsPage, CommissionApprovalsNavLink } from "./CommissionApprovalsPage";
+import { ManualInvoicePage } from "./ManualInvoicePage";
 import { FinanceDrillDown } from "../components/FinanceDrillDown";
 
 function FinanceTabNav({ lang }: { lang: Lang }) {
@@ -259,6 +261,7 @@ function FinancePendingApprovals({ lang }: { lang: Lang }) {
             </div>
           ))
         )}
+        <CommissionApprovalsNavLink lang={lang} />
       </CardContent>
     </Card>
   );
@@ -294,6 +297,8 @@ export function FinanceWorkspacePage({ lang }: { lang: Lang }) {
         <Route path="balances" element={<BalancesPage lang={lang} />} />
         <Route path="vat" element={<FinanceVatSummary lang={lang} />} />
         <Route path="pending-approvals" element={<FinancePendingApprovals lang={lang} />} />
+        <Route path="commission-approvals" element={<CommissionApprovalsPage lang={lang} />} />
+        <Route path="invoices/new" element={<ManualInvoicePage lang={lang} />} />
         <Route path="*" element={<Navigate to="overview" replace />} />
       </Routes>
     </div>

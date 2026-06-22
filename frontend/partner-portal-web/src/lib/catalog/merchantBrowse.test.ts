@@ -131,18 +131,18 @@ describe("buildMerchantActivationIdempotencyKey", () => {
   it("matches backend activation idempotency shape", () => {
     expect(
       buildMerchantActivationIdempotencyKey(
-        "11111111-1111-1111-1111-111111111099",
+        "11111111-1111-1111-1111-111111111001",
         "a1000003-0003-4000-8000-000000000003",
       ),
     ).toBe(
-      "activation:11111111-1111-1111-1111-111111111099:a1000003-0003-4000-8000-000000000003",
+      "activation:11111111-1111-1111-1111-111111111001:a1000003-0003-4000-8000-000000000003",
     );
   });
 });
 
 describe("instant activation mock contract", () => {
   it("idempotent key is per catalog item not per partner", () => {
-    const tenant = "11111111-1111-1111-1111-111111111099";
+    const tenant = "11111111-1111-1111-1111-111111111001";
     const k1 = buildMerchantActivationIdempotencyKey(tenant, tierBasic.id);
     const k2 = buildMerchantActivationIdempotencyKey(tenant, tierPro.id);
     expect(k1).not.toBe(k2);

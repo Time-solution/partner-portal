@@ -18,6 +18,7 @@ import { usePortalSession } from "@/features/auth/usePortalSession";
 import { PageHeader } from "../components/PageHeader";
 import { SettingsUsersSection } from "./SettingsUsersSection";
 import { OrgProfileForm } from "@/features/settings/profile/OrgProfileForm";
+import { BankRegistryPage } from "@/features/settings/banks/BankRegistryPage";
 import type { Lang } from "@/lib/i18n";
 import { useTranslator } from "@/lib/i18n";
 import { tabBarClass, tabLinkClass as tabLinkActiveClass } from "@/lib/ui/tabs";
@@ -48,6 +49,12 @@ const SETTINGS_TABS: readonly SettingsTab[] = [
     path: "teams",
     labelKey: "settingsTabTeams",
     permissions: [PortalPermissions.Settings.Read],
+  },
+  {
+    key: "banks",
+    path: "banks",
+    labelKey: "settingsTabBanks",
+    permissions: [PortalPermissions.Banks.Read],
   },
   {
     key: "users",
@@ -223,6 +230,7 @@ export function SettingsPage({ lang }: { lang: Lang }) {
             )
           }
         />
+        <Route path="banks" element={<BankRegistryPage lang={lang} />} />
         <Route path="users" element={<SettingsUsersSection lang={lang} />} />
         <Route
           path="audit"

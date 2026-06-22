@@ -47,8 +47,12 @@ public static class ZahyRoleRegistry
                 ZahyPermissions.Payouts.Read,
                 ZahyPermissions.Orders.Read,
                 ZahyPermissions.Finance.KycReview,
+                ZahyPermissions.Finance.ReadAll,
+                ZahyPermissions.Finance.WriteManualInvoice,
+                ZahyPermissions.Commission.Approve,
                 ZahyPermissions.Settlement.Read,
-                ZahyPermissions.Settlement.Reconcile
+                ZahyPermissions.Settlement.Reconcile,
+                ZahyPermissions.Settlement.BankRegistryManage
             },
             assignableRoles: Array.Empty<string>()),
 

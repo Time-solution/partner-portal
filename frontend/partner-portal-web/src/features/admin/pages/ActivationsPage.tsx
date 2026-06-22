@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MoneyAmount } from "@/components/MoneyAmount";
@@ -13,17 +13,27 @@ import { PageHeader } from "../components/PageHeader";
 import { EmptyState } from "../components/EmptyState";
 import { useTranslator } from "@/lib/i18n";
 import { activationStatusLabel } from "@/lib/i18n/domainLabels";
+import { filterByDate } from "@/lib/filters/dateRange";
 import type { ModuleScopeProps } from "../moduleScope";
 import { useScopePartnerIds } from "../hooks/useScopePartnerIds";
+import { useDateRange } from "../hooks/useDateRange";
+import { DateRangeFilter } from "../components/DateRangeFilter";
 
 export function ActivationsPage({ lang, moduleId, partnerId, financeMode }: ModuleScopeProps) {
   const t = useTranslator(lang);
   const { can, role, user } = usePortalSession();
   const scopeIds = useScopePartnerIds(moduleId, partnerId);
+  const { range, setRange } = useDateRange();
   const showHeader = !moduleId && !partnerId && !financeMode;
   const [activations, setActivations] = useState<MerchantActivationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  // Date filter layers ON TOP of scope — narrows by activation date (undated rows stay visible).
+  const visibleActivations = useMemo(
+    () => filterByDate(activations, range, (r) => r.activation.activatedAt),
+    [activations, range],
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -70,12 +80,15 @@ export function ActivationsPage({ lang, moduleId, partnerId, financeMode }: Modu
           lang={lang}
         />
       ) : null}
+      <div className="flex justify-end">
+        <DateRangeFilter range={range} onChange={setRange} lang={lang} />
+      </div>
       {loading ? (
         <div className="flex items-center gap-2 text-base text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" />
           {t("loadingData" as never)}
         </div>
-      ) : activations.length === 0 ? (
+      ) : visibleActivations.length === 0 ? (
         <Card>
           <CardContent className="p-0">
             <EmptyState message={t("activationsEmpty" as never)} />
@@ -83,7 +96,7 @@ export function ActivationsPage({ lang, moduleId, partnerId, financeMode }: Modu
         </Card>
       ) : (
         <div className="space-y-4">
-          {activations.map(({ activation: a, workflow: wf }) => (
+          {visibleActivations.map(({ activation: a, workflow: wf }) => (
             <Card key={a.id}>
               <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
                 <div>

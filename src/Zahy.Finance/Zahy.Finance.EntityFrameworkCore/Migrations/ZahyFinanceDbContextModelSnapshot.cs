@@ -190,12 +190,31 @@ namespace Zahy.Finance.EntityFrameworkCore.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
                     b.Property<decimal>("PostingSum")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<string>("Recipient")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid?>("RecipientReference")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("RecipientType")
+                        .HasColumnType("int");
+
                     b.Property<int>("SequenceNumber")
                         .HasColumnType("int");
+
+                    b.Property<int>("Source")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
 
                     b.Property<Guid?>("SourceRowId")
                         .HasColumnType("uniqueidentifier");
@@ -497,6 +516,57 @@ namespace Zahy.Finance.EntityFrameworkCore.Migrations
                         .IsUnique();
 
                     b.ToTable("FinPartnerAccounts", (string)null);
+                });
+
+            modelBuilder.Entity("Zahy.Finance.FinanceDocument", b =>
+                {
+                    b.OwnsMany("Zahy.Finance.FinanceInvoiceLine", "Lines", b1 =>
+                        {
+                            b1.Property<Guid>("FinanceDocumentId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<int>("LineNo")
+                                .HasColumnType("int");
+
+                            b1.Property<string>("AccountCode")
+                                .IsRequired()
+                                .HasMaxLength(32)
+                                .HasColumnType("nvarchar(32)");
+
+                            b1.Property<string>("Description")
+                                .IsRequired()
+                                .HasMaxLength(500)
+                                .HasColumnType("nvarchar(500)");
+
+                            b1.Property<decimal>("LineTotalInclusive")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)");
+
+                            b1.Property<decimal>("Quantity")
+                                .HasPrecision(18, 4)
+                                .HasColumnType("decimal(18,4)");
+
+                            b1.Property<decimal>("UnitPriceInclusive")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)");
+
+                            b1.Property<decimal>("VatAmount")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)");
+
+                            b1.Property<decimal>("VatNet")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("decimal(18,2)");
+
+                            b1.HasKey("FinanceDocumentId", "LineNo");
+
+                            b1.ToTable("FinInvoiceLines", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("FinanceDocumentId");
+                        });
+
+                    b.Navigation("Lines");
                 });
 #pragma warning restore 612, 618
         }

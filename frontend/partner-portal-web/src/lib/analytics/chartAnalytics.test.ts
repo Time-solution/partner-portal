@@ -12,10 +12,10 @@ describe("buildChartAnalytics", () => {
 
   it("maps partners to business modules for transaction chart", () => {
     const a = buildChartAnalytics(mockPortalData);
-    const commerce = a.transactionsByModule.find((m) => m.moduleId === "commerce");
-    const fnb = a.transactionsByModule.find((m) => m.moduleId === "fnb");
-    expect(commerce?.volume).toBeGreaterThan(0);
-    expect(fnb?.volume).toBeGreaterThan(0);
+    const delivery = a.transactionsByModule.find((m) => m.moduleId === "delivery-service");
+    const subscriptions = a.transactionsByModule.find((m) => m.moduleId === "subscriptions");
+    expect(delivery?.volume).toBeGreaterThan(0);
+    expect(subscriptions?.volume).toBeGreaterThan(0);
   });
 
   it("tracks pending activations separately from active", () => {

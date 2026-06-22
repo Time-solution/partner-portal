@@ -36,7 +36,7 @@ public class PartnerSettlementStatementTests
         var disb = Disbursements.CreateOrGet(Guid.NewGuid(), Partner, Period, Incl(70m), "DISB-1", At, ctx, Array.Empty<Disbursement>());
         if (release)
         {
-            disb.Release("platform-admin", true, At);
+            disb.Release("platform-admin", true, reconciledBy: batch.ReconciledBy!, At);
         }
 
         var status = Disbursements.Status(Partner, Period, ctx, new[] { disb });

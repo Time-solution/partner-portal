@@ -37,10 +37,17 @@ export const PortalPermissions = {
     SetTerms: "Zahy.Portal.Billing.SetTerms",
   },
   Reversals: { Read: "Zahy.Portal.Reversals.Read" },
-  Finance: { Read: "Zahy.Portal.Finance.Read" },
+  Finance: {
+    Read: "Zahy.Portal.Finance.Read",
+    /** Platform-only: issue an ad-hoc (manual) invoice with keyed line items. */
+    WriteManualInvoice: "Zahy.Portal.Finance.WriteManualInvoice",
+  },
+  Commission: { Approve: "Zahy.Commission.Approve" },
   Webhooks: { Read: "Zahy.Portal.Webhooks.Read", Manage: "Zahy.Portal.Webhooks.Manage" },
   Credentials: { Read: "Zahy.Portal.Credentials.Read", Rotate: "Zahy.Portal.Credentials.Rotate" },
   Settings: { Read: "Zahy.Portal.Settings.Read", Manage: "Zahy.Portal.Settings.Manage" },
+  /** Track B — accountant-managed bank registry. Read lists banks; Manage add/edit/deactivate. */
+  Banks: { Read: "Zahy.Portal.Banks.Read", Manage: "Zahy.Portal.Banks.Manage" },
   Users: { Read: "Zahy.Portal.Users.Read", Manage: "Zahy.Portal.Users.Manage" },
   PartnerFinance: { ReadOwn: "Zahy.Portal.PartnerFinance.ReadOwn" },
   MerchantPreview: { Read: "Zahy.Portal.MerchantPreview.Read" },
@@ -53,6 +60,7 @@ export const rolePermissionMap: Record<PortalRole, readonly string[]> = {
   Accountant: [
     PortalPermissions.Dashboard.Read,
     PortalPermissions.Finance.Read,
+    PortalPermissions.Finance.WriteManualInvoice,
     PortalPermissions.Partners.Read,
     PortalPermissions.Catalog.Read,
     PortalPermissions.Activations.Read,
@@ -64,6 +72,9 @@ export const rolePermissionMap: Record<PortalRole, readonly string[]> = {
     PortalPermissions.Webhooks.Read,
     PortalPermissions.Credentials.Read,
     PortalPermissions.Settings.Read,
+    PortalPermissions.Banks.Read,
+    PortalPermissions.Banks.Manage,
+    PortalPermissions.Commission.Approve,
   ],
   PartnerSuccessManager: [
     PortalPermissions.Partners.Read,
@@ -116,6 +127,24 @@ export function permissionsForRole(role: PortalRole): readonly string[] {
 
 export function canDisburse(role: PortalRole): boolean {
   return role === "PlatformAdmin";
+}
+
+/**
+ * Two-person rule (separation of duties) for releasing a disbursement — mirrors the backend
+ * `Disbursement.Release` enforcement. The releaser must (1) hold the Disburse privilege AND (2) NOT be the
+ * same human who reconciled the batch. Even a PlatformAdmin holding both permissions is blocked from doing
+ * BOTH gates on the SAME item: the rule compares actor ids (case-insensitive / trimmed), not just roles.
+ */
+export function canReleaseDisbursement(opts: {
+  releaserRole: PortalRole;
+  releaserActorId: string;
+  reconciledByActorId: string | null | undefined;
+}): boolean {
+  if (!canDisburse(opts.releaserRole)) return false;
+  const releaser = (opts.releaserActorId ?? "").trim().toLowerCase();
+  if (!releaser) return false;
+  const reconciler = (opts.reconciledByActorId ?? "").trim().toLowerCase();
+  return releaser !== reconciler;
 }
 
 const ROLE_RANK: Record<PortalRole, number> = {

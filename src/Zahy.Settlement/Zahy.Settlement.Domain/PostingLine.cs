@@ -23,7 +23,7 @@ public sealed record PostingLine
 
     public static PostingLine Of(string accountCode, EntryDirection direction, Money amount)
     {
-        if (!SettlementAccountCode.IsDefined(accountCode))
+        if (!SettlementAccountCode.IsPostable(accountCode))
         {
             throw new AbpException($"Unknown chart account code '{accountCode}'.");
         }

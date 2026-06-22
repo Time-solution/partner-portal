@@ -26,7 +26,7 @@ public sealed class SettlementResaleTriggerRequest
 
     public Money SellPrice { get; init; } = Money.Zero();
 
-    public decimal VatRate { get; init; } = 0.15m;
+    public decimal VatRate { get; init; } = SettlementVatOptions.DefaultStandardRate;
 
     public DateTime PostedAt { get; init; }
 
@@ -47,7 +47,7 @@ public sealed class SettlementResaleReversalRequest
 
     public Money SellPrice { get; init; } = Money.Zero();
 
-    public decimal VatRate { get; init; } = 0.15m;
+    public decimal VatRate { get; init; } = SettlementVatOptions.DefaultStandardRate;
 
     public DateTime PostedAt { get; init; }
 

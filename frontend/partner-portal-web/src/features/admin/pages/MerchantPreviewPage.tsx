@@ -22,15 +22,17 @@ import {
 import { OrgProfileForm } from "@/features/settings/profile/OrgProfileForm";
 import { PageHeader } from "../components/PageHeader";
 import { MerchantActivePartnersPanel } from "../components/MerchantActivePartnersPanel";
+import { MerchantUsagePackagesPanel } from "../components/MerchantUsagePackagesPanel";
+import { MerchantStatementView } from "@/features/merchant/MerchantStatementView";
 import { tabBarClass, tabLinkClass } from "@/lib/ui/tabs";
 import type { Lang } from "@/lib/i18n";
 import { useTranslator } from "@/lib/i18n";
 import { offeringKindLabel } from "@/lib/i18n/domainLabels";
 
-type MerchantTab = "partners" | "browse" | "profile";
+type MerchantTab = "partners" | "browse" | "profile" | "statement";
 
 function parseMerchantTab(raw: string | null): MerchantTab {
-  if (raw === "browse" || raw === "profile") return raw;
+  if (raw === "browse" || raw === "profile" || raw === "statement") return raw;
   return "partners";
 }
 
@@ -257,6 +259,13 @@ export function MerchantPreviewPage({ lang }: { lang: Lang }) {
         </button>
         <button
           type="button"
+          className={tabLinkClass(activeTab === "statement")}
+          onClick={() => setTab("statement")}
+        >
+          {t("merchantTabStatement" as never)}
+        </button>
+        <button
+          type="button"
           className={tabLinkClass(activeTab === "browse")}
           onClick={() => setTab("browse")}
         >
@@ -279,6 +288,8 @@ export function MerchantPreviewPage({ lang }: { lang: Lang }) {
           titleKey="orgProfileMerchantTitle"
           descKey="orgProfileMerchantDesc"
         />
+      ) : activeTab === "statement" ? (
+        <MerchantStatementView lang={lang} tenantId={MOCK_MERCHANT_PREVIEW.tenantId} />
       ) : activeTab === "partners" ? (
         <MerchantActivePartnersPanel
           lang={lang}
@@ -356,6 +367,12 @@ export function MerchantPreviewPage({ lang }: { lang: Lang }) {
               ))
             )}
           </section>
+
+          <MerchantUsagePackagesPanel
+            lang={lang}
+            tenantId={MOCK_MERCHANT_PREVIEW.tenantId}
+            merchantName={MOCK_MERCHANT_PREVIEW.merchantName}
+          />
         </>
       )}
     </div>

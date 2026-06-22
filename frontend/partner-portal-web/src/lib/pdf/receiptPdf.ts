@@ -1,32 +1,21 @@
-import type { jsPDF } from "jspdf";
+/**
+ * Payment-receipt PDF generator (browser only). Rebuilt to use the SAME html2canvas → jsPDF
+ * pipeline as the proforma: render {@link buildReceiptHtml} in an offscreen iframe, WAIT for the
+ * Cairo webfont + logo image, capture with html2canvas, then place it on an A4 jsPDF page.
+ *
+ * This fixes the old jsPDF-core output, which could neither shape connected Arabic (mojibake like
+ * "þ©þ•þª") nor render the Riyal SVG (it fell back to a "SAR" string). Capturing rendered HTML makes
+ * Arabic sharp and the Riyal a crisp vector. DISPLAY ONLY — no money math / ledger change.
+ */
 import type { Receipt } from "@/lib/data/types";
 import type { Lang } from "@/lib/i18n";
+import { listBankAccounts } from "@/lib/banks/bankRegistryStore";
+import { buildReceiptHtml, receiptBankLabel, type ReceiptDoc } from "./receiptHtml";
 
-/**
- * Money cycle — clean proof-of-payment receipt (MOCK / BETA, flagged off).
- *
- * NOTE on language: jsPDF's built-in fonts are WinAnsi-encoded and cannot shape
- * connected Arabic script. To keep the generated PDF always legible we render the
- * receipt body with English labels + Western data, and surface the Arabic context
- * (title, "paid by") as a secondary line where it is safe to do so. The surrounding
- * UI (buttons, toasts, on-screen receipt) is fully bilingual. Embedding an Arabic
- * font + bidi shaper is the documented next step for a production tax-grade receipt.
- */
-
-const BRAND = "#0f766e";
-
-const METHOD_LABEL: Record<Receipt["method"], string> = {
-  COD: "Cash on Delivery",
-  Online: "Online",
-  Transfer: "Bank Transfer",
-};
-
-function fmtMoney(amount: number, currency: string): string {
-  return `${currency} ${amount.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
+const A4_WIDTH_PT = 595.28;
+const A4_HEIGHT_PT = 841.89;
+const RENDER_WIDTH_PX = 794;
+const RENDER_HEIGHT_PX = 1123;
 
 function fmtDate(iso: string): string {
   const d = new Date(iso);
@@ -34,107 +23,89 @@ function fmtDate(iso: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-async function buildReceiptDoc(receipt: Receipt, _lang: Lang = "en"): Promise<jsPDF> {
-  const { jsPDF } = await import("jspdf");
-  const doc = new jsPDF({ unit: "pt", format: "a4" });
-  const pageW = doc.internal.pageSize.getWidth();
-  const left = 56;
-  const right = pageW - 56;
-
-  // ---- Header band ----
-  doc.setFillColor(BRAND);
-  doc.rect(0, 0, pageW, 96, "F");
-  doc.setTextColor("#ffffff");
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(26);
-  doc.text("ZAHY", left, 50);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(11);
-  doc.text("Partner Platform", left, 70);
-  doc.setFontSize(20);
-  doc.setFont("helvetica", "bold");
-  doc.text("PAYMENT RECEIPT", right, 50, { align: "right" });
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(11);
-  doc.text("إيصال سداد", right, 70, { align: "right" });
-
-  // ---- BETA / not-a-tax-invoice watermark ----
-  doc.setTextColor("#e2e8f0");
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(66);
-  doc.text("BETA", pageW / 2, 430, { align: "center", angle: 22 });
-  doc.setTextColor("#94a3b8");
-  doc.setFontSize(11);
-  doc.text("BETA — proof of payment, not a ZATCA tax invoice", pageW / 2, 470, {
-    align: "center",
-  });
-
-  // ---- Meta block ----
-  let y = 150;
-  doc.setTextColor("#0f172a");
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(13);
-  doc.text(`Receipt No: ${receipt.receiptNo}`, left, y);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(11);
-  doc.setTextColor("#475569");
-  doc.text(`Date: ${fmtDate(receipt.date)}`, right, y, { align: "right" });
-
-  // ---- Detail rows ----
-  y += 36;
-  const rows: Array<[string, string]> = [
-    ["Paid by (Merchant)", receipt.merchantName],
-    ["Invoice reference", receipt.invoiceRef],
-    ["Payment method", METHOD_LABEL[receipt.method]],
-    ["Amount received", fmtMoney(receipt.amount.amount, receipt.amount.currency)],
-  ];
-
-  doc.setDrawColor("#e2e8f0");
-  for (const [label, value] of rows) {
-    doc.setTextColor("#64748b");
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.text(label, left, y);
-    doc.setTextColor("#0f172a");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.text(value, right, y, { align: "right" });
-    y += 14;
-    doc.line(left, y, right, y);
-    y += 22;
-  }
-
-  // ---- Amount emphasis ----
-  y += 10;
-  doc.setFillColor("#f1f5f9");
-  doc.roundedRect(left, y, right - left, 56, 6, 6, "F");
-  doc.setTextColor("#0f172a");
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(11);
-  doc.text("Total received", left + 16, y + 24);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(20);
-  doc.setTextColor(BRAND);
-  doc.text(fmtMoney(receipt.amount.amount, receipt.amount.currency), right - 16, y + 36, {
-    align: "right",
-  });
-
-  // ---- Footer ----
-  doc.setTextColor("#94a3b8");
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.text(
-    "Generated by Zahy Partner Platform (mock). Computer-generated — no signature required.",
-    pageW / 2,
-    doc.internal.pageSize.getHeight() - 48,
-    { align: "center" },
-  );
-
-  return doc;
+/** Map a receipt + the chosen language into the pure HTML model (resolves the bank label here). */
+export function toReceiptDoc(receipt: Receipt, lang: Lang): ReceiptDoc {
+  const banks = listBankAccounts();
+  return {
+    lang,
+    receiptNo: receipt.receiptNo,
+    date: fmtDate(receipt.date),
+    merchantName: receipt.merchantName,
+    invoiceRef: receipt.invoiceRef,
+    method: receipt.method,
+    amount: receipt.amount.amount,
+    currency: receipt.amount.currency,
+    bankLabel: receiptBankLabel(receipt.bankAccountId, banks, lang),
+  };
 }
 
-/** Build the receipt and trigger a browser download (jsPDF is lazy-loaded). */
-export async function downloadReceiptPdf(receipt: Receipt, lang: Lang = "en"): Promise<void> {
-  const doc = await buildReceiptDoc(receipt, lang);
-  doc.save(`${receipt.receiptNo}.pdf`);
+async function waitForAssets(idoc: Document, win: Window | null): Promise<void> {
+  const images = Array.from(idoc.images);
+  await Promise.all(
+    images.map((img) =>
+      img.complete
+        ? Promise.resolve()
+        : new Promise<void>((resolve) => {
+            img.addEventListener("load", () => resolve(), { once: true });
+            img.addEventListener("error", () => resolve(), { once: true });
+          }),
+    ),
+  );
+  try {
+    const fonts = (idoc as Document & { fonts?: FontFaceSet }).fonts;
+    if (fonts?.ready) await fonts.ready;
+    if (typeof document !== "undefined" && document.fonts?.ready) await document.fonts.ready;
+  } catch {
+    /* fonts API unavailable — fall through */
+  }
+  await new Promise((r) => (win ?? window).setTimeout(r, 250));
+}
+
+async function renderToCanvas(doc: ReceiptDoc): Promise<HTMLCanvasElement> {
+  const html2canvas = (await import("html2canvas")).default;
+
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("aria-hidden", "true");
+  Object.assign(iframe.style, {
+    position: "fixed",
+    left: "-10000px",
+    top: "0",
+    width: `${RENDER_WIDTH_PX}px`,
+    height: `${RENDER_HEIGHT_PX}px`,
+    border: "0",
+    background: "#ffffff",
+  });
+  document.body.appendChild(iframe);
+
+  try {
+    const idoc = iframe.contentDocument!;
+    idoc.open();
+    idoc.write(buildReceiptHtml(doc));
+    idoc.close();
+
+    await waitForAssets(idoc, iframe.contentWindow);
+
+    const root = (idoc.querySelector("[data-receipt-root]") as HTMLElement) ?? idoc.body;
+    return await html2canvas(root, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+      windowWidth: RENDER_WIDTH_PX,
+      windowHeight: RENDER_HEIGHT_PX,
+    });
+  } finally {
+    iframe.remove();
+  }
+}
+
+/** Build the receipt PDF (in the chosen language) and trigger a browser download. */
+export async function downloadReceiptPdf(receipt: Receipt, lang: Lang = "ar"): Promise<void> {
+  const { jsPDF } = await import("jspdf");
+  const canvas = await renderToCanvas(toReceiptDoc(receipt, lang));
+
+  const pdf = new jsPDF({ unit: "pt", format: "a4" });
+  const imgData = canvas.toDataURL("image/png");
+  const imgHeight = Math.min(A4_HEIGHT_PT, (canvas.height * A4_WIDTH_PT) / canvas.width);
+  pdf.addImage(imgData, "PNG", 0, 0, A4_WIDTH_PT, imgHeight, undefined, "FAST");
+  pdf.save(`${receipt.receiptNo}.pdf`);
 }

@@ -12,6 +12,10 @@ public static class CommissionErrorCodes
     public const string LedgerEntryNotFound = Namespace + ":011";
     public const string InvalidLedgerEntry = Namespace + ":012";
     public const string ReversalNotAllowed = Namespace + ":013";
+    public const string ReversalReasonRequired = Namespace + ":014";
+
+    /// <summary>MarkPaid actor must differ from the approver (two-person rule).</summary>
+    public const string MarkPaidSameActorAsApprover = Namespace + ":070";
 
     public const string InvalidBillingCharge = Namespace + ":020";
     public const string BillingProfileNotFound = Namespace + ":021";

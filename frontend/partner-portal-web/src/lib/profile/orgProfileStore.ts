@@ -8,7 +8,7 @@ import {
   type OrgProfileScope,
 } from "./orgProfile";
 
-const STORAGE_KEY = "zahy-org-profiles-v1";
+const STORAGE_KEY = "zahy-org-profiles-v2";
 
 type ProfileMap = Record<string, OrgProfile>;
 

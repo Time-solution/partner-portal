@@ -24,6 +24,12 @@ public class ZahySettlementDbContext : AbpDbContext<ZahySettlementDbContext>
 
     public DbSet<Disbursement> Disbursements => Set<Disbursement>();
 
+    public DbSet<BankAccount> BankAccounts => Set<BankAccount>();
+
+    public DbSet<PartnerLedgerAccount> PartnerLedgerAccounts => Set<PartnerLedgerAccount>();
+
+    public DbSet<UsageRecord> UsageRecords => Set<UsageRecord>();
+
     public ZahySettlementDbContext(DbContextOptions<ZahySettlementDbContext> options)
         : base(options)
     {
@@ -49,6 +55,8 @@ public class ZahySettlementDbContext : AbpDbContext<ZahySettlementDbContext>
             b.Property(x => x.CreatedAt).IsRequired();
             b.Property(x => x.UpdatedAt).IsRequired();
             b.Property(x => x.ReversesSettlementCaseId);
+            b.Property(x => x.Reason).HasMaxLength(SettlementCaseConsts.MaxReasonLength);
+            b.Property(x => x.ReversedByUserId);
 
             // Idempotency: at most one case per (Book, ExternalTransactionId). A replayed external
             // event hits this unique index instead of creating a second case.
@@ -133,13 +141,21 @@ public class ZahySettlementDbContext : AbpDbContext<ZahySettlementDbContext>
             b.Property(x => x.Amount).IsRequired().HasColumnType("decimal(18,2)");
             b.Property(x => x.Currency).IsRequired().HasMaxLength(3);
             b.Property(x => x.Date).IsRequired();
-            b.Property(x => x.Method).HasMaxLength(SettlementPaymentConsts.MaxMethodLength);
+            // Method is now a proper enum (nullable int column), no longer free text.
+            b.Property(x => x.Method);
+            // The 110x bank destination the receipt landed in (nullable → 1100 fallback).
+            b.Property(x => x.BankAccountCode).HasMaxLength(SettlementLedgerAccountConsts.MaxCodeLength);
+            b.Property(x => x.IdempotencyKey).IsRequired().HasMaxLength(SettlementPaymentConsts.MaxIdempotencyKeyLength);
 
             // The gross-money view over Amount + Currency is derived, never stored.
             b.Ignore(x => x.Money);
 
             // Several payments may target one balance — indexed for paid-to-date lookups, NOT unique.
             b.HasIndex(x => x.AgainstRef);
+
+            // Double-submit safety: one receipt per idempotency key. A replayed submit hits this unique
+            // index instead of recording a duplicate payment.
+            b.HasIndex(x => x.IdempotencyKey).IsUnique();
         });
 
         builder.Entity<ReconciliationBatch>(b =>
@@ -192,6 +208,62 @@ public class ZahySettlementDbContext : AbpDbContext<ZahySettlementDbContext>
             b.Ignore(x => x.Money);
             b.Ignore(x => x.IsReversal);
             b.Ignore(x => x.IsReleased);
+        });
+
+        builder.Entity<BankAccount>(b =>
+        {
+            b.ToTable("StlBankAccounts");
+            b.ConfigureByConvention();
+
+            b.Property(x => x.Code).IsRequired().HasMaxLength(SettlementLedgerAccountConsts.MaxCodeLength);
+            b.Property(x => x.Name).IsRequired().HasMaxLength(SettlementBankAccountConsts.MaxNameLength);
+            b.Property(x => x.AccountNumber).IsRequired().HasMaxLength(SettlementBankAccountConsts.MaxAccountNumberLength);
+            b.Property(x => x.Currency).IsRequired().HasMaxLength(SettlementBankAccountConsts.MaxCurrencyLength);
+            b.Property(x => x.Status).IsRequired();
+            b.Property(x => x.GatewayMapping).HasMaxLength(SettlementBankAccountConsts.MaxGatewayMappingLength);
+
+            // Each bank binds to a unique ledger sub-account code (110x under the 1100 parent).
+            b.HasIndex(x => x.Code).IsUnique();
+
+            // Display-only mask is derived from AccountNumber, never stored.
+            b.Ignore(x => x.MaskedAccountNumber);
+        });
+
+        builder.Entity<PartnerLedgerAccount>(b =>
+        {
+            b.ToTable("StlPartnerLedgerAccounts");
+            b.ConfigureByConvention();
+
+            b.Property(x => x.PartnerId).IsRequired();
+            b.Property(x => x.PartnerName).IsRequired().HasMaxLength(SettlementPartnerLedgerConsts.MaxPartnerNameLength);
+            b.Property(x => x.PayableCode).IsRequired().HasMaxLength(SettlementLedgerAccountConsts.MaxCodeLength);
+            b.Property(x => x.ReceivableCode).IsRequired().HasMaxLength(SettlementLedgerAccountConsts.MaxCodeLength);
+            b.Property(x => x.Status).IsRequired();
+
+            // One registry row per partner; each payable/receivable sub-account code is unique.
+            b.HasIndex(x => x.PartnerId).IsUnique();
+            b.HasIndex(x => x.PayableCode).IsUnique();
+            b.HasIndex(x => x.ReceivableCode).IsUnique();
+        });
+
+        builder.Entity<UsageRecord>(b =>
+        {
+            b.ToTable("StlUsageRecords");
+            b.ConfigureByConvention();
+
+            b.Property(x => x.PartnerId).IsRequired();
+            b.Property(x => x.MerchantId).IsRequired();
+            b.Property(x => x.PeriodYear).IsRequired();
+            b.Property(x => x.PeriodMonth).IsRequired();
+            b.Property(x => x.UnitLabel).IsRequired().HasMaxLength(SettlementUsageConsts.MaxUnitLabelLength);
+            b.Property(x => x.Quantity).IsRequired().HasColumnType("decimal(18,2)");
+            b.Property(x => x.Source).IsRequired().HasMaxLength(SettlementUsageConsts.MaxSourceLength);
+
+            // Append/accumulate model: MANY rows per partner+merchant+period sum together — NOT unique.
+            b.HasIndex(x => new { x.PartnerId, x.MerchantId, x.PeriodYear, x.PeriodMonth });
+
+            // The SettlementPeriod view is derived from the scalar columns, never stored.
+            b.Ignore(x => x.Period);
         });
 
         builder.Entity<SettlementWebhookEvent>(b =>

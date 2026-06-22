@@ -54,3 +54,19 @@ public enum InvoiceGenerationMode
     Manual = 1,
     Automatic = 2
 }
+
+/// <summary>How a finance document was produced. LedgerDerived is the existing ledger-sourced generator;
+/// Manual is an ad-hoc invoice keyed in by an accountant with its own line items.</summary>
+public enum FinanceDocumentSource
+{
+    LedgerDerived = 1,
+    Manual = 2
+}
+
+/// <summary>Who a manual invoice is addressed to.</summary>
+public enum FinanceDocumentRecipientType
+{
+    Partner = 1,
+    Merchant = 2,
+    External = 3
+}

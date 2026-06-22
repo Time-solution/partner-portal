@@ -115,6 +115,7 @@ function makeData(): PortalData {
     reflectedOrders: [reflected("ro-AM", PA, TM), reflected("ro-BN", PB, TN)],
     billingPeriods: [billing("b-AM", PA, TM), billing("b-BN", PB, TN)],
     receipts: [],
+    commissionLedger: [],
     webhookEndpoints: [webhook(PA), webhook(PB)],
     webhookDeliveries: [],
     credentials: [],
@@ -124,6 +125,7 @@ function makeData(): PortalData {
     users: [],
     orgs: [],
     orgUsers: [],
+    manualInvoices: [],
   };
 }
 

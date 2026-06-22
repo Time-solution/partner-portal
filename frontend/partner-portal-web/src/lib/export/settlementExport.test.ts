@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { SettlementCase } from "@/lib/data/types";
+import type { SettlementCase, SettlementReversal } from "@/lib/data/types";
 import {
   buildCaseRows,
   buildFlatRows,
   buildJournalLineRows,
+  buildSettlementCsv,
+  buildSettlementWorkbook,
   exportHeaders,
   rowsToCsv,
 } from "./settlementExport";
@@ -130,5 +132,70 @@ describe("rowsToCsv", () => {
 
   it("returns empty string for no rows", () => {
     expect(rowsToCsv([])).toBe("");
+  });
+});
+
+const reversalForCaseA: SettlementReversal = {
+  id: "stl-rev-7002",
+  originalCaseId: "stl-case-7002",
+  partnerId: "p-salasa",
+  partnerName: "Salasa Delivery",
+  tenantId: "t-001",
+  orderLineId: "",
+  journal: {
+    currency: "SAR",
+    totalDebits: sar(14.3),
+    totalCredits: sar(14.3),
+    lines: [
+      { account: "DeliveryCost", direction: "Debit", amount: sar(10) },
+      { account: "AggregatorClearing", direction: "Credit", amount: sar(13) },
+      { account: "ShippingMarginRevenue", direction: "Debit", amount: sar(2.6) },
+      { account: "VatOutput", direction: "Debit", amount: sar(1.7) },
+      { account: "VatInput", direction: "Credit", amount: sar(1.3) },
+    ],
+  },
+  netsToZero: true,
+  reason: "Duplicate disbursement reversed",
+  reversedBy: "accountant@zahy.dev",
+  createdAt: "2026-06-20T11:00:00Z",
+};
+
+describe("settlementExport reversals", () => {
+  it("settlementExport_Xlsx_Has_Reversals_Sheet_When_Reversals_Present", async () => {
+    const wb = await buildSettlementWorkbook(input, [reversalForCaseA]);
+    expect(wb.SheetNames).toContain("Reversals");
+    const ws = wb.Sheets["Reversals"];
+    const json = (await import("xlsx")).utils.sheet_to_json<Record<string, unknown>>(ws);
+    expect(json).toHaveLength(1);
+    const h = exportHeaders("en");
+    expect(json[0][h.reversalId]).toBe("stl-rev-7002");
+    expect(json[0][h.originalCaseRef]).toBe("Order #7002 · v1");
+    expect(json[0][h.reversedBy]).toBe("accountant@zahy.dev");
+    expect(json[0][h.netsToZero]).toBe("Y");
+  });
+
+  it("settlementExport_Xlsx_Omits_Reversals_Sheet_When_None", async () => {
+    const wb = await buildSettlementWorkbook(input, []);
+    expect(wb.SheetNames).not.toContain("Reversals");
+  });
+
+  it("settlementExport_Csv_Appends_Reversals_Section", () => {
+    const csv = buildSettlementCsv(input, [reversalForCaseA]);
+    const plainCsv = buildSettlementCsv(input);
+    // Main section unchanged; reversals appended after a blank line + REVERSALS header.
+    expect(csv.startsWith(plainCsv)).toBe(true);
+    expect(csv).toContain("REVERSALS");
+    expect(csv).toContain("stl-rev-7002");
+    expect(csv).toContain("accountant@zahy.dev");
+    const blankLineIdx = csv.indexOf("\r\n\r\nREVERSALS");
+    expect(blankLineIdx).toBeGreaterThan(-1);
+  });
+
+  it("adds a ReversedBy column to the main case sheet when a reversal points to the case", () => {
+    const h = exportHeaders("en");
+    const withRev = buildCaseRows(input, [reversalForCaseA]);
+    expect(withRev[0][h.reversedBy]).toBe("accountant@zahy.dev");
+    const withoutRev = buildCaseRows(input);
+    expect(withoutRev[0][h.reversedBy]).toBe("");
   });
 });

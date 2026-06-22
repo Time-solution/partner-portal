@@ -30,6 +30,8 @@
     <ProjectReference Include="..\..\src\Zahy.Commission\Zahy.Commission.Application\Zahy.Commission.Application.csproj" />
     <ProjectReference Include="..\..\src\Zahy.Commission\Zahy.Commission.EntityFrameworkCore\Zahy.Commission.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\src\Zahy.Identity\Zahy.Identity.Domain\Zahy.Identity.Domain.csproj" />
+    <!-- Test-only: assert the Finance VAT split is IDENTICAL to the Settlement engine's VatMath (no production coupling). -->
+    <ProjectReference Include="..\..\src\Zahy.Settlement\Zahy.Settlement.Domain\Zahy.Settlement.Domain.csproj" />
   </ItemGroup>
 
 </Project>

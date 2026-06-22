@@ -27,6 +27,7 @@ import type {
 } from "./types";
 import type { OrgProfile, OrgProfileScope } from "@/lib/profile/orgProfile";
 import type { Org, OrgContext, OrgUser } from "@/lib/org/orgModel";
+import type { BankAccount, BankAccountInput, BankAccountStatus } from "@/lib/banks/bankAccount";
 
 export interface RegisterWebhookInput {
   partnerId: string;
@@ -55,6 +56,8 @@ export interface RecordPaymentInput {
   date: string;
   method: PaymentMethod;
   reference: string;
+  /** Track B — the bank account the payment landed in (BankAccount.id); absent → 1100 parent fallback. */
+  bankAccountId?: string;
 }
 
 export interface CreateCatalogItemInput {
@@ -156,4 +159,25 @@ export interface IPortalDataSource {
   /** Organisation profile (mock) — issuer / partner / merchant; invoice phase later. */
   getOrgProfile(scope: OrgProfileScope): Promise<OrgProfile>;
   saveOrgProfile(scope: OrgProfileScope, profile: OrgProfile): Promise<OrgProfile>;
+
+  /* ---- Track B: accountant-managed bank registry (mock) ---- */
+  /** List registered banks (each bound to a 110x ledger sub-account under 1100). */
+  listBankAccounts(): Promise<BankAccount[]>;
+  /** Add a bank → auto-assigns the next 110x sub-account under the 1100 parent. */
+  createBankAccount(input: BankAccountInput): Promise<BankAccount>;
+  updateBankAccount(id: string, input: BankAccountInput): Promise<BankAccount>;
+  setBankAccountStatus(id: string, status: BankAccountStatus): Promise<BankAccount>;
+
+  /* ---- Manual (ad-hoc) invoices (platform finance) — mock preview ---- */
+  /** Create a manual invoice (Source=Manual). Idempotent on idempotencyKey. */
+  createManualInvoice(input: import("./types").CreateManualInvoiceInput): Promise<import("./types").ManualInvoice>;
+  /** List invoices, optionally filtered by source / recipient type. */
+  listInvoices(filter?: import("./types").ManualInvoiceFilter): Promise<import("./types").ManualInvoice[]>;
+  getManualInvoice(id: string): Promise<import("./types").ManualInvoice | undefined>;
+
+  /* ---- Commission ledger approval queue (platform finance) ---- */
+  listCommissionLedger(filter?: import("./types").CommissionLedgerFilter): Promise<import("./types").CommissionLedgerRow[]>;
+  approveCommissionEntry(id: string, actorUserId: string, actorName: string): Promise<import("./types").CommissionLedgerRow>;
+  reverseCommissionEntry(id: string, reason: string, actorName: string): Promise<import("./types").CommissionLedgerRow>;
+  markCommissionPaid(id: string, actorUserId: string, actorName: string): Promise<import("./types").CommissionLedgerRow>;
 }

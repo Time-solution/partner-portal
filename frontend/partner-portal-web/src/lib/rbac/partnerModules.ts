@@ -24,7 +24,8 @@ export type ModuleScreenId =
   | "billing"
   | "invoices"
   | "activations"
-  | "snapshots";
+  | "snapshots"
+  | "usage-packages";
 
 export interface ModuleScreenDef {
   id: ModuleScreenId;
@@ -72,6 +73,12 @@ export const PARTNER_MODULE_SCREENS: Record<PartnerBusinessModuleId, ModuleScree
       path: "subscriptions",
       labelKey: "moduleScreen_subscriptions",
       permissions: [PP.Billing.Read],
+    },
+    {
+      id: "usage-packages",
+      path: "usage-packages",
+      labelKey: "moduleScreen_usagePackages",
+      permissions: [PP.Catalog.Read],
     },
     { id: "billing", path: "billing", labelKey: "moduleScreen_billing", permissions: [PP.Billing.Read] },
     { id: "invoices", path: "invoices", labelKey: "moduleScreen_invoices", permissions: [PP.Billing.Read] },
@@ -212,7 +219,8 @@ export type FinanceWorkspaceTabId =
   | "billing"
   | "balances"
   | "vat"
-  | "pending-approvals";
+  | "pending-approvals"
+  | "commission-approvals";
 
 export interface FinanceTabDef {
   id: FinanceWorkspaceTabId;
@@ -230,4 +238,5 @@ export const FINANCE_WORKSPACE_TABS: readonly FinanceTabDef[] = [
   { id: "balances", path: "balances", labelKey: "financeTab_balances" },
   { id: "vat", path: "vat", labelKey: "financeTab_vat" },
   { id: "pending-approvals", path: "pending-approvals", labelKey: "financeTab_pendingApprovals" },
+  { id: "commission-approvals", path: "commission-approvals", labelKey: "financeTab_commissionApprovals" },
 ];

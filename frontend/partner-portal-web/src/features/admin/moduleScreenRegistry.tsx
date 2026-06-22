@@ -12,6 +12,7 @@ import { ReversalsPage } from "./pages/ReversalsPage";
 import { SettlementPage } from "./pages/SettlementPage";
 import { SnapshotsPage } from "./pages/SnapshotsPage";
 import { SubscriptionsOverviewPage } from "./pages/SubscriptionsOverviewPage";
+import { UsagePackagesPage } from "./pages/UsagePackagesPage";
 
 export interface ModuleScreenContext {
   lang: Lang;
@@ -50,6 +51,8 @@ export function ModuleScreenRenderer({
       return <MenuPage {...scope} />;
     case "subscriptions":
       return <SubscriptionsOverviewPage {...scope} />;
+    case "usage-packages":
+      return <UsagePackagesPage {...scope} />;
     case "billing":
       return <BillingPage {...scope} />;
     case "invoices":

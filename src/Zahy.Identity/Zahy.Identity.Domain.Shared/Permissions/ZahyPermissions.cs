@@ -61,6 +61,30 @@ public static class ZahyPermissions
     {
         public const string Default = GroupName + ".Finance";
         public const string KycReview = Default + ".KycReview";
+
+        /// <summary>
+        /// Read ANY partner/merchant finance ledger (the cross-entity "see all" capability). Granted to
+        /// the accountant (Platform.Finance) and Platform.SuperAdmin ONLY — deliberately NOT implied by
+        /// <see cref="Partners.Manage"/>, so partner-ops cannot read arbitrary merchant/partner ledgers.
+        /// Partner/merchant principals are scoped to their OWN entity by context, not by this permission.
+        /// </summary>
+        public const string ReadAll = Default + ".ReadAll";
+
+        /// <summary>
+        /// Author an ad-hoc (manual) invoice with custom recipient + line items. Granted to the accountant
+        /// (Platform.Finance) and Platform.SuperAdmin ONLY — never to partner/merchant roles (partner-side
+        /// Finance stays read-only). Deliberately NOT implied by <see cref="ReadAll"/>: reading every ledger
+        /// must not confer the right to mint invoices.
+        /// </summary>
+        public const string WriteManualInvoice = Default + ".WriteManualInvoice";
+    }
+
+    public static class Commission
+    {
+        public const string Default = GroupName + ".Commission";
+
+        /// <summary>Approve / reverse / mark-paid on commission ledger entries (platform finance).</summary>
+        public const string Approve = Default + ".Approve";
     }
 
     public static class Settlement
@@ -75,6 +99,10 @@ public static class ZahyPermissions
 
         /// <summary>Disburse funds. Platform admin only; never granted to accountant or partner roles.</summary>
         public const string Disburse = Default + ".Disburse";
+
+        /// <summary>Manage the bank registry (accountant). Add/edit/deactivate banks + their ledger accounts.
+        /// Granted to Platform.Finance (accountant) and Platform.SuperAdmin only — never to partner/merchant.</summary>
+        public const string BankRegistryManage = Default + ".BankRegistry.Manage";
     }
 
     /// <summary>Platform-wide administration (super power).</summary>
@@ -95,9 +123,13 @@ public static class ZahyPermissions
             Partners.Manage,
             Roles.Manage,
             Finance.KycReview,
+            Finance.ReadAll,
+            Finance.WriteManualInvoice,
+            Commission.Approve,
             Settlement.Read,
             Settlement.Reconcile,
             Settlement.Disburse,
+            Settlement.BankRegistryManage,
             Admin
         };
     }

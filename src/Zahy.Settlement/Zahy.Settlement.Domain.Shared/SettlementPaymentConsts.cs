@@ -7,6 +7,9 @@ public static class SettlementPaymentConsts
 
     /// <summary>Optional free-text payment method (e.g. "bank-transfer", "mada").</summary>
     public const int MaxMethodLength = 64;
+
+    /// <summary>Double-submit safety key (unique per payment receipt).</summary>
+    public const int MaxIdempotencyKeyLength = 128;
 }
 
 /// <summary>

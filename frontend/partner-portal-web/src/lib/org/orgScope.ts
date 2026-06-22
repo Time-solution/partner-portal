@@ -132,6 +132,7 @@ export function scopePortalData(data: PortalData, ctx: OrgContext): PortalData {
     reflectedOrders,
     billingPeriods,
     receipts,
+    commissionLedger: isPlatform(ctx) ? [...data.commissionLedger] : [],
     webhookEndpoints,
     webhookDeliveries,
     credentials,
@@ -141,6 +142,8 @@ export function scopePortalData(data: PortalData, ctx: OrgContext): PortalData {
     users: scopeUsers(data, ctx),
     orgs,
     orgUsers,
+    // Manual invoices are host-level platform finance — never shared to partner/merchant scopes.
+    manualInvoices: isPlatform(ctx) ? [...data.manualInvoices] : [],
     kpis: {
       totalPartners: partners.filter((p) => p.status === "Active").length,
       activeActivations: activations.filter((a) => a.status === "Active").length,

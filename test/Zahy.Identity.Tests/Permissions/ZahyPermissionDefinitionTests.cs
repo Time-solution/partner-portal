@@ -25,6 +25,8 @@ public class ZahyPermissionDefinitionTests : ZahyIdentityTestBase
     [InlineData(ZahyPermissions.Payouts.Read)]
     [InlineData(ZahyPermissions.Partners.Manage)]
     [InlineData(ZahyPermissions.Roles.Manage)]
+    [InlineData(ZahyPermissions.Finance.KycReview)]
+    [InlineData(ZahyPermissions.Finance.ReadAll)]
     [InlineData(ZahyPermissions.Settlement.Read)]
     [InlineData(ZahyPermissions.Settlement.Reconcile)]
     [InlineData(ZahyPermissions.Settlement.Disburse)]

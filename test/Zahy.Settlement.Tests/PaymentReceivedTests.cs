@@ -218,4 +218,174 @@ public class PaymentReceivedTests
             Payment.Record(Guid.NewGuid(), "  ", PaymentPayer.Merchant, Merchant, Incl(10m), DateTime.UtcNow))
             .Code.ShouldBe(SettlementPaymentErrorCodes.EmptyAgainstRef);
     }
+
+    // ── Guarded Payment.Record — overpayment + idempotency enforced AT the domain ────────────────
+
+    [Fact]
+    public void Guarded_Record_Rejects_Overpayment_120_On_100_Balance()
+    {
+        var ex = Should.Throw<BusinessException>(() =>
+            Payment.Record(Guid.NewGuid(), "STL-1", PaymentPayer.Merchant, Merchant, Incl(120.00m), DateTime.UtcNow,
+                arTotal: Incl(100.00m), existingForRef: Array.Empty<Payment>(), idempotencyKey: "RCPT-1"));
+
+        ex.Code.ShouldBe(SettlementPaymentErrorCodes.Overpayment);
+    }
+
+    [Fact]
+    public void Guarded_Record_Rejects_Overpayment_Across_Multiple_Receipts()
+    {
+        var ar = Incl(100.00m);
+        var first = Payment.Record(Guid.NewGuid(), "STL-1", PaymentPayer.Merchant, Merchant, Incl(70.00m),
+            DateTime.UtcNow, arTotal: ar, existingForRef: Array.Empty<Payment>(), idempotencyKey: "RCPT-1");
+
+        // A further 40 against the remaining 30 exceeds the balance and is rejected here, not by the caller.
+        var ex = Should.Throw<BusinessException>(() =>
+            Payment.Record(Guid.NewGuid(), "STL-1", PaymentPayer.Merchant, Merchant, Incl(40.00m), DateTime.UtcNow,
+                arTotal: ar, existingForRef: new[] { first }, idempotencyKey: "RCPT-2"));
+
+        ex.Code.ShouldBe(SettlementPaymentErrorCodes.Overpayment);
+    }
+
+    [Fact]
+    public void Guarded_Record_Duplicate_Submit_Is_A_NoOp_Returning_The_Same_Receipt()
+    {
+        var ar = Incl(100.00m);
+        var first = Payment.Record(Guid.NewGuid(), "STL-1", PaymentPayer.Merchant, Merchant, Incl(60.00m),
+            DateTime.UtcNow, arTotal: ar, existingForRef: Array.Empty<Payment>(), idempotencyKey: "RCPT-1");
+
+        // A re-submit with the SAME key returns the existing receipt — no duplicate, no overpayment throw
+        // (dedupe runs BEFORE the guard, so the 60+60 that would breach 100 never gets evaluated).
+        var replay = Payment.Record(Guid.NewGuid(), "STL-1", PaymentPayer.Merchant, Merchant, Incl(60.00m),
+            DateTime.UtcNow, arTotal: ar, existingForRef: new[] { first }, idempotencyKey: "RCPT-1");
+
+        replay.ShouldBeSameAs(first);
+        // The ledger still sees a single 60.00 receipt — money is not double-counted.
+        PaymentLedger.PaidToDate("STL-1", new[] { first }).ShouldBe(60.00m);
+    }
+
+    [Fact]
+    public void Guarded_Record_Partial_60_Then_Partial_40_Reaches_Paid()
+    {
+        var ar = Incl(100.00m);
+        var first = Payment.Record(Guid.NewGuid(), "STL-1", PaymentPayer.Merchant, Merchant, Incl(60.00m),
+            DateTime.UtcNow, arTotal: ar, existingForRef: Array.Empty<Payment>(), idempotencyKey: "RCPT-1");
+        var second = Payment.Record(Guid.NewGuid(), "STL-1", PaymentPayer.Merchant, Merchant, Incl(40.00m),
+            DateTime.UtcNow, arTotal: ar, existingForRef: new[] { first }, idempotencyKey: "RCPT-2");
+
+        second.ShouldNotBeSameAs(first); // a genuine second receipt was recorded (exact remaining accepted)
+
+        var status = PaymentLedger.Status("STL-1", ar, new[] { first, second });
+        status.PaidToDate.Amount.ShouldBe(100.00m);
+        status.Remaining.Amount.ShouldBe(0m);
+        status.State.ShouldBe(PaymentState.Paid);
+    }
+
+    [Fact]
+    public void Record_Without_Key_Defaults_To_A_Unique_Per_Row_Idempotency_Key()
+    {
+        var a = Payment.Record(Guid.NewGuid(), "STL-1", PaymentPayer.Merchant, Merchant, Incl(10m), DateTime.UtcNow);
+        var b = Payment.Record(Guid.NewGuid(), "STL-1", PaymentPayer.Merchant, Merchant, Incl(10m), DateTime.UtcNow);
+
+        a.IdempotencyKey.ShouldNotBeNullOrWhiteSpace();
+        a.IdempotencyKey.ShouldNotBe(b.IdempotencyKey); // legacy single-shot records never collide
+    }
+
+    // ── Per-receipt destination + method (FE/BE parity) ──────────────────────────────────────────
+
+    [Fact]
+    public void Receipt_Remembers_Its_Bank_Destination_And_Method()
+    {
+        var receipt = Payment.Record(
+            Guid.NewGuid(), "STL-1", PaymentPayer.Merchant, Merchant, Incl(100.00m), DateTime.UtcNow,
+            arTotal: Incl(100.00m), existingForRef: Array.Empty<Payment>(),
+            method: PaymentMethod.Transfer, bankAccountCode: "1102", idempotencyKey: "RCPT-1");
+
+        receipt.BankAccountCode.ShouldBe("1102");
+        receipt.Method.ShouldBe(PaymentMethod.Transfer);
+    }
+
+    [Fact]
+    public void Stored_Destination_Equals_What_The_Posting_Template_Routes_To()
+    {
+        // The receipt persists exactly the 110x the cash leg debits — "what posted == what's stored".
+        var receipt = Payment.Record(
+            Guid.NewGuid(), "STL-1", PaymentPayer.Merchant, Merchant, Incl(50.00m), DateTime.UtcNow,
+            method: PaymentMethod.Card, bankAccountCode: "1103");
+
+        var journal = SettlementPostingTemplates.PaymentReceived(receipt.Money, receipt.Payer, receipt.BankAccountCode);
+        Line(journal, "1103", EntryDirection.Debit).ShouldBe(50.00m);
+        receipt.BankAccountCode.ShouldBe("1103");
+    }
+
+    [Fact]
+    public void Two_Receipts_On_One_Invoice_To_Different_Banks_Each_Keep_Their_Own_Destination()
+    {
+        var ar = Incl(100.00m);
+        var toBankA = Payment.Record(
+            Guid.NewGuid(), "STL-1", PaymentPayer.Merchant, Merchant, Incl(60.00m), DateTime.UtcNow,
+            arTotal: ar, existingForRef: Array.Empty<Payment>(),
+            method: PaymentMethod.Transfer, bankAccountCode: "1101", idempotencyKey: "RCPT-A");
+        var toBankB = Payment.Record(
+            Guid.NewGuid(), "STL-1", PaymentPayer.Merchant, Merchant, Incl(40.00m), DateTime.UtcNow,
+            arTotal: ar, existingForRef: new[] { toBankA },
+            method: PaymentMethod.Card, bankAccountCode: "1102", idempotencyKey: "RCPT-B");
+
+        toBankA.BankAccountCode.ShouldBe("1101");
+        toBankB.BankAccountCode.ShouldBe("1102");
+        toBankA.Method.ShouldBe(PaymentMethod.Transfer);
+        toBankB.Method.ShouldBe(PaymentMethod.Card);
+    }
+
+    [Fact]
+    public void Each_Method_Enum_Value_Is_Retained()
+    {
+        foreach (var method in new[]
+                 {
+                     PaymentMethod.Cash, PaymentMethod.Transfer, PaymentMethod.Card,
+                     PaymentMethod.Cod, PaymentMethod.Online, PaymentMethod.Gateway
+                 })
+        {
+            var receipt = Payment.Record(
+                Guid.NewGuid(), "STL-1", PaymentPayer.Merchant, Merchant, Incl(1.00m), DateTime.UtcNow,
+                method: method);
+            receipt.Method.ShouldBe(method);
+        }
+    }
+
+    [Fact]
+    public void No_Bank_Falls_Back_To_1100_Parent_As_Null_Code()
+    {
+        // Null (or a non-110x code) means the cash leg uses the 1100 parent — stored as null, not "1100".
+        var noCode = Payment.Record(Guid.NewGuid(), "STL-1", PaymentPayer.Merchant, Merchant, Incl(10m), DateTime.UtcNow);
+        var parentCode = Payment.Record(Guid.NewGuid(), "STL-2", PaymentPayer.Merchant, Merchant, Incl(10m),
+            DateTime.UtcNow, method: PaymentMethod.Cash, bankAccountCode: "1100");
+
+        noCode.BankAccountCode.ShouldBeNull();
+        parentCode.BankAccountCode.ShouldBeNull(); // 1100 is the parent, not a 110x sub-account
+
+        var journal = SettlementPostingTemplates.PaymentReceived(Incl(10m), PaymentPayer.Merchant, noCode.BankAccountCode);
+        Line(journal, SettlementAccountCode.BankCashClearing, EntryDirection.Debit).ShouldBe(10.00m);
+    }
+
+    [Fact]
+    public void Mixed_Method_Receipts_On_One_Invoice_Accumulate_To_Paid()
+    {
+        var ar = Incl(100.00m);
+        var cash = Payment.Record(
+            Guid.NewGuid(), "STL-1", PaymentPayer.Merchant, Merchant, Incl(30.00m), DateTime.UtcNow,
+            arTotal: ar, existingForRef: Array.Empty<Payment>(),
+            method: PaymentMethod.Cash, bankAccountCode: "1101", idempotencyKey: "RCPT-1");
+        var transfer = Payment.Record(
+            Guid.NewGuid(), "STL-1", PaymentPayer.Merchant, Merchant, Incl(45.00m), DateTime.UtcNow,
+            arTotal: ar, existingForRef: new[] { cash },
+            method: PaymentMethod.Transfer, bankAccountCode: "1102", idempotencyKey: "RCPT-2");
+        var card = Payment.Record(
+            Guid.NewGuid(), "STL-1", PaymentPayer.Merchant, Merchant, Incl(25.00m), DateTime.UtcNow,
+            arTotal: ar, existingForRef: new[] { cash, transfer },
+            method: PaymentMethod.Card, bankAccountCode: null, idempotencyKey: "RCPT-3");
+
+        var status = PaymentLedger.Status("STL-1", ar, new[] { cash, transfer, card });
+        status.PaidToDate.Amount.ShouldBe(100.00m);
+        status.State.ShouldBe(PaymentState.Paid);
+    }
 }

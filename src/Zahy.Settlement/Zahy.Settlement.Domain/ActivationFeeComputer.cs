@@ -14,7 +14,12 @@ namespace Zahy.Settlement;
 /// </summary>
 public static class ActivationFeeComputer
 {
-    public const decimal DefaultVatRate = 0.15m;
+    /// <summary>
+    /// Compute-only default — sourced from the module's canonical VAT config
+    /// (<see cref="SettlementVatOptions.DefaultStandardRate"/>) so the rate is not a second hardcoded
+    /// literal. Production callers pass the configured <c>SettlementVatOptions.StandardRate</c>.
+    /// </summary>
+    public const decimal DefaultVatRate = SettlementVatOptions.DefaultStandardRate;
 
     /// <summary>The single subscription-fee result for the period, or null when the line is disabled.</summary>
     public static PostingResult? Subscription(ActivationFeeConfig config, decimal vatRate = DefaultVatRate)

@@ -6,7 +6,7 @@
  * debits / credits / VAT / margin. Headers follow the active language; the export reflects whatever
  * scoped/filtered cases are passed in (admin sees all; accountant sees money scope).
  */
-import type { SettlementCase } from "@/lib/data/types";
+import type { SettlementCase, SettlementReversal } from "@/lib/data/types";
 import { deriveSettlementSummary } from "@/lib/data/types";
 import { translations, type Lang } from "@/lib/i18n";
 import {
@@ -67,7 +67,20 @@ export function exportHeaders(lang: Lang) {
     splitDelivery: t(lang, "colSplitDelivery"),
     splitZahy: t(lang, "colSplitZahy"),
     splitZatca: t(lang, "colSplitZatca"),
+    reversedBy: t(lang, "colReversedBy"),
+    reversalId: t(lang, "colReversalId"),
+    originalCaseRef: t(lang, "colOriginalCaseRef"),
+    reversedAt: t(lang, "colReversedAt"),
+    reason: t(lang, "colReason"),
+    netsToZero: t(lang, "colNetsToZero"),
+    originalAmount: t(lang, "colOriginalAmount"),
+    reversalAmount: t(lang, "colReversalAmount"),
   };
+}
+
+/** Map original case id → the reversal that points at it (for the main-sheet ReversedBy column). */
+function reversalByOriginalCaseId(reversals: SettlementReversal[]): Map<string, SettlementReversal> {
+  return new Map(reversals.map((r) => [r.originalCaseId, r]));
 }
 
 /** Collection/remittance export cells for a case (blank/0 when no collection). */
@@ -87,11 +100,16 @@ function collectionCells(c: SettlementCase, lang: Lang) {
 }
 
 /** One row per settlement case — the accountant summary. */
-export function buildCaseRows(input: SettlementExportInput): ExportRow[] {
+export function buildCaseRows(
+  input: SettlementExportInput,
+  reversals: SettlementReversal[] = [],
+): ExportRow[] {
   const { cases, merchantName, lang } = input;
   const h = exportHeaders(lang);
+  const reversalMap = reversalByOriginalCaseId(reversals);
   return cases.map((c) => {
     const s = deriveSettlementSummary(c.journal);
+    const reversal = reversalMap.get(c.id);
     return {
       [h.order]: formatOrderRef(c.externalTransactionId, lang),
       [h.partner]: c.partnerName,
@@ -107,6 +125,38 @@ export function buildCaseRows(input: SettlementExportInput): ExportRow[] {
       [h.netVat]: money(s.netVatToZatca),
       ...collectionCells(c, lang),
       [h.currency]: c.journal.currency,
+      [h.reversedBy]: reversal?.reversedBy ?? "",
+    };
+  });
+}
+
+/** Journal gross (the balanced total) used as the export "amount" for a case/reversal. */
+function journalGross(journal: SettlementReversal["journal"]): number {
+  return money(journal.totalDebits.amount);
+}
+
+/** One row per reversal — the "Reversals" sheet / CSV section. */
+export function buildReversalRows(
+  reversals: SettlementReversal[],
+  input: SettlementExportInput,
+): ExportRow[] {
+  const { cases, lang } = input;
+  const h = exportHeaders(lang);
+  const caseById = new Map(cases.map((c) => [c.id, c]));
+  return reversals.map((r) => {
+    const original = caseById.get(r.originalCaseId);
+    const originalRef = original
+      ? formatOrderRef(original.externalTransactionId, lang)
+      : r.originalCaseId;
+    return {
+      [h.reversalId]: r.id,
+      [h.originalCaseRef]: originalRef,
+      [h.reversedAt]: formatDate(r.createdAt, lang),
+      [h.reversedBy]: r.reversedBy ?? "",
+      [h.reason]: r.reason ?? "",
+      [h.netsToZero]: r.netsToZero ? "Y" : "N",
+      [h.originalAmount]: original ? journalGross(original.journal) : 0,
+      [h.reversalAmount]: journalGross(r.journal),
     };
   });
 }
@@ -186,9 +236,18 @@ export function rowsToCsv(rows: ExportRow[]): string {
   return lines.join("\r\n");
 }
 
-/** Full flat CSV string for the current settlement scope. */
-export function buildSettlementCsv(input: SettlementExportInput): string {
-  return rowsToCsv(buildFlatRows(input));
+/** Full flat CSV string for the current settlement scope (+ optional REVERSALS section). */
+export function buildSettlementCsv(
+  input: SettlementExportInput,
+  reversals: SettlementReversal[] = [],
+): string {
+  const main = rowsToCsv(buildFlatRows(input));
+  if (reversals.length === 0) return main;
+
+  // Append a REVERSALS section: blank line, section header row, then the reversal table.
+  const reversalCsv = rowsToCsv(buildReversalRows(reversals, input));
+  const sectionHeader = csvCell(t(input.lang, "exportSheetReversals").toUpperCase());
+  return [main, "", sectionHeader, reversalCsv].join("\r\n");
 }
 
 function timestamp(): string {
@@ -207,17 +266,26 @@ function triggerDownload(blob: Blob, filename: string): void {
 }
 
 /** Download a flat CSV (UTF-8 BOM so Excel renders Arabic correctly). */
-export function downloadSettlementCsv(input: SettlementExportInput): void {
-  const csv = buildSettlementCsv(input);
+export function downloadSettlementCsv(
+  input: SettlementExportInput,
+  reversals: SettlementReversal[] = [],
+): void {
+  const csv = buildSettlementCsv(input, reversals);
   const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8;" });
   triggerDownload(blob, `settlement-${timestamp()}.csv`);
 }
 
-/** Download a two-sheet .xlsx (Cases summary + Journal lines) via SheetJS. */
-export async function downloadSettlementXlsx(input: SettlementExportInput): Promise<void> {
+/**
+ * Build the settlement workbook (no file side-effect, so it is unit-testable): Cases summary +
+ * Journal lines, plus a "Reversals" sheet when any reversals are present (omitted when none).
+ */
+export async function buildSettlementWorkbook(
+  input: SettlementExportInput,
+  reversals: SettlementReversal[] = [],
+): Promise<import("xlsx").WorkBook> {
   const XLSX = await import("xlsx");
   const { lang } = input;
-  const caseRows = buildCaseRows(input);
+  const caseRows = buildCaseRows(input, reversals);
   const lineRows = buildJournalLineRows(input);
 
   const wb = XLSX.utils.book_new();
@@ -228,6 +296,26 @@ export async function downloadSettlementXlsx(input: SettlementExportInput): Prom
 
   XLSX.utils.book_append_sheet(wb, wsCases, t(lang, "exportSheetCases").slice(0, 31));
   XLSX.utils.book_append_sheet(wb, wsLines, t(lang, "exportSheetLines").slice(0, 31));
+
+  if (reversals.length > 0) {
+    const wsReversals = XLSX.utils.json_to_sheet(buildReversalRows(reversals, input));
+    applyMoneyFormat(XLSX, wsReversals);
+    XLSX.utils.book_append_sheet(wb, wsReversals, t(lang, "exportSheetReversals").slice(0, 31));
+  }
+
+  return wb;
+}
+
+/**
+ * Download an .xlsx via SheetJS: Cases summary + Journal lines, plus a "Reversals" sheet when any
+ * reversals are present (omitted entirely when there are none).
+ */
+export async function downloadSettlementXlsx(
+  input: SettlementExportInput,
+  reversals: SettlementReversal[] = [],
+): Promise<void> {
+  const XLSX = await import("xlsx");
+  const wb = await buildSettlementWorkbook(input, reversals);
   XLSX.writeFile(wb, `settlement-${timestamp()}.xlsx`);
 }
 

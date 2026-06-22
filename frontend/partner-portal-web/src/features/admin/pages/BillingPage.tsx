@@ -7,6 +7,7 @@ import { Riyal } from "@/components/Riyal";
 import { BetaBadge } from "@/components/brand/BetaBadge";
 import { getPortalDataSource } from "@/lib/data";
 import type { PaymentMethod, Receipt, SubscriptionBillingPeriod } from "@/lib/data/types";
+import { BANK_PARENT_CODE, type BankAccount } from "@/lib/banks/bankAccount";
 import { deriveInvoicePayment } from "@/lib/data/types";
 import { PortalPermissions } from "@/lib/rbac/portalRoles";
 import { usePortalSession } from "@/features/auth/usePortalSession";
@@ -19,8 +20,11 @@ import { downloadReceiptPdf } from "@/lib/pdf/receiptPdf";
 import { invoiceProformaFromPeriod } from "@/lib/invoice/proformaSources";
 import { downloadProformaPdf } from "@/lib/invoice/proformaPdf";
 import { downloadProformaXlsx } from "@/lib/invoice/proformaExcel";
+import { filterByDate } from "@/lib/filters/dateRange";
 import type { ModuleScopeProps } from "../moduleScope";
 import { filterByPartnerIds, useScopePartnerIds } from "../hooks/useScopePartnerIds";
+import { useDateRange } from "../hooks/useDateRange";
+import { DateRangeFilter } from "../components/DateRangeFilter";
 
 type BillingPageProps = ModuleScopeProps & {
   titleKey?: string;
@@ -57,6 +61,7 @@ export function BillingPage({
   const t = useTranslator(lang);
   const { scopedPartnerId, can } = usePortalSession();
   const scopeIds = useScopePartnerIds(moduleId, partnerId ?? scopedPartnerId);
+  const { range, setRange } = useDateRange();
   const [periods, setPeriods] = useState<SubscriptionBillingPeriod[]>([]);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,14 +119,17 @@ export function BillingPage({
     }
   };
 
-  const rows = invoicesOnly ? periods.filter((p) => p.invoiceNumber || p.status === "Invoiced") : periods;
+  // Date filter layers ON TOP of partner scope — narrows billing rows by their period month.
+  const dateScoped = filterByDate(periods, range, (p) => p.periodKey);
+  const rows = invoicesOnly ? dateScoped.filter((p) => p.invoiceNumber || p.status === "Invoiced") : dateScoped;
 
   return (
     <div className="space-y-6">
       {showHeader ? (
         <PageHeader title={t(titleKey as never)} description={t(descKey as never)} lang={lang} showBeta />
       ) : null}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-end gap-2">
+        <DateRangeFilter range={range} onChange={setRange} lang={lang} />
         {canManage ? (
           <Button variant="outline" disabled={busyId === "advance"} onClick={() => void advancePeriod()}>
             {t("billingAdvancePeriod" as never)}
@@ -243,6 +251,8 @@ interface RecordPaymentDraft {
   date: string;
   method: PaymentMethod;
   reference: string;
+  /** Track B — bank the receipt landed in (BankAccount.id); absent → 1100 parent fallback. */
+  bankAccountId?: string;
 }
 
 function BillingRow({
@@ -283,7 +293,21 @@ function BillingRow({
     date: today,
     method: "Transfer",
     reference: "",
+    bankAccountId: undefined,
   });
+  const [banks, setBanks] = useState<BankAccount[]>([]);
+  useEffect(() => {
+    if (!canRecordPayment) return;
+    let active = true;
+    void getPortalDataSource()
+      .listBankAccounts()
+      .then((list) => {
+        if (active) setBanks(list.filter((b) => b.status === "Active"));
+      });
+    return () => {
+      active = false;
+    };
+  }, [canRecordPayment]);
   const busy = busyId === period.id;
 
   return (
@@ -393,9 +417,24 @@ function BillingRow({
                             <MoneyAmount amount={r.amount.amount} />
                           </span>
                           <div className="flex items-center gap-1.5">
-                            <Button size="sm" variant="outline" onClick={() => void downloadReceiptPdf(r, lang)}>
+                            <span className="text-xs text-muted-foreground">{t("receiptPdfLabel" as never)}</span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => void downloadReceiptPdf(r, "ar")}
+                              title={t("receiptDownloadAr" as never)}
+                            >
                               <Download className="h-3.5 w-3.5" />
-                              {t("generateReceiptPdf" as never)}
+                              {t("receiptLangAr" as never)}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => void downloadReceiptPdf(r, "en")}
+                              title={t("receiptDownloadEn" as never)}
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                              {t("receiptLangEn" as never)}
                             </Button>
                             {r.sent ? (
                               <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
@@ -476,6 +515,29 @@ function BillingRow({
                         className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       />
                     </label>
+                    <label className="text-sm">
+                      <span className="mb-1 block text-muted-foreground">{t("paymentBank" as never)}</span>
+                      <select
+                        value={draft.bankAccountId ?? ""}
+                        onChange={(e) =>
+                          setDraft((d) => ({ ...d, bankAccountId: e.target.value || undefined }))
+                        }
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="">{t("paymentBankFallback" as never)}</option>
+                        {banks.map((b) => (
+                          <option key={b.id} value={b.id}>
+                            {b.code} · {b.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <p className="text-xs text-muted-foreground sm:col-span-2">
+                      {t("paymentBankRoutingNote" as never)}{" "}
+                      <span className="font-mono">
+                        {banks.find((b) => b.id === draft.bankAccountId)?.code ?? BANK_PARENT_CODE}
+                      </span>
+                    </p>
                     <div className="sm:col-span-2">
                       <Button type="submit" size="sm" disabled={busy || !(draft.amount > 0)}>
                         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}

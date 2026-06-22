@@ -31,4 +31,15 @@ public static class SettlementAccountCode
     };
 
     public static bool IsDefined(string code) => All.Contains(code);
+
+    /// <summary>
+    /// True if a posting may target this code: a canonical chart code, a registered bank
+    /// sub-account (1101–1149) beneath the 1100 parent (Track B), OR a per-partner payable/receivable
+    /// sub-account (2101–2149 under 2100 / 1251–1299 under 1250). The canonical <see cref="All"/> set is
+    /// unchanged — bank and partner sub-accounts are dynamic registry data, not chart entries.
+    /// </summary>
+    public static bool IsPostable(string code) =>
+        IsDefined(code)
+        || BankLedgerCoding.IsBankSubAccount(code)
+        || PartnerLedgerCoding.IsPartnerSubAccount(code);
 }

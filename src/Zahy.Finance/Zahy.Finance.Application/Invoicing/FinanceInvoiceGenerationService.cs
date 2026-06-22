@@ -24,6 +24,7 @@ public class FinanceInvoiceGenerationService : ApplicationService, IFinanceInvoi
     private readonly IRepository<PartnerFinancialAccount, Guid> _partnerAccountRepository;
     private readonly IRepository<MerchantAccount, Guid> _merchantAccountRepository;
     private readonly IGuidGenerator _guidGenerator;
+    private readonly decimal _vatRate;
 
     public FinanceInvoiceGenerationService(
         IFinancePostingReadService postingReadService,
@@ -32,6 +33,7 @@ public class FinanceInvoiceGenerationService : ApplicationService, IFinanceInvoi
         IFinanceInvoiceNumberAllocator invoiceNumberAllocator,
         IFinanceInvoicePdfGenerator invoicePdfGenerator,
         IOptions<FinanceBrandingOptions> branding,
+        IOptions<FinanceVatOptions> vat,
         IRepository<FinanceDocument, Guid> documentRepository,
         IRepository<PartnerFinancialAccount, Guid> partnerAccountRepository,
         IRepository<MerchantAccount, Guid> merchantAccountRepository,
@@ -43,6 +45,7 @@ public class FinanceInvoiceGenerationService : ApplicationService, IFinanceInvoi
         _invoiceNumberAllocator = invoiceNumberAllocator;
         _invoicePdfGenerator = invoicePdfGenerator;
         _branding = branding.Value;
+        _vatRate = vat.Value.StandardRate;
         _documentRepository = documentRepository;
         _partnerAccountRepository = partnerAccountRepository;
         _merchantAccountRepository = merchantAccountRepository;
@@ -204,15 +207,19 @@ public class FinanceInvoiceGenerationService : ApplicationService, IFinanceInvoi
         string invoiceNumber,
         DateTime issueDate)
     {
-        var taxExclusive = ledger.PostingSum;
-        var taxAmount = FinanceMoney.RoundPosting(taxExclusive * 0.15m);
+        // PostingSum is VAT-INCLUSIVE (billing charges / commission accruals cross the module boundary as
+        // inclusive amounts — the SAME convention the Settlement engine uses). Split it via the inclusive
+        // back-out so net + VAT == PostingSum exactly, instead of (incorrectly) adding 15% on top.
+        var taxInclusive = ledger.PostingSum;
+        var taxExclusive = FinanceVat.NetOfInclusive(taxInclusive, _vatRate);
+        var taxAmount = FinanceVat.VatOfInclusive(taxInclusive, _vatRate);
         var draft = new FinanceInvoiceDraft
         {
             InvoiceNumber = invoiceNumber,
             IssueDate = issueDate,
             TaxExclusiveAmount = taxExclusive,
             TaxAmount = taxAmount,
-            TaxInclusiveAmount = FinanceMoney.RoundPosting(taxExclusive + taxAmount),
+            TaxInclusiveAmount = taxInclusive,
             Currency = ledger.Currency,
             Seller = new FinanceDocumentKycBlockDto
             {

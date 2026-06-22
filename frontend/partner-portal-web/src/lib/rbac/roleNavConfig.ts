@@ -3,7 +3,7 @@ import type { PortalRole } from "./portalRoles";
 /** Mock partner scope — Salasa Delivery (PSM). */
 export const MOCK_PARTNER_PSM_PARTNER_ID = "22222222-2222-2222-2222-222222222001";
 
-/** Mock partner scope — Jahez Channel (Partner Finance). */
+/** Mock partner scope — WhatsApp Co (Partner Finance). */
 export const MOCK_PARTNER_FINANCE_PARTNER_ID = "22222222-2222-2222-2222-222222222004";
 
 export type RoleExperience = "admin" | "partner" | "merchant" | "finance";
@@ -15,6 +15,8 @@ export const ROLE_NAV_KEYS: Record<PortalRole, readonly string[]> = {
     "merchant-preview",
     "finance",
     "reports",
+    "commission-approvals",
+    "manual-invoice-new",
     "delivery-service",
     "commerce",
     "fnb",
@@ -26,7 +28,7 @@ export const ROLE_NAV_KEYS: Record<PortalRole, readonly string[]> = {
     "credentials",
     "settings",
   ],
-  Accountant: ["finance", "reports", "settings"],
+  Accountant: ["finance", "reports", "commission-approvals", "manual-invoice-new", "settings"],
   PartnerSuccessManager: ["partner-home", "webhooks", "credentials"],
   PartnerFinance: ["partner-home", "webhooks", "credentials"],
   MerchantPreview: ["merchant-preview"],
