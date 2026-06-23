@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Options;
 using Shouldly;
+using Volo.Abp.Timing;
 using Xunit;
 
 namespace Zahy.Settlement;
@@ -14,6 +16,27 @@ public class SettlementWebhookIngestionTests
     private const long Ts = 1_700_000_000;
     private static readonly DateTime At = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     private static readonly Guid Partner = Guid.NewGuid();
+
+    // The server resolves the signing secret itself; the caller never supplies it.
+    private sealed class FakeSecretResolver : ISigningSecretResolver
+    {
+        private readonly string? _secret;
+        public FakeSecretResolver(string? secret) => _secret = secret;
+        public string? Resolve(SettlementBook book, Guid partnerId) => _secret;
+    }
+
+    private sealed class FixedClock : IClock
+    {
+        private readonly DateTime _now;
+        public FixedClock(DateTime now) => _now = now;
+        public DateTime Now => _now;
+        public DateTimeKind Kind => DateTimeKind.Utc;
+        public bool SupportsMultipleTimezone => false;
+        public DateTime Normalize(DateTime dateTime) => dateTime;
+        public DateTime ConvertToUtc(DateTime dateTime) => DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+        public DateTime ConvertToUserTime(DateTime dateTime) => dateTime;
+        public DateTimeOffset ConvertToUserTime(DateTimeOffset dateTimeOffset) => dateTimeOffset;
+    }
 
     // ---- in-memory fakes (keep the pipeline host-free and deterministic) -------------------------
     private sealed class FakeCaseStore : ISettlementCaseStore
@@ -33,7 +56,8 @@ public class SettlementWebhookIngestionTests
             Task.FromResult((IReadOnlyList<SettlementWebhookEvent>)Events.Where(e => e.SettlementCaseId == caseId).ToList());
     }
 
-    private static (SettlementWebhookIngestionService svc, FakeCaseStore cases, FakeEventStore events) Build()
+    private static (SettlementWebhookIngestionService svc, FakeCaseStore cases, FakeEventStore events) Build(
+        string? resolvedSecret = Secret, long nowUnix = Ts, int windowSeconds = 300)
     {
         var cases = new FakeCaseStore();
         var events = new FakeEventStore();
@@ -41,16 +65,21 @@ public class SettlementWebhookIngestionTests
         {
             new AggregatorFlowProfile(), new ServiceFlowProfile()
         });
+        var verifier = new HmacSettlementWebhookSignatureVerifier(
+            new FakeSecretResolver(resolvedSecret),
+            new FixedClock(DateTimeOffset.FromUnixTimeSeconds(nowUnix).UtcDateTime),
+            Options.Create(new SettlementWebhookSecurityOptions { FreshnessWindowSeconds = windowSeconds }));
         var svc = new SettlementWebhookIngestionService(
-            new HmacSettlementWebhookSignatureVerifier(), resolver, new SettlementAllocator(), cases, events);
+            verifier, resolver, new SettlementAllocator(), cases, events);
         return (svc, cases, events);
     }
 
-    private static InboundSettlementWebhook Webhook(string eventId, bool signed = true, bool tamper = false, bool partnerKnown = true)
+    private static InboundSettlementWebhook Webhook(
+        string eventId, bool signed = true, bool tamper = false, bool partnerKnown = true, string signingSecret = Secret)
     {
         const string payload = "{\"event\":\"collected\",\"total\":100}";
         var signature = Zahy.Webhooks.WebhookHmacSigner
-            .Sign(Secret, payload, DateTimeOffset.FromUnixTimeSeconds(Ts)).Signature;
+            .Sign(signingSecret, payload, DateTimeOffset.FromUnixTimeSeconds(Ts)).Signature;
 
         return new InboundSettlementWebhook
         {
@@ -59,7 +88,6 @@ public class SettlementWebhookIngestionTests
             PartnerKnown = partnerKnown,
             ExternalEventId = eventId,
             Payload = tamper ? payload + "X" : payload, // tamper invalidates the signature
-            SigningSecret = Secret,
             Signature = signed ? signature : null,
             UnixTimestamp = Ts,
             ReceivedAt = At,
@@ -96,6 +124,46 @@ public class SettlementWebhookIngestionTests
         var (svc, cases, _) = Build();
 
         var result = await svc.ProcessAsync(Webhook("evt-1", tamper: true));
+
+        result.Outcome.ShouldBe(SettlementEventOutcome.Rejected);
+        result.SignatureStatus.ShouldBe(WebhookSignatureStatus.Invalid);
+        cases.Cases.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Stale_Timestamp_Is_Rejected_Even_With_Valid_Signature()
+    {
+        // Clock is far beyond the signed timestamp + window, so the (otherwise valid) signature is stale.
+        var (svc, cases, events) = Build(nowUnix: Ts + 10_000);
+
+        var result = await svc.ProcessAsync(Webhook("evt-stale"));
+
+        result.Outcome.ShouldBe(SettlementEventOutcome.Rejected);
+        result.SignatureStatus.ShouldBe(WebhookSignatureStatus.Stale);
+        cases.Cases.ShouldBeEmpty();
+        events.Events.ShouldContain(e => e.Outcome == SettlementEventOutcome.Rejected);
+    }
+
+    [Fact]
+    public async Task Caller_Supplied_Secret_Is_Not_Trusted_Must_Match_Server_Resolved_Secret()
+    {
+        // The server resolves "Secret"; the caller signed with a foreign secret → cannot verify → rejected.
+        var (svc, cases, _) = Build(resolvedSecret: Secret);
+
+        var result = await svc.ProcessAsync(Webhook("evt-foreign", signingSecret: "attacker-supplied-secret"));
+
+        result.Outcome.ShouldBe(SettlementEventOutcome.Rejected);
+        result.SignatureStatus.ShouldBe(WebhookSignatureStatus.Invalid);
+        cases.Cases.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task No_Server_Secret_On_File_Is_Treated_As_Hostile()
+    {
+        // Resolver returns nothing for this partner/book → we cannot prove authenticity → reject.
+        var (svc, cases, _) = Build(resolvedSecret: null);
+
+        var result = await svc.ProcessAsync(Webhook("evt-nosecret"));
 
         result.Outcome.ShouldBe(SettlementEventOutcome.Rejected);
         result.SignatureStatus.ShouldBe(WebhookSignatureStatus.Invalid);

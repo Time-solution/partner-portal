@@ -20,6 +20,9 @@ public class WebhookOutboxMessage : Entity<Guid>
 
     public int AttemptCount { get; private set; }
 
+    /// <summary>Exclusive processing lease — null when not claimed or after completion.</summary>
+    public DateTime? LeaseExpiresAt { get; private set; }
+
     public DateTime CreatedAt { get; private set; }
 
     protected WebhookOutboxMessage()
@@ -47,16 +50,25 @@ public class WebhookOutboxMessage : Entity<Guid>
 
     public void MarkProcessing() => Status = WebhookOutboxStatus.Processing;
 
-    public void MarkCompleted() => Status = WebhookOutboxStatus.Completed;
+    public void MarkCompleted()
+    {
+        Status = WebhookOutboxStatus.Completed;
+        LeaseExpiresAt = null;
+    }
 
-    public void MarkDeadLettered() => Status = WebhookOutboxStatus.DeadLettered;
+    public void MarkDeadLettered()
+    {
+        Status = WebhookOutboxStatus.DeadLettered;
+        LeaseExpiresAt = null;
+    }
 
     public void ScheduleRetry(DateTime nextAttemptAt)
     {
         Status = WebhookOutboxStatus.Pending;
         ScheduledAt = nextAttemptAt;
         AttemptCount++;
+        LeaseExpiresAt = null;
     }
 
-    public void MarkDueNow() => ScheduledAt = DateTime.UtcNow.AddMinutes(-1);
+    public void MarkDueNow() => ScheduledAt = CreatedAt.AddMinutes(-5);
 }

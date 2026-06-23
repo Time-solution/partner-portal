@@ -59,4 +59,13 @@ public static class PartnerCatalogErrorCodes
 
     // U5 — optional volume tiers on a package's overage.
     public const string InvalidUsagePackageTier = Namespace + ":031";
+
+    // R1 — partner<->merchant participation LINK (the data-sharing relationship: partner GRANT +
+    // merchant CONSENT, PDPL). Contiguous free range :032–:037 (verified no collision with :001–:031).
+    public const string InvalidPartnerMerchantLink = Namespace + ":032";
+    public const string GrantNotOffered = Namespace + ":033";
+    public const string StaleConsentVersion = Namespace + ":034";
+    public const string PartnerMerchantLinkTerminal = Namespace + ":035";
+    public const string InvalidLinkStateTransition = Namespace + ":036";
+    public const string StandingGrantRequired = Namespace + ":037";
 }

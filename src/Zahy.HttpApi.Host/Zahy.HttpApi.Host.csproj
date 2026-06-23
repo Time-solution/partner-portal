@@ -7,6 +7,9 @@
     <PackageReference Include="Volo.Abp.EntityFrameworkCore.SqlServer" />
     <PackageReference Include="Volo.Abp.OpenIddict.AspNetCore" />
     <PackageReference Include="Volo.Abp.Identity.AspNetCore" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" />
+    <PackageReference Include="StackExchange.Redis" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Zahy.Identity\Zahy.Identity.Application\Zahy.Identity.Application.csproj" />

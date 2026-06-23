@@ -17,5 +17,7 @@ public class ZahyWebhooksEntityFrameworkCoreModule : AbpModule
         {
             options.AddDefaultRepositories(includeAllEntities: true);
         });
+
+        context.Services.AddTransient<IWebhookOutboxLeaseService, WebhookOutboxLeaseService>();
     }
 }

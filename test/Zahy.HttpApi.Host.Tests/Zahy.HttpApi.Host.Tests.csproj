@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.0.2" />
+    <PackageReference Include="Shouldly" Version="4.3.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.7" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.7" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.7" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.7" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.7" />
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Physical" Version="10.0.7" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" Version="10.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" Version="10.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.0" />
+    <PackageReference Include="StackExchange.Redis" Version="2.8.31" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\src\Zahy.HttpApi.Host\Hosting\*.cs" Link="Hosting\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

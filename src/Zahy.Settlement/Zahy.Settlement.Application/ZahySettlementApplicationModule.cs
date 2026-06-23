@@ -20,6 +20,8 @@ public class ZahySettlementApplicationModule : AbpModule
         Configure<SettlementVatOptions>(configuration.GetSection(SettlementVatOptions.SectionName));
         // Engine flags — disbursement + live provider OFF until sign-off (computation-only bridge in 2b).
         Configure<SettlementEngineOptions>(configuration.GetSection(SettlementEngineOptions.SectionName));
+        // Inbound webhook security — replay window + server-side signing-secret source (never the caller).
+        Configure<SettlementWebhookSecurityOptions>(configuration.GetSection(SettlementWebhookSecurityOptions.SectionName));
 
         // Composition over inheritance: each per-partner-type flow profile is registered as a
         // strategy; the resolver receives them all and routes by book (DESIGN.md §6.1).
@@ -30,6 +32,7 @@ public class ZahySettlementApplicationModule : AbpModule
         context.Services.AddTransient<ISettlementResaleTriggerPort, SettlementResaleTriggerService>();
 
         // P4 — webhook ingestion + allocation + explain.
+        context.Services.AddTransient<ISigningSecretResolver, ConfigSigningSecretResolver>();
         context.Services.AddTransient<ISettlementWebhookSignatureVerifier, HmacSettlementWebhookSignatureVerifier>();
         context.Services.AddTransient<ISettlementAllocator, SettlementAllocator>();
         context.Services.AddTransient<ISettlementWebhookIngestionService, SettlementWebhookIngestionService>();

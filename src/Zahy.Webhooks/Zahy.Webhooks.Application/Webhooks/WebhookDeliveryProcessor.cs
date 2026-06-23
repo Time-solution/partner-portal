@@ -16,6 +16,7 @@ public class WebhookDeliveryProcessor : ApplicationService, IWebhookDeliveryProc
     private readonly IRepository<WebhookSubscription, Guid> _subscriptionRepository;
     private readonly IRepository<WebhookDelivery, Guid> _deliveryRepository;
     private readonly IRepository<WebhookDeadLetter, Guid> _deadLetterRepository;
+    private readonly IWebhookOutboxLeaseService _outboxLeaseService;
     private readonly IWebhookDeliveryTransport _deliveryTransport;
     private readonly IGuidGenerator _guidGenerator;
     private readonly IDataFilter _dataFilter;
@@ -25,6 +26,7 @@ public class WebhookDeliveryProcessor : ApplicationService, IWebhookDeliveryProc
         IRepository<WebhookSubscription, Guid> subscriptionRepository,
         IRepository<WebhookDelivery, Guid> deliveryRepository,
         IRepository<WebhookDeadLetter, Guid> deadLetterRepository,
+        IWebhookOutboxLeaseService outboxLeaseService,
         IWebhookDeliveryTransport deliveryTransport,
         IGuidGenerator guidGenerator,
         IDataFilter dataFilter)
@@ -33,6 +35,7 @@ public class WebhookDeliveryProcessor : ApplicationService, IWebhookDeliveryProc
         _subscriptionRepository = subscriptionRepository;
         _deliveryRepository = deliveryRepository;
         _deadLetterRepository = deadLetterRepository;
+        _outboxLeaseService = outboxLeaseService;
         _deliveryTransport = deliveryTransport;
         _guidGenerator = guidGenerator;
         _dataFilter = dataFilter;
@@ -41,32 +44,23 @@ public class WebhookDeliveryProcessor : ApplicationService, IWebhookDeliveryProc
     [UnitOfWork]
     public virtual async Task ProcessPendingAsync(CancellationToken cancellationToken = default)
     {
-        List<WebhookOutboxMessage> pending;
+        var now = Clock.Now;
+        var leaseDuration = TimeSpan.FromMinutes(WebhookConsts.DefaultOutboxLeaseMinutes);
+        var claimedIds = await _outboxLeaseService.ClaimDueBatchAsync(
+            WebhookConsts.DefaultOutboxClaimBatchSize,
+            now,
+            leaseDuration,
+            cancellationToken);
 
-        using (_dataFilter.Disable<IWebhookPartnerDataFilter>())
+        foreach (var messageId in claimedIds)
         {
-            var now = Clock.Now;
-            var queryable = await _outboxRepository.GetQueryableAsync();
-            pending = queryable
-                .Where(x =>
-                    (x.Status == WebhookOutboxStatus.Pending || x.Status == WebhookOutboxStatus.Processing) &&
-                    x.ScheduledAt <= now)
-                .OrderBy(x => x.ScheduledAt)
-                .Take(50)
-                .ToList();
-        }
-
-        foreach (var message in pending)
-        {
+            var message = await _outboxRepository.GetAsync(messageId, cancellationToken: cancellationToken);
             await ProcessMessageAsync(message, cancellationToken);
         }
     }
 
     private async Task ProcessMessageAsync(WebhookOutboxMessage message, CancellationToken cancellationToken)
     {
-        message.MarkProcessing();
-        await _outboxRepository.UpdateAsync(message, autoSave: true, cancellationToken: cancellationToken);
-
         var subscriptions = await GetMatchingSubscriptionsAsync(message);
         if (subscriptions.Count == 0)
         {

@@ -83,5 +83,6 @@
     <Project Path="test\Zahy.PlatformIntegration.Tests\Zahy.PlatformIntegration.Tests.csproj" />
     <Project Path="test\Zahy.Settlement.Tests\Zahy.Settlement.Tests.csproj" />
     <Project Path="test\Zahy.PartnerCatalog.Tests\Zahy.PartnerCatalog.Tests.csproj" />
+    <Project Path="test\Zahy.HttpApi.Host.Tests\Zahy.HttpApi.Host.Tests.csproj" />
   </Folder>
 </Solution>

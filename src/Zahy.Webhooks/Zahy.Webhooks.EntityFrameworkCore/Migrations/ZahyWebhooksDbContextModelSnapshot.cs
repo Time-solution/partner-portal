@@ -135,6 +135,9 @@ namespace Zahy.Webhooks.EntityFrameworkCore.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<DateTime?>("LeaseExpiresAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<Guid>("PartnerId")
                         .HasColumnType("uniqueidentifier");
 

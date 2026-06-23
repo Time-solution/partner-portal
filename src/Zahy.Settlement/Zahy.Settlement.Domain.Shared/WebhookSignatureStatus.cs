@@ -10,5 +10,8 @@ public enum WebhookSignatureStatus
     Invalid = 1,
 
     /// <summary>Signature verified against the partner's signing secret.</summary>
-    Valid = 2
+    Valid = 2,
+
+    /// <summary>Signature matched but the timestamp is outside the replay window — treated as hostile.</summary>
+    Stale = 3
 }

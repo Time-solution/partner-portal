@@ -3,9 +3,9 @@ using System;
 namespace Zahy.Settlement;
 
 /// <summary>
-/// An inbound settlement webhook as handed to the engine. The adapter looks up the partner's signing
-/// secret + book routing and parses the component amounts; the engine verifies, dedupes, routes,
-/// allocates, and logs. Payload is the raw signed JSON (kept for the event log).
+/// An inbound settlement webhook as handed to the engine. The adapter maps partner/book routing and
+/// parses the component amounts; the engine resolves the signing secret server-side (never from the
+/// caller) then verifies, dedupes, routes, allocates, and logs. Payload is the raw signed JSON.
 /// </summary>
 public sealed record InboundSettlementWebhook
 {
@@ -19,8 +19,6 @@ public sealed record InboundSettlementWebhook
     public string ExternalEventId { get; init; } = string.Empty;
 
     public string Payload { get; init; } = string.Empty;
-
-    public string SigningSecret { get; init; } = string.Empty;
 
     public string? Signature { get; init; }
 

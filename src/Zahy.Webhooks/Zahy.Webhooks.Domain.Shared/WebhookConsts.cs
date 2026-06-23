@@ -10,4 +10,6 @@ public static class WebhookConsts
     public const int MaxReasonLength = 512;
     public const int MaxSigningSecretLength = 128;
     public const int DefaultMaxDeliveryAttempts = 5;
+    public const int DefaultOutboxClaimBatchSize = 50;
+    public const int DefaultOutboxLeaseMinutes = 5;
 }

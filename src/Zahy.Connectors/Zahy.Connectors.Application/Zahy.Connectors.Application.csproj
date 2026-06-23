@@ -4,11 +4,14 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Zahy.Connectors.Application.Contracts\Zahy.Connectors.Application.Contracts.csproj" />
+    <ProjectReference Include="..\Zahy.Connectors.Domain\Zahy.Connectors.Domain.csproj" />
     <ProjectReference Include="..\Zahy.Connectors.Domain.Shared\Zahy.Connectors.Domain.Shared.csproj" />
     <ProjectReference Include="..\..\Zahy.OrderLedger\Zahy.OrderLedger.Application\Zahy.OrderLedger.Application.csproj" />
     <ProjectReference Include="..\..\Zahy.OrderLedger\Zahy.OrderLedger.Domain\Zahy.OrderLedger.Domain.csproj" />
     <ProjectReference Include="..\..\Zahy.OrderLedger\Zahy.OrderLedger.Application.Contracts\Zahy.OrderLedger.Application.Contracts.csproj" />
     <ProjectReference Include="..\..\Zahy.OrderLedger\Zahy.OrderLedger.Domain.Shared\Zahy.OrderLedger.Domain.Shared.csproj" />
     <ProjectReference Include="..\..\Zahy.PartnerPlatform\Zahy.PartnerPlatform.Domain.Shared\Zahy.PartnerPlatform.Domain.Shared.csproj" />
+    <!-- Reuse the existing Webhooks HMAC primitive (WebhookHmacSigner) for inbound signature verification. -->
+    <ProjectReference Include="..\..\Zahy.Webhooks\Zahy.Webhooks.Domain\Zahy.Webhooks.Domain.csproj" />
   </ItemGroup>
 </Project>

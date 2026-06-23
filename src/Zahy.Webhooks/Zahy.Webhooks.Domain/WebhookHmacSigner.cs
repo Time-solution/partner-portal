@@ -26,6 +26,33 @@ public static class WebhookHmacSigner
             Encoding.UTF8.GetBytes(NormalizeSignature(signatureHeader)));
     }
 
+    /// <summary>
+    /// Signature + replay-window verification. The constant-time signature compare always runs (the
+    /// freshness check never short-circuits it), then the timestamp is checked against an injected
+    /// "now": a captured-but-stale payload is rejected even when its signature is otherwise valid.
+    /// </summary>
+    public static WebhookVerificationOutcome VerifyWithFreshness(
+        string secret,
+        string payloadJson,
+        long unixTimestamp,
+        string signatureHeader,
+        long nowUnixSeconds,
+        int freshnessWindowSeconds)
+    {
+        var signatureValid = Verify(secret, payloadJson, unixTimestamp, signatureHeader);
+        if (!signatureValid)
+        {
+            return WebhookVerificationOutcome.InvalidSignature;
+        }
+
+        if (Math.Abs(nowUnixSeconds - unixTimestamp) > freshnessWindowSeconds)
+        {
+            return WebhookVerificationOutcome.Stale;
+        }
+
+        return WebhookVerificationOutcome.Valid;
+    }
+
     private static string NormalizeSignature(string signatureHeader)
     {
         if (signatureHeader.StartsWith(SignaturePrefix, StringComparison.OrdinalIgnoreCase))
@@ -38,3 +65,16 @@ public static class WebhookHmacSigner
 }
 
 public readonly record struct WebhookSignatureResult(long UnixTimestamp, string Signature);
+
+/// <summary>Outcome of a freshness-aware HMAC verification.</summary>
+public enum WebhookVerificationOutcome
+{
+    /// <summary>Signature did not match the secret over the signed payload.</summary>
+    InvalidSignature = 0,
+
+    /// <summary>Signature matched but the timestamp is outside the replay window.</summary>
+    Stale = 1,
+
+    /// <summary>Signature matched and the timestamp is fresh.</summary>
+    Valid = 2
+}

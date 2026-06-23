@@ -11,4 +11,5 @@ public static class ConnectorErrorCodes
     public const string ConnectorOrderNotFoundInLedger = Namespace + ":005";
     public const string InvalidConnectorCode = Namespace + ":006";
     public const string InvalidConnectorRegistration = Namespace + ":007";
+    public const string ConnectorSignatureRejected = Namespace + ":008";
 }

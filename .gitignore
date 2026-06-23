@@ -60,6 +60,10 @@ tsc-out.txt
 test-out.txt
 build-out.txt
 
+# ----- Agent / tooling local state -----------------------------------------
+# Stray git worktrees created by AI agents — never commit (full nested repo copies).
+.claude/worktrees/
+
 # ----- OS / misc -----------------------------------------------------------
 .DS_Store
 Thumbs.db

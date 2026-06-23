@@ -4,5 +4,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Zahy.Finance.Application.Contracts\Zahy.Finance.Application.Contracts.csproj" />
+    <!-- Controller actions gate on ZahyPermissions.Finance.* (Zahy.Identity.Permissions), as other modules do. -->
+    <ProjectReference Include="..\..\Zahy.Identity\Zahy.Identity.Domain.Shared\Zahy.Identity.Domain.Shared.csproj" />
   </ItemGroup>
 </Project>

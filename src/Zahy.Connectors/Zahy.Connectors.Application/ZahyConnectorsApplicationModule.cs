@@ -13,6 +13,11 @@ public class ZahyConnectorsApplicationModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
+        var configuration = context.Services.GetConfiguration();
+
+        // Inbound boundary security — HMAC verification gated OFF, replay window + dev secret map from config.
+        Configure<ConnectorInboundSecurityOptions>(configuration.GetSection(ConnectorInboundSecurityOptions.SectionName));
+
         context.Services.AddSingleton<InMemoryAggregatorConnectorTransport>();
         context.Services.AddSingleton<InMemoryThreePLConnectorTransport>();
         context.Services.AddSingleton<InMemoryCarrierConnectorTransport>();

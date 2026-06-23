@@ -4,9 +4,12 @@ using Microsoft.Extensions.Hosting;
 using Volo.Abp;
 using Volo.Abp.Autofac;
 using Zahy;
+using Zahy.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseAutofac();
+
+OpenIddictHostStartupGuard.EnsureProductionCertificateConfigured(builder.Environment, builder.Configuration);
 
 await builder.AddApplicationAsync<ZahyHostModule>();
 

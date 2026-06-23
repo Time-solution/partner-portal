@@ -20,6 +20,7 @@ using Volo.Abp.Modularity;
 using Volo.Abp.OpenIddict;
 using Volo.Abp.Swashbuckle;
 using Volo.Abp.Uow;
+using Zahy.Hosting;
 using Zahy.Identity;
 using Zahy.PartnerPlatform;
 using Zahy.Webhooks;
@@ -76,6 +77,8 @@ public class ZahyHostModule : AbpModule
         var hostingEnvironment = context.Services.GetHostingEnvironment();
         var configuration = context.Services.GetConfiguration();
 
+        OpenIddictHostStartupGuard.EnsureProductionCertificateConfigured(hostingEnvironment, configuration);
+
         PreConfigure<OpenIddictServerBuilder>(serverBuilder =>
         {
             // Token policy: short-lived access tokens (~30 min) + 14-day refresh.
@@ -105,21 +108,21 @@ public class ZahyHostModule : AbpModule
                 options.AddDevelopmentEncryptionAndSigningCertificate = false;
             });
 
-            var certPath = configuration["OpenIddict:Certificate:Path"];
+            var certPath = configuration["OpenIddict:Certificate:Path"]!;
             var certPassword = configuration["OpenIddict:Certificate:Password"];
-            if (!string.IsNullOrWhiteSpace(certPath))
+            PreConfigure<OpenIddictServerBuilder>(serverBuilder =>
             {
-                PreConfigure<OpenIddictServerBuilder>(serverBuilder =>
-                {
-                    serverBuilder.AddProductionEncryptionAndSigningCertificate(certPath, certPassword!);
-                });
-            }
+                serverBuilder.AddProductionEncryptionAndSigningCertificate(certPath, certPassword!);
+            });
         }
     }
 
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
         var configuration = context.Services.GetConfiguration();
+        var hostingEnvironment = context.Services.GetHostingEnvironment();
+
+        ZahyDataProtectionConfigurator.Configure(context.Services, configuration, hostingEnvironment);
 
         Configure<AbpDbContextOptions>(options =>
         {
