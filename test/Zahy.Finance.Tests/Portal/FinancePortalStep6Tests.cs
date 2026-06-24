@@ -11,6 +11,7 @@ using Zahy.Commission;
 
 namespace Zahy.Finance;
 
+[Collection(PdfRenderCollection.Name)]
 public class FinancePortalStep6Tests : ZahyFinanceTestBase
 {
     private readonly IFinancePartnerPortalAppService _partnerPortal;

@@ -11,6 +11,7 @@ using Zahy.Commission;
 
 namespace Zahy.Finance;
 
+[Collection(PdfRenderCollection.Name)]
 public class FinanceInvoiceStep5Tests : ZahyFinanceTestBase
 {
     private readonly IFinanceInvoiceGenerationService _invoiceGenerationService;

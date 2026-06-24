@@ -14,6 +14,7 @@ using Zahy.Identity.Roles;
 
 namespace Zahy.Finance;
 
+[Collection(PdfRenderCollection.Name)]
 public class ManualInvoiceTests : ZahyFinanceTestBase
 {
     private const decimal VatRate = 0.15m;

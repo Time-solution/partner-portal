@@ -10,6 +10,7 @@ using Zahy.Commission;
 
 namespace Zahy.Finance;
 
+[Collection(PdfRenderCollection.Name)]
 public class FinanceDocumentStep4Tests : ZahyFinanceTestBase
 {
     private readonly IFinanceAccountService _accountService;
