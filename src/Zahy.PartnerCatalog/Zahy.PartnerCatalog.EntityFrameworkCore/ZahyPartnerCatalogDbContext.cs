@@ -26,6 +26,8 @@ public class ZahyPartnerCatalogDbContext : AbpDbContext<ZahyPartnerCatalogDbCont
 
     public DbSet<UsagePackageSelection> UsagePackageSelections => Set<UsagePackageSelection>();
 
+    public DbSet<PartnerCatalogProfile> PartnerCatalogProfiles => Set<PartnerCatalogProfile>();
+
     public ZahyPartnerCatalogDbContext(DbContextOptions<ZahyPartnerCatalogDbContext> options)
         : base(options)
     {
@@ -48,6 +50,7 @@ public class ZahyPartnerCatalogDbContext : AbpDbContext<ZahyPartnerCatalogDbCont
             b.Property(x => x.Code).IsRequired().HasMaxLength(PartnerCatalogConsts.MaxCodeLength);
             b.Property(x => x.Name).IsRequired().HasMaxLength(PartnerCatalogConsts.MaxNameLength);
             b.Property(x => x.Description).HasMaxLength(PartnerCatalogConsts.MaxDescriptionLength);
+            b.Property(x => x.MerchantBenefit).HasMaxLength(PartnerCatalogConsts.MaxMerchantBenefitLength);
             b.Property(x => x.OfferingKind).IsRequired();
             b.Property(x => x.PartnerCostAmount).HasPrecision(18, 2);
             b.Property(x => x.PartnerCostCurrency).IsRequired().HasMaxLength(3);
@@ -178,6 +181,7 @@ public class ZahyPartnerCatalogDbContext : AbpDbContext<ZahyPartnerCatalogDbCont
             b.Property(x => x.OverageSellAmount).HasPrecision(18, 2);
             b.Property(x => x.Payer).IsRequired();
             b.Property(x => x.Status).IsRequired();
+            b.Property(x => x.PackageExplanation).HasMaxLength(PartnerCatalogConsts.MaxPackageExplanationLength);
             // U5 — optional volume tiers stored as JSON (null = flat overage; provider-agnostic). The
             // deserialized Tiers collection is computed, not a navigation — map only the JSON column.
             b.Property(x => x.TiersJson);
@@ -209,6 +213,23 @@ public class ZahyPartnerCatalogDbContext : AbpDbContext<ZahyPartnerCatalogDbCont
             b.HasIndex(x => x.TenantId);
             b.HasIndex(x => new { x.TenantId, x.PartnerId });
             b.HasIndex(x => new { x.TenantId, x.UsagePackageId });
+
+            b.HasQueryFilter(x =>
+                !IsPartnerFilterEnabled ||
+                CurrentPartnerId == null ||
+                x.PartnerId == CurrentPartnerId);
+        });
+
+        builder.Entity<PartnerCatalogProfile>(b =>
+        {
+            b.ToTable("PcatPartnerProfiles");
+            b.ConfigureByConvention();
+
+            b.Property(x => x.PartnerId).IsRequired();
+            b.Property(x => x.PartnerBrief).HasMaxLength(PartnerCatalogConsts.MaxPartnerBriefLength);
+
+            // One presentation profile per partner.
+            b.HasIndex(x => x.PartnerId).IsUnique();
 
             b.HasQueryFilter(x =>
                 !IsPartnerFilterEnabled ||

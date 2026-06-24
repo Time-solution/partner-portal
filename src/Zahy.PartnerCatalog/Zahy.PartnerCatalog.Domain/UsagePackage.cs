@@ -55,6 +55,13 @@ public class UsagePackage : FullAuditedAggregateRoot<Guid>
     public UsagePackageStatus Status { get; private set; } = UsagePackageStatus.Draft;
 
     /// <summary>
+    /// Phase 6a — one free-text partner-authored explanation ("خانة للشرح") shown to the merchant alongside
+    /// the structured package details. Optional plain text, length-capped, never required to publish.
+    /// CONFIG/PRESENTATION ONLY — computes no billing.
+    /// </summary>
+    public string? PackageExplanation { get; private set; }
+
+    /// <summary>
     /// U5 — OPTIONAL graduated volume-tier ladder for the overage, persisted as JSON (provider-agnostic;
     /// null/empty = flat U3 overage, fully back-compatible). Read via <see cref="Tiers"/>; set via
     /// <see cref="SetTiers"/>. CONFIG ONLY.
@@ -133,6 +140,29 @@ public class UsagePackage : FullAuditedAggregateRoot<Guid>
             // Payer is a subscription concept; default for resale.
             Payer = ActivationFeePayer.Merchant;
         }
+    }
+
+    /// <summary>
+    /// Phase 6a — set the partner-authored free-text explanation (null/blank clears it). Plain text, trimmed,
+    /// capped at <see cref="UsagePackageConsts"/>-adjacent limit. PRESENTATION ONLY — no billing effect.
+    /// </summary>
+    public void SetExplanation(string? explanation)
+    {
+        if (string.IsNullOrWhiteSpace(explanation))
+        {
+            PackageExplanation = null;
+            return;
+        }
+
+        var trimmed = explanation.Trim();
+        if (trimmed.Length > PartnerCatalogConsts.MaxPackageExplanationLength)
+        {
+            throw new BusinessException(PartnerCatalogErrorCodes.InvalidUsagePackage)
+                .WithData("Reason", "PackageExplanationTooLong")
+                .WithData("MaxLength", PartnerCatalogConsts.MaxPackageExplanationLength);
+        }
+
+        PackageExplanation = trimmed;
     }
 
     public void Publish()

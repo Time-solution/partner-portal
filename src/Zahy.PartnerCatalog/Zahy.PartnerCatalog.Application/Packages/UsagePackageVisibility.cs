@@ -26,6 +26,8 @@ public static class UsagePackageVisibility
             IncludedQuantity = package.IncludedQuantity,
             Status = package.Status,
             Audience = audience,
+            // Presentation free text — shown to every audience (never a money field).
+            PackageExplanation = package.PackageExplanation,
             Payer = package.Mode == UsagePackageMode.Subscription ? package.Payer : null,
             Tiers = package.Tiers.Select(t => ScopeTier(t, package.Mode, package.Currency, audience)).ToList(),
         };

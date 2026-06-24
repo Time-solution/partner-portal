@@ -7,6 +7,11 @@ public static class PartnerCatalogConsts
     public const int MaxCodeLength = 64;
     public const int MaxNameLength = 256;
     public const int MaxDescriptionLength = 2048;
+
+    // Phase 6a — partner authoring presentation (plain text, optional, not required to publish).
+    public const int MaxPartnerBriefLength = 600;
+    public const int MaxMerchantBenefitLength = 400;
+    public const int MaxPackageExplanationLength = 500;
     public const int MaxCarrierServiceCodeLength = 64;
     public const int MaxExternalMenuItemIdLength = 128;
     public const int MaxMenuCategoryCodeLength = 64;
@@ -68,4 +73,7 @@ public static class PartnerCatalogErrorCodes
     public const string PartnerMerchantLinkTerminal = Namespace + ":035";
     public const string InvalidLinkStateTransition = Namespace + ":036";
     public const string StandingGrantRequired = Namespace + ":037";
+
+    // Phase 6a — partner catalog-side presentation profile (PartnerBrief). Free slot :038 (no collision).
+    public const string InvalidPartnerCatalogProfile = Namespace + ":038";
 }

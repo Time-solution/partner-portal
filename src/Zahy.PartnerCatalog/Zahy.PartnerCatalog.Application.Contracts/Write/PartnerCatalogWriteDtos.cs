@@ -10,6 +10,10 @@ public class CreatePartnerCatalogItemInput
     public string Code { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
+
+    /// <summary>Phase 6a — "what the merchant gets / why activate this." Optional plain text (≤400).</summary>
+    public string? MerchantBenefit { get; set; }
+
     public PartnerCatalogOfferingKind OfferingKind { get; set; }
     public MoneyDto PartnerCost { get; set; } = new();
     public SettlementBook? SettlementBookOverride { get; set; }
@@ -27,6 +31,10 @@ public class UpdatePartnerCatalogItemInput
 {
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
+
+    /// <summary>Phase 6a — "what the merchant gets / why activate this." Optional plain text (≤400).</summary>
+    public string? MerchantBenefit { get; set; }
+
     public MoneyDto PartnerCost { get; set; } = new();
     public SettlementBook? SettlementBookOverride { get; set; }
     public SettlementTriggerMode? SettlementTriggerMode { get; set; }

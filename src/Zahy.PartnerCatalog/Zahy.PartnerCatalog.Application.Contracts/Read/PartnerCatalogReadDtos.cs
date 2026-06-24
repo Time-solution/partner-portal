@@ -19,6 +19,10 @@ public class PartnerCatalogItemReadDto : EntityDto<Guid>
     public string Code { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
+
+    /// <summary>Phase 6a — "what the merchant gets / why activate this" (offering-level presentation).</summary>
+    public string? MerchantBenefit { get; set; }
+
     public PartnerCatalogOfferingKind OfferingKind { get; set; }
     public MoneyDto PartnerCost { get; set; } = new();
     public PartnerCatalogItemStatus Status { get; set; }

@@ -59,6 +59,11 @@ export interface Partner {
   marketplaceCategory?: "commerce" | "fnb";
   /** Parked business module (Consignment / FBA demo). */
   parkedModule?: "consignment";
+  /**
+   * Phase 6a — partner self-introduction shown to merchants (plain text, ≤600). Optional, presentation
+   * only; mirrors the backend catalog-side PartnerCatalogProfile.PartnerBrief.
+   */
+  partnerBrief?: string;
 }
 
 export interface PartnerCatalogItem {
@@ -66,7 +71,10 @@ export interface PartnerCatalogItem {
   partnerId: string;
   code: string;
   name: string;
+  /** Human description of the service — also the merchant-facing OfferingSummary (reused, Phase 6a). */
   description?: string;
+  /** Phase 6a — "what the merchant gets / why activate this" (plain text, ≤400). Presentation only. */
+  merchantBenefit?: string;
   offeringKind: OfferingKind;
   participationMode: ParticipationMode;
   partnerCost: Money;

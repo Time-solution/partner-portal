@@ -45,7 +45,8 @@ public class PartnerCatalogWriteAppService : ApplicationService, IPartnerCatalog
             input.ExternalMenuItemId,
             input.MenuCategoryCode,
             input.SettlementParticipationMode,
-            input.ConsignmentOwnershipMode);
+            input.ConsignmentOwnershipMode,
+            input.MerchantBenefit);
 
         await _itemRepository.InsertAsync(item, autoSave: true);
 
@@ -71,7 +72,8 @@ public class PartnerCatalogWriteAppService : ApplicationService, IPartnerCatalog
             input.ExternalMenuItemId,
             input.MenuCategoryCode,
             input.SettlementParticipationMode,
-            input.ConsignmentOwnershipMode);
+            input.ConsignmentOwnershipMode,
+            input.MerchantBenefit);
 
         await _itemRepository.UpdateAsync(item, autoSave: true);
 

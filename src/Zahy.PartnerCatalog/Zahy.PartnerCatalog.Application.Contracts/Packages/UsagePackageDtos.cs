@@ -35,6 +35,12 @@ public class UsagePackageDto : EntityDto<Guid>
     public UsagePackageStatus Status { get; set; }
     public UsagePackageAudience Audience { get; set; }
 
+    /// <summary>
+    /// Phase 6a — partner-authored plain-text explanation shown to all audiences alongside the structured
+    /// (audience-scoped) details. Presentation only; null when the partner left it blank.
+    /// </summary>
+    public string? PackageExplanation { get; set; }
+
     /// <summary>Subscription only — who pays the fee (Merchant/Partner). Null for resale.</summary>
     public ActivationFeePayer? Payer { get; set; }
 
@@ -81,6 +87,10 @@ public class CreateUsagePackageInput
     public Guid PartnerId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string UnitLabel { get; set; } = "messages";
+
+    /// <summary>Phase 6a — partner-authored plain-text explanation shown to merchants (≤500). Optional.</summary>
+    public string? PackageExplanation { get; set; }
+
     public UsagePackageMode Mode { get; set; }
     public string Currency { get; set; } = UsagePackageConsts.DefaultCurrency;
     public decimal IncludedQuantity { get; set; }
@@ -98,6 +108,10 @@ public class UpdateUsagePackageInput
 {
     public string Name { get; set; } = string.Empty;
     public string UnitLabel { get; set; } = "messages";
+
+    /// <summary>Phase 6a — partner-authored plain-text explanation shown to merchants (≤500). Optional.</summary>
+    public string? PackageExplanation { get; set; }
+
     public decimal IncludedQuantity { get; set; }
     public decimal BaseBuyAmount { get; set; }
     public decimal BaseSellAmount { get; set; }

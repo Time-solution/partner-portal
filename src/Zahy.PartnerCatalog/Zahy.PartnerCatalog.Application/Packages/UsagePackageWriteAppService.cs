@@ -65,6 +65,7 @@ public class UsagePackageWriteAppService : ApplicationService, IUsagePackageWrit
             input.Payer);
 
         package.SetTiers(MapTiers(input.Tiers));
+        package.SetExplanation(input.PackageExplanation);
 
         await _repository.InsertAsync(package, autoSave: true);
         return UsagePackageVisibility.ToDto(package, await ResolveAudienceAsync());
@@ -87,6 +88,7 @@ public class UsagePackageWriteAppService : ApplicationService, IUsagePackageWrit
             input.Payer);
 
         package.SetTiers(MapTiers(input.Tiers));
+        package.SetExplanation(input.PackageExplanation);
 
         await _repository.UpdateAsync(package, autoSave: true);
         return UsagePackageVisibility.ToDto(package, await ResolveAudienceAsync());

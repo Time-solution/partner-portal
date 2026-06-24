@@ -55,6 +55,11 @@ export interface UsagePackage {
   status: UsagePackageStatus;
   /** U5 — optional graduated overage tiers (empty/undefined = flat overage). */
   tiers?: UsagePackageTier[];
+  /**
+   * Phase 6a — partner-authored plain-text explanation shown to the merchant alongside the structured
+   * details ("خانة للشرح"). Optional, presentation only; mirrors the backend UsagePackage.PackageExplanation.
+   */
+  packageExplanation?: string;
 }
 
 export interface UsagePackageInput {

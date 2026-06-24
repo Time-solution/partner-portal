@@ -61,6 +61,7 @@ internal static class PartnerCatalogReadDtoMapper
             Code = item.Code,
             Name = item.Name,
             Description = item.Description,
+            MerchantBenefit = item.MerchantBenefit,
             OfferingKind = item.OfferingKind,
             PartnerCost = ToMoneyDto(item.PartnerCost),
             Status = item.Status,

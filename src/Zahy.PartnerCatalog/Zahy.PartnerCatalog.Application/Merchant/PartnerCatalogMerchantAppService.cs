@@ -18,6 +18,7 @@ public class PartnerCatalogMerchantAppService : ApplicationService, IPartnerCata
 {
     private readonly IRepository<PartnerCatalogItem, Guid> _itemRepository;
     private readonly IRepository<MerchantActivation, Guid> _activationRepository;
+    private readonly IRepository<PartnerCatalogProfile, Guid> _profileRepository;
     private readonly MerchantCatalogAccessGuard _accessGuard;
     private readonly PartnerCatalogActivationSnapshotOrchestrator _activationSnapshotOrchestrator;
     private readonly IOptionsMonitor<PartnerCatalogMerchantOptions> _merchantOptions;
@@ -25,12 +26,14 @@ public class PartnerCatalogMerchantAppService : ApplicationService, IPartnerCata
     public PartnerCatalogMerchantAppService(
         IRepository<PartnerCatalogItem, Guid> itemRepository,
         IRepository<MerchantActivation, Guid> activationRepository,
+        IRepository<PartnerCatalogProfile, Guid> profileRepository,
         MerchantCatalogAccessGuard accessGuard,
         PartnerCatalogActivationSnapshotOrchestrator activationSnapshotOrchestrator,
         IOptionsMonitor<PartnerCatalogMerchantOptions> merchantOptions)
     {
         _itemRepository = itemRepository;
         _activationRepository = activationRepository;
+        _profileRepository = profileRepository;
         _accessGuard = accessGuard;
         _activationSnapshotOrchestrator = activationSnapshotOrchestrator;
         _merchantOptions = merchantOptions;
@@ -43,10 +46,16 @@ public class PartnerCatalogMerchantAppService : ApplicationService, IPartnerCata
 
         var items = await _itemRepository.GetListAsync(x => x.Status == PartnerCatalogItemStatus.Active);
 
+        // Phase 6a — partner-level brief is one row per partner; resolve once and attach read-only.
+        var profiles = await _profileRepository.GetListAsync();
+        var briefByPartner = profiles
+            .Where(p => !string.IsNullOrWhiteSpace(p.PartnerBrief))
+            .ToDictionary(p => p.PartnerId, p => p.PartnerBrief);
+
         return items
             .OrderBy(x => x.PartnerId)
             .ThenBy(x => x.Code)
-            .Select(ToOfferingDto)
+            .Select(item => ToOfferingDto(item, briefByPartner))
             .ToList();
     }
 
@@ -164,14 +173,19 @@ public class PartnerCatalogMerchantAppService : ApplicationService, IPartnerCata
         return Money.Of(input.Amount, input.Currency, input.VatInclusive);
     }
 
-    private static MerchantPartnerOfferingReadDto ToOfferingDto(PartnerCatalogItem item) =>
+    private static MerchantPartnerOfferingReadDto ToOfferingDto(
+        PartnerCatalogItem item,
+        IReadOnlyDictionary<Guid, string?> briefByPartner) =>
         new()
         {
             Id = item.Id,
             PartnerId = item.PartnerId,
             Code = item.Code,
             Name = item.Name,
+            // Description doubles as the merchant-facing OfferingSummary (reused, not duplicated).
             Description = item.Description,
+            PartnerBrief = briefByPartner.TryGetValue(item.PartnerId, out var brief) ? brief : null,
+            MerchantBenefit = item.MerchantBenefit,
             OfferingKind = item.OfferingKind,
             PartnerCost = PartnerCatalogReadDtoMapper.ToMoneyDto(item.PartnerCost),
             SettlementParticipationMode = item.SettlementParticipationMode,

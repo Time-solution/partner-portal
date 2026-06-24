@@ -12,7 +12,16 @@ public class MerchantPartnerOfferingReadDto : EntityDto<Guid>
     public Guid PartnerId { get; set; }
     public string Code { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>Phase 6a — human description of the service; this IS the merchant-facing OfferingSummary.</summary>
     public string? Description { get; set; }
+
+    /// <summary>Phase 6a — partner self-introduction (partner-level), read-only for merchants.</summary>
+    public string? PartnerBrief { get; set; }
+
+    /// <summary>Phase 6a — "what the merchant gets / why activate this" (offering-level), read-only.</summary>
+    public string? MerchantBenefit { get; set; }
+
     public PartnerCatalogOfferingKind OfferingKind { get; set; }
     public MoneyDto PartnerCost { get; set; } = new();
     public SettlementParticipationMode SettlementParticipationMode { get; set; }

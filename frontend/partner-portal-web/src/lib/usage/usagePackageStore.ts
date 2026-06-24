@@ -11,8 +11,8 @@ import {
  * journal is posted here (that is the gated U3 phase).
  */
 
-// Bumped v1 -> v2 to force a clean re-seed of the COMPLETE U1–U5 demo dataset.
-const STORAGE_KEY = "zahy-usage-packages-v2";
+// Bumped v2 -> v3 (Phase 6a) to re-seed with partner-authored packageExplanation on demo packages.
+const STORAGE_KEY = "zahy-usage-packages-v3";
 
 // Demo IDs — mirror the fixtures (WhatsApp Co / W there).
 const PARTNER_WHATSAPP = "22222222-2222-2222-2222-222222222004";
@@ -42,6 +42,8 @@ function seedDefaults(): UsagePackage[] {
       overageSellAmount: 0.05,
       payer: "Merchant",
       status: "Published",
+      packageExplanation:
+        "يشمل ٥٬٠٠٠ رسالة شهريًا، وتُحتسب الرسائل الإضافية بسعر الوحدة المبيّن. مناسب للمتاجر متوسطة الحجم.",
     },
     // 2) RESALE TIERED — graduated overage ladder: 0–10,000 @0.05 sell, beyond @0.04 (buy pair below).
     //    With included 5,000 + 16,200 usage -> overage 11,200 -> 10,000×0.05 + 1,200×0.04 = 548 sell.
@@ -112,6 +114,7 @@ function seedDefaults(): UsagePackage[] {
       overageSellAmount: 0.05,
       payer: "Merchant",
       status: "Published",
+      packageExplanation: "باقة ٤٬٠٠٠ رسالة شهريًا مع سعر ثابت للوحدة الإضافية.",
     },
     // 6) SUBSCRIPTION TIERED — graduated fee ladder on the overage (first 1k then beyond).
     {

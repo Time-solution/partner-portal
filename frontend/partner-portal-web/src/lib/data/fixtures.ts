@@ -147,6 +147,8 @@ export const mockPortalData: PortalData = {
       primaryContactEmail: "billing@whatsapp.co",
       participationMode: "SubscriptionFee",
       accentClass: "border-l-green-500",
+      partnerBrief:
+        "نوفّر منصة رسائل واتساب للأعمال: قنوات متعددة، قوالب معتمدة، وربط سهل لمتجرك لزيادة تفاعل العملاء.",
     },
     {
       id: PARTNER_WTHERE,
@@ -157,6 +159,8 @@ export const mockPortalData: PortalData = {
       primaryContactEmail: "billing@wthere.co",
       participationMode: "SubscriptionFee",
       accentClass: "border-l-indigo-500",
+      partnerBrief:
+        "حلول مراسلة وتنبيهات للمطاعم والمتاجر مع باقات مرنة حسب الاستخدام.",
     },
     {
       id: PARTNER_OTO,
@@ -219,6 +223,7 @@ export const mockPortalData: PortalData = {
       code: "SVC-BASIC",
       name: "Basic tier",
       description: "Single channel, standard SLA",
+      merchantBenefit: "تواصل مباشر مع عملائك عبر واتساب وزيادة الطلبات المتكررة.",
       offeringKind: "ServiceOneOff",
       participationMode: "SubscriptionFee",
       partnerCost: sar(49),
@@ -255,6 +260,7 @@ export const mockPortalData: PortalData = {
       code: "WTH-BASIC",
       name: "Basic tier",
       description: "قناة واحدة، SLA قياسي · Single channel, standard SLA",
+      merchantBenefit: "تنبيهات فورية لعملائك تقلّل الطلبات الملغاة.",
       offeringKind: "ServiceOneOff",
       participationMode: "SubscriptionFee",
       partnerCost: sar(55),

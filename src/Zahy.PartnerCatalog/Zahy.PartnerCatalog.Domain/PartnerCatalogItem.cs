@@ -20,7 +20,15 @@ public class PartnerCatalogItem : FullAuditedAggregateRoot<Guid>, IMultiTenant
 
     public string Name { get; private set; } = string.Empty;
 
+    /// <summary>Human description of the service — reused as the merchant-facing OfferingSummary (Phase 6a).</summary>
     public string? Description { get; private set; }
+
+    /// <summary>
+    /// Phase 6a — "what the merchant gets / why activate this." Optional plain text, not required to
+    /// publish. Authored through the existing create/update authoring-by-type guard (delivery/3PL cannot
+    /// self-author). Presentation only — never a money or settlement input.
+    /// </summary>
+    public string? MerchantBenefit { get; private set; }
 
     public PartnerCatalogOfferingKind OfferingKind { get; private set; }
 
@@ -87,7 +95,8 @@ public class PartnerCatalogItem : FullAuditedAggregateRoot<Guid>, IMultiTenant
         string? externalMenuItemId = null,
         string? menuCategoryCode = null,
         SettlementParticipationMode settlementParticipationMode = SettlementParticipationMode.Principal,
-        ConsignmentOwnershipMode? consignmentOwnershipMode = null)
+        ConsignmentOwnershipMode? consignmentOwnershipMode = null,
+        string? merchantBenefit = null)
     {
         if (partnerId == Guid.Empty)
         {
@@ -119,6 +128,7 @@ public class PartnerCatalogItem : FullAuditedAggregateRoot<Guid>, IMultiTenant
             Code = NormalizeRequired(code, PartnerCatalogConsts.MaxCodeLength, nameof(code)),
             Name = NormalizeRequired(name, PartnerCatalogConsts.MaxNameLength, nameof(name)),
             Description = NormalizeOptional(description, PartnerCatalogConsts.MaxDescriptionLength),
+            MerchantBenefit = NormalizeOptional(merchantBenefit, PartnerCatalogConsts.MaxMerchantBenefitLength),
             OfferingKind = offeringKind,
             Status = PartnerCatalogItemStatus.Draft,
             SettlementBookOverride = settlementBookOverride,
@@ -153,7 +163,8 @@ public class PartnerCatalogItem : FullAuditedAggregateRoot<Guid>, IMultiTenant
         string? externalMenuItemId = null,
         string? menuCategoryCode = null,
         SettlementParticipationMode? settlementParticipationMode = null,
-        ConsignmentOwnershipMode? consignmentOwnershipMode = null)
+        ConsignmentOwnershipMode? consignmentOwnershipMode = null,
+        string? merchantBenefit = null)
     {
         if (Status != PartnerCatalogItemStatus.Draft)
         {
@@ -163,6 +174,7 @@ public class PartnerCatalogItem : FullAuditedAggregateRoot<Guid>, IMultiTenant
 
         Name = NormalizeRequired(name, PartnerCatalogConsts.MaxNameLength, nameof(name));
         Description = NormalizeOptional(description, PartnerCatalogConsts.MaxDescriptionLength);
+        MerchantBenefit = NormalizeOptional(merchantBenefit, PartnerCatalogConsts.MaxMerchantBenefitLength);
         SettlementBookOverride = settlementBookOverride;
         if (settlementTriggerMode.HasValue)
         {
