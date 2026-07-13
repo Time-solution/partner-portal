@@ -20,6 +20,7 @@ import { PackageDetailsCard } from "../components/PackageDetailsCard";
 import { ListingDetails } from "../components/ListingDetails";
 import { isListingEmpty, type OfferingListing } from "@/lib/catalog/listingSchema";
 import { getListing } from "@/lib/catalog/listingStore";
+import { MerchantServiceOrdersPanel, ServiceOrderForm } from "../components/ServiceOrderPanels";
 import { subscribePortalDataChanged } from "@/lib/data/portalDataEvents";
 import {
   MERCHANT_PREVIEW_DESC_KEYS,
@@ -59,6 +60,7 @@ export function PartnerBrowseCard({
   onActivate,
   packages,
   listings,
+  onOrderService,
 }: {
   entry: MerchantBrowsePartnerEntry;
   lang: Lang;
@@ -70,6 +72,8 @@ export function PartnerBrowseCard({
   packages: UsagePackage[];
   /** Gate 2a — structured listings keyed by offering id (read-only merchant rendering). */
   listings?: Record<string, OfferingListing>;
+  /** Gate 2b — start a service order from the listing view. */
+  onOrderService?: (item: PartnerCatalogItem) => void;
 }) {
   const t = useTranslator(lang);
   const { partner, offerings, hasTierMenu } = entry;
@@ -169,8 +173,13 @@ export function PartnerBrowseCard({
           ? offerings
               .filter((item) => listings[item.id] && !isListingEmpty(listings[item.id]))
               .map((item) => (
-                <div key={item.id} className="border-t border-border/60 pt-3" data-testid="browse-offering-listing">
+                <div key={item.id} className="space-y-2 border-t border-border/60 pt-3" data-testid="browse-offering-listing">
                   <ListingDetails lang={lang} listing={listings[item.id]} />
+                  {onOrderService ? (
+                    <Button size="sm" data-testid={`order-service-${item.id}`} onClick={() => onOrderService(item)}>
+                      {t("orderThisService" as never)}
+                    </Button>
+                  ) : null}
                 </div>
               ))
           : null}
@@ -201,6 +210,8 @@ export function MerchantPreviewPage({ lang }: { lang: Lang }) {
   const [loading, setLoading] = useState(true);
   const [expandedPartnerId, setExpandedPartnerId] = useState<string | null>(null);
   const [busyCatalogId, setBusyCatalogId] = useState<string | null>(null);
+  const [orderItem, setOrderItem] = useState<PartnerCatalogItem | null>(null);
+  const [ordersVersion, setOrdersVersion] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
 
   const loadBrowse = useCallback(async () => {
@@ -363,6 +374,25 @@ export function MerchantPreviewPage({ lang }: { lang: Lang }) {
             </div>
           ) : null}
 
+          {orderItem ? (
+            <ServiceOrderForm
+              lang={lang}
+              catalogItemId={orderItem.id}
+              offeringName={orderItem.name}
+              partnerId={orderItem.partnerId}
+              tenantId={MOCK_MERCHANT_PREVIEW.tenantId}
+              participationMode={orderItem.participationMode === "SubscriptionFee" ? "SubscriptionFee" : "Principal"}
+              buy={orderItem.partnerCost.amount}
+              sellOrFee={orderItem.partnerCost.amount}
+              requirements={getListing(orderItem.id).requirements}
+              onDone={() => {
+                setOrderItem(null);
+                setOrdersVersion((v) => v + 1);
+              }}
+              onCancel={() => setOrderItem(null)}
+            />
+          ) : null}
+          <MerchantServiceOrdersPanel key={ordersVersion} lang={lang} tenantId={MOCK_MERCHANT_PREVIEW.tenantId} />
           <MerchantReflectionOrders lang={lang} tenantId={MOCK_MERCHANT_PREVIEW.tenantId} />
 
           <Card>
@@ -415,6 +445,7 @@ export function MerchantPreviewPage({ lang }: { lang: Lang }) {
                         listings={Object.fromEntries(
                           entry.offerings.map((item) => [item.id, getListing(item.id)]),
                         )}
+                        onOrderService={(item) => setOrderItem(item)}
                         busyCatalogId={busyCatalogId}
                         onActivate={handleActivate}
                         packages={packagesByPartner.get(entry.partner.id) ?? []}

@@ -30,6 +30,8 @@ public class ZahyPartnerCatalogDbContext : AbpDbContext<ZahyPartnerCatalogDbCont
 
     public DbSet<PartnerCatalogListing> PartnerCatalogListings => Set<PartnerCatalogListing>();
 
+    public DbSet<ServiceOrder> ServiceOrders => Set<ServiceOrder>();
+
     public ZahyPartnerCatalogDbContext(DbContextOptions<ZahyPartnerCatalogDbContext> options)
         : base(options)
     {
@@ -335,6 +337,86 @@ public class ZahyPartnerCatalogDbContext : AbpDbContext<ZahyPartnerCatalogDbCont
 
             b.Ignore(x => x.IsEmpty);
 
+            b.HasQueryFilter(x =>
+                !IsPartnerFilterEnabled ||
+                CurrentPartnerId == null ||
+                x.PartnerId == CurrentPartnerId);
+        });
+
+        // The ABP base model walk discovers these row types as NON-owned before this block runs;
+        // Ignore removes that registration so OwnsMany below re-adds them as owned (the remedy the
+        // EF error itself prescribes — same family as the SettlementStateTransition ignore above).
+        builder.Ignore<ServiceOrderAnswer>();
+        builder.Ignore<ServiceOrderMilestone>();
+        builder.Ignore<ServiceOrderHistoryEntry>();
+
+        builder.Entity<ServiceOrder>(b =>
+        {
+            b.ToTable("PcatServiceOrders");
+            b.ConfigureByConvention();
+
+            b.Property(x => x.PartnerId).IsRequired();
+            b.Property(x => x.PartnerCatalogItemId).IsRequired();
+            b.Property(x => x.OfferingNameSnapshot).IsRequired().HasMaxLength(PartnerCatalogConsts.MaxNameLength);
+            b.Property(x => x.Status).IsRequired();
+            b.Property(x => x.ParticipationModeSnapshot).IsRequired();
+            b.Property(x => x.BuySnapshotAmount).HasColumnType("decimal(18,2)");
+            b.Property(x => x.SellSnapshotAmount).HasColumnType("decimal(18,2)");
+            b.Property(x => x.FeeSnapshotAmount).HasColumnType("decimal(18,2)");
+            b.Property(x => x.Currency).IsRequired().HasMaxLength(3);
+
+            b.HasIndex(x => x.PartnerId);
+            b.HasIndex(x => x.TenantId);
+            b.HasIndex(x => new { x.TenantId, x.PartnerCatalogItemId });
+            b.HasIndex(x => x.Status);
+
+            // Owned rows: explicit client Guids (ValueGeneratedNever), app-managed OrderIndex —
+            // the 2a pattern; never DB IDENTITY sequence.
+            b.OwnsMany(x => x.Answers, a =>
+            {
+                a.ToTable("PcatServiceOrderAnswers");
+                a.WithOwner().HasForeignKey("ServiceOrderId");
+                a.HasKey(x => x.Id);
+                a.Property(x => x.Id).ValueGeneratedNever();
+                a.Property(x => x.OrderIndex).IsRequired();
+                a.Property(x => x.RequirementTitleSnapshot).IsRequired()
+                    .HasMaxLength(PartnerCatalogListingConsts.MaxRequirementTitleLength);
+                a.Property(x => x.RequirementType).IsRequired();
+                a.Property(x => x.AnswerText).IsRequired()
+                    .HasMaxLength(PartnerCatalogServiceOrderConsts.MaxLongTextAnswerLength);
+            });
+
+            b.OwnsMany(x => x.Milestones, m =>
+            {
+                m.ToTable("PcatServiceOrderMilestones");
+                m.WithOwner().HasForeignKey("ServiceOrderId");
+                m.HasKey(x => x.Id);
+                m.Property(x => x.Id).ValueGeneratedNever();
+                m.Property(x => x.OrderIndex).IsRequired();
+                m.Property(x => x.Title).IsRequired()
+                    .HasMaxLength(PartnerCatalogServiceOrderConsts.MaxMilestoneTitleLength);
+                m.Property(x => x.Amount).IsRequired().HasColumnType("decimal(18,2)");
+            });
+
+            b.OwnsMany(x => x.History, h =>
+            {
+                h.ToTable("PcatServiceOrderHistory");
+                h.WithOwner().HasForeignKey("ServiceOrderId");
+                h.HasKey(x => x.Id);
+                h.Property(x => x.Id).ValueGeneratedNever();
+                h.Property(x => x.OrderIndex).IsRequired();
+                h.Property(x => x.Action).IsRequired();
+                h.Property(x => x.ToStatus).IsRequired();
+                h.Property(x => x.Actor).IsRequired().HasMaxLength(PartnerCatalogServiceOrderConsts.MaxActorLength);
+                h.Property(x => x.Note).HasMaxLength(PartnerCatalogServiceOrderConsts.MaxNoteLength);
+                h.Property(x => x.At).IsRequired();
+            });
+
+            b.Ignore(x => x.MerchantPriceAmount);
+            b.Ignore(x => x.IsTerminal);
+
+            // Partner scoping (merchant scoping comes from the built-in IMultiTenant filter):
+            // cross-partner access is structurally invisible (the ratified 2a convention).
             b.HasQueryFilter(x =>
                 !IsPartnerFilterEnabled ||
                 CurrentPartnerId == null ||

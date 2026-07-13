@@ -24,6 +24,7 @@ import { PageHeader } from "../components/PageHeader";
 import { PartnerBriefEditor } from "../components/PartnerBriefEditor";
 import { ProductPresentationEditor } from "../components/ProductPresentationEditor";
 import { getListing, saveListing } from "@/lib/catalog/listingStore";
+import { PartnerServiceOrdersPanel } from "../components/ServiceOrderPanels";
 import { TableEmptyRow } from "../components/EmptyState";
 import { filterByPartnerIds, useScopePartnerIds } from "../hooks/useScopePartnerIds";
 import type { ModuleScopeProps } from "../moduleScope";
@@ -338,6 +339,8 @@ export function CatalogPage({
           onSave={(brief) => void handleSaveBrief(brief)}
         />
       ) : null}
+
+      {partnerId ? <PartnerServiceOrdersPanel lang={lang} partnerId={partnerId} /> : null}
 
       {canWrite && partnerId ? (
         <Card>
