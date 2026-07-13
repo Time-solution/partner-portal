@@ -98,6 +98,7 @@ public class PartnerCatalogItem : FullAuditedAggregateRoot<Guid>, IMultiTenant
         ConsignmentOwnershipMode? consignmentOwnershipMode = null,
         string? merchantBenefit = null)
     {
+        PartnerCatalogContentPolicy.EnsureNoContactChannel(merchantBenefit, "MerchantBenefit");
         if (partnerId == Guid.Empty)
         {
             throw new BusinessException(PartnerCatalogErrorCodes.InvalidOfferingKind)
@@ -175,6 +176,7 @@ public class PartnerCatalogItem : FullAuditedAggregateRoot<Guid>, IMultiTenant
         Name = NormalizeRequired(name, PartnerCatalogConsts.MaxNameLength, nameof(name));
         Description = NormalizeOptional(description, PartnerCatalogConsts.MaxDescriptionLength);
         MerchantBenefit = NormalizeOptional(merchantBenefit, PartnerCatalogConsts.MaxMerchantBenefitLength);
+        PartnerCatalogContentPolicy.EnsureNoContactChannel(MerchantBenefit, "MerchantBenefit");
         SettlementBookOverride = settlementBookOverride;
         if (settlementTriggerMode.HasValue)
         {

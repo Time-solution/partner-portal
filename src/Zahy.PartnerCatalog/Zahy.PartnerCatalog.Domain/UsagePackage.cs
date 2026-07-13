@@ -162,6 +162,7 @@ public class UsagePackage : FullAuditedAggregateRoot<Guid>
                 .WithData("MaxLength", PartnerCatalogConsts.MaxPackageExplanationLength);
         }
 
+        PartnerCatalogContentPolicy.EnsureNoContactChannel(trimmed, "PackageExplanation");
         PackageExplanation = trimmed;
     }
 

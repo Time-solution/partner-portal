@@ -28,6 +28,8 @@ public class ZahyPartnerCatalogDbContext : AbpDbContext<ZahyPartnerCatalogDbCont
 
     public DbSet<PartnerCatalogProfile> PartnerCatalogProfiles => Set<PartnerCatalogProfile>();
 
+    public DbSet<PartnerCatalogListing> PartnerCatalogListings => Set<PartnerCatalogListing>();
+
     public ZahyPartnerCatalogDbContext(DbContextOptions<ZahyPartnerCatalogDbContext> options)
         : base(options)
     {
@@ -256,6 +258,82 @@ public class ZahyPartnerCatalogDbContext : AbpDbContext<ZahyPartnerCatalogDbCont
             b.HasIndex(x => x.PartnerId);
             b.HasIndex(x => x.TenantId);
             b.HasIndex(x => x.SettlementCostMarkupSnapshotId);
+
+            b.HasQueryFilter(x =>
+                !IsPartnerFilterEnabled ||
+                CurrentPartnerId == null ||
+                x.PartnerId == CurrentPartnerId);
+        });
+
+        builder.Entity<PartnerCatalogListing>(b =>
+        {
+            b.ToTable("PcatListings");
+            b.ConfigureByConvention();
+
+            b.Property(x => x.PartnerCatalogItemId).IsRequired();
+            b.Property(x => x.PartnerId).IsRequired();
+
+            // One structured listing per offering.
+            b.HasIndex(x => x.PartnerCatalogItemId).IsUnique();
+
+            // Owned rows: EXPLICIT Guid keys, app-managed OrderIndex — never DB IDENTITY sequence
+            // (the LineNo lesson). Whole-document replace reconciles as delete+insert by key.
+            b.OwnsMany(x => x.Requirements, r =>
+            {
+                r.ToTable("PcatListingRequirements");
+                r.WithOwner().HasForeignKey("ListingId");
+                r.HasKey(x => x.Id);
+                r.Property(x => x.Id).ValueGeneratedNever();
+                r.Property(x => x.OrderIndex).IsRequired();
+                r.Property(x => x.Title).IsRequired().HasMaxLength(PartnerCatalogListingConsts.MaxRequirementTitleLength);
+                r.Property(x => x.Type).IsRequired();
+                r.Property(x => x.ChoicesJson).IsRequired().HasMaxLength(1024);
+                r.Ignore(x => x.Choices);
+            });
+
+            b.OwnsMany(x => x.Deliverables, d =>
+            {
+                d.ToTable("PcatListingDeliverables");
+                d.WithOwner().HasForeignKey("ListingId");
+                d.HasKey(x => x.Id);
+                d.Property(x => x.Id).ValueGeneratedNever();
+                d.Property(x => x.OrderIndex).IsRequired();
+                d.Property(x => x.Title).IsRequired().HasMaxLength(PartnerCatalogListingConsts.MaxDeliverableTitleLength);
+                d.Property(x => x.Quantity).IsRequired();
+            });
+
+            b.OwnsMany(x => x.ExecutionSteps, e =>
+            {
+                e.ToTable("PcatListingExecutionSteps");
+                e.WithOwner().HasForeignKey("ListingId");
+                e.HasKey(x => x.Id);
+                e.Property(x => x.Id).ValueGeneratedNever();
+                e.Property(x => x.OrderIndex).IsRequired();
+                e.Property(x => x.Text).IsRequired().HasMaxLength(PartnerCatalogListingConsts.MaxExecutionStepLength);
+            });
+
+            b.OwnsMany(x => x.Terms, t =>
+            {
+                t.ToTable("PcatListingTerms");
+                t.WithOwner().HasForeignKey("ListingId");
+                t.HasKey(x => x.Id);
+                t.Property(x => x.Id).ValueGeneratedNever();
+                t.Property(x => x.OrderIndex).IsRequired();
+                t.Property(x => x.Text).IsRequired().HasMaxLength(PartnerCatalogListingConsts.MaxTermLength);
+            });
+
+            b.OwnsMany(x => x.Faqs, f =>
+            {
+                f.ToTable("PcatListingFaqs");
+                f.WithOwner().HasForeignKey("ListingId");
+                f.HasKey(x => x.Id);
+                f.Property(x => x.Id).ValueGeneratedNever();
+                f.Property(x => x.OrderIndex).IsRequired();
+                f.Property(x => x.Question).IsRequired().HasMaxLength(PartnerCatalogListingConsts.MaxFaqQuestionLength);
+                f.Property(x => x.Answer).IsRequired().HasMaxLength(PartnerCatalogListingConsts.MaxFaqAnswerLength);
+            });
+
+            b.Ignore(x => x.IsEmpty);
 
             b.HasQueryFilter(x =>
                 !IsPartnerFilterEnabled ||

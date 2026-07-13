@@ -55,6 +55,7 @@ public class PartnerCatalogProfile : FullAuditedAggregateRoot<Guid>
                 .WithData("MaxLength", PartnerCatalogConsts.MaxPartnerBriefLength);
         }
 
+        PartnerCatalogContentPolicy.EnsureNoContactChannel(trimmed, "PartnerBrief");
         PartnerBrief = trimmed;
     }
 }

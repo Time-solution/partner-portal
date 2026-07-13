@@ -23,6 +23,7 @@ import { PortalPermissions } from "@/lib/rbac/portalRoles";
 import { PageHeader } from "../components/PageHeader";
 import { PartnerBriefEditor } from "../components/PartnerBriefEditor";
 import { ProductPresentationEditor } from "../components/ProductPresentationEditor";
+import { getListing, saveListing } from "@/lib/catalog/listingStore";
 import { TableEmptyRow } from "../components/EmptyState";
 import { filterByPartnerIds, useScopePartnerIds } from "../hooks/useScopePartnerIds";
 import type { ModuleScopeProps } from "../moduleScope";
@@ -311,6 +312,10 @@ export function CatalogPage({
         onBack={() => setPresentationItem(null)}
         onSaveOffering={(input) => void handleSaveOffering(presentationItem.id, input)}
         onSavePackageNote={handleSavePackageNote}
+        listing={getListing(presentationItem.id)}
+        onSaveListing={(next) => {
+          saveListing(next);
+        }}
       />
     );
   }

@@ -13,6 +13,9 @@ import type { PartnerCatalogItem } from "@/lib/data/types";
 import type { UsagePackage } from "@/lib/usage/usagePackage";
 import { useTranslator, type Lang } from "@/lib/i18n";
 import { PackageDetailsCard } from "./PackageDetailsCard";
+import { ListingSectionsEditor } from "./ListingSectionsEditor";
+import { ListingDetails } from "./ListingDetails";
+import type { OfferingListing } from "@/lib/catalog/listingSchema";
 
 const TEXTAREA_CLASS =
   "flex w-full rounded-md border border-input bg-surface px-3 py-2 text-sm text-surface-foreground shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
@@ -79,6 +82,8 @@ export function ProductPresentationEditor({
   onBack,
   onSaveOffering,
   onSavePackageNote,
+  listing,
+  onSaveListing,
 }: {
   lang: Lang;
   item: PartnerCatalogItem;
@@ -88,6 +93,9 @@ export function ProductPresentationEditor({
   onBack: () => void;
   onSaveOffering: (input: { description?: string; merchantBenefit?: string }) => void;
   onSavePackageNote: (packageId: string, note: string | undefined) => void;
+  /** Gate 2a — structured listing (five sections). Editable when canEdit; read-only preview otherwise. */
+  listing?: OfferingListing;
+  onSaveListing?: (next: OfferingListing) => void;
 }) {
   const t = useTranslator(lang);
   const isRtl = lang === "ar";
@@ -209,6 +217,22 @@ export function ProductPresentationEditor({
           )}
         </CardContent>
       </Card>
+
+      {listing && onSaveListing ? (
+        <Card data-testid="listing-card">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">{t("listingEditorTitle" as never)}</CardTitle>
+            <CardDescription>{t("listingEditorDesc" as never)}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {canEdit ? (
+              <ListingSectionsEditor lang={lang} listing={listing} onSave={onSaveListing} busy={busy} />
+            ) : (
+              <ListingDetails lang={lang} listing={listing} />
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }

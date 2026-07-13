@@ -17,6 +17,9 @@ import type { PartnerCatalogItem } from "@/lib/data/types";
 import { listUsagePackages } from "@/lib/usage/usagePackageStore";
 import type { UsagePackage } from "@/lib/usage/usagePackage";
 import { PackageDetailsCard } from "../components/PackageDetailsCard";
+import { ListingDetails } from "../components/ListingDetails";
+import { isListingEmpty, type OfferingListing } from "@/lib/catalog/listingSchema";
+import { getListing } from "@/lib/catalog/listingStore";
 import { subscribePortalDataChanged } from "@/lib/data/portalDataEvents";
 import {
   MERCHANT_PREVIEW_DESC_KEYS,
@@ -55,6 +58,7 @@ export function PartnerBrowseCard({
   busyCatalogId,
   onActivate,
   packages,
+  listings,
 }: {
   entry: MerchantBrowsePartnerEntry;
   lang: Lang;
@@ -64,6 +68,8 @@ export function PartnerBrowseCard({
   busyCatalogId: string | null;
   onActivate: (entry: MerchantBrowsePartnerEntry, item: PartnerCatalogItem) => void;
   packages: UsagePackage[];
+  /** Gate 2a — structured listings keyed by offering id (read-only merchant rendering). */
+  listings?: Record<string, OfferingListing>;
 }) {
   const t = useTranslator(lang);
   const { partner, offerings, hasTierMenu } = entry;
@@ -158,6 +164,16 @@ export function PartnerBrowseCard({
             </Button>
           </>
         ) : null}
+
+        {listings
+          ? offerings
+              .filter((item) => listings[item.id] && !isListingEmpty(listings[item.id]))
+              .map((item) => (
+                <div key={item.id} className="border-t border-border/60 pt-3" data-testid="browse-offering-listing">
+                  <ListingDetails lang={lang} listing={listings[item.id]} />
+                </div>
+              ))
+          : null}
 
         {packages.length > 0 ? (
           <div className="space-y-2 border-t border-border/60 pt-3" data-testid="browse-partner-packages">
@@ -396,6 +412,9 @@ export function MerchantPreviewPage({ lang }: { lang: Lang }) {
                           )
                         }
                         activeCatalogIds={activeCatalogIds}
+                        listings={Object.fromEntries(
+                          entry.offerings.map((item) => [item.id, getListing(item.id)]),
+                        )}
                         busyCatalogId={busyCatalogId}
                         onActivate={handleActivate}
                         packages={packagesByPartner.get(entry.partner.id) ?? []}
