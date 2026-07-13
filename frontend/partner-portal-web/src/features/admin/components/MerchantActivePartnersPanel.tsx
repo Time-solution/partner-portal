@@ -29,6 +29,8 @@ export function MerchantActivePartnersPanel({
   const t = useTranslator(lang);
   const isRtl = lang === "ar";
   const [rows, setRows] = useState<MerchantActivePartnerRow[]>([]);
+  const [briefByPartner, setBriefByPartner] = useState<Map<string, string>>(new Map());
+  const [benefitByKey, setBenefitByKey] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -38,6 +40,17 @@ export function MerchantActivePartnersPanel({
       const [data, partners] = await Promise.all([ds.getAll(), ds.getPartners()]);
       const partnerNameById = new Map(
         partners.map((p) => [p.id, p.tradeName ?? p.legalName]),
+      );
+      // Phase 6b — read-only presentation fields (no pricing): company brief + offering benefit.
+      setBriefByPartner(
+        new Map(partners.filter((p) => p.partnerBrief).map((p) => [p.id, p.partnerBrief as string])),
+      );
+      setBenefitByKey(
+        new Map(
+          data.catalogItems
+            .filter((c) => c.merchantBenefit)
+            .map((c) => [`${c.partnerId}:${c.code}`, c.merchantBenefit as string]),
+        ),
       );
       const built = buildMerchantActivePartners(data, tenantId, partnerNameById);
       for (const row of built) {
@@ -140,6 +153,26 @@ export function MerchantActivePartnersPanel({
                   ) : null}
                 </div>
               </CardHeader>
+              {briefByPartner.get(row.partnerId) || benefitByKey.get(`${row.partnerId}:${row.tierCode}`) ? (
+                <CardContent className="space-y-2 pb-0 pt-0" data-testid="active-partner-presentation">
+                  {briefByPartner.get(row.partnerId) ? (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {t("merchantBrowseAboutPartner" as never)}
+                      </p>
+                      <p className="mt-0.5 whitespace-pre-line text-sm">{briefByPartner.get(row.partnerId)}</p>
+                    </div>
+                  ) : null}
+                  {benefitByKey.get(`${row.partnerId}:${row.tierCode}`) ? (
+                    <div>
+                      <p className="text-xs font-medium text-teal-700 dark:text-teal-300">
+                        {t("merchantBrowseWhatYouGet" as never)}
+                      </p>
+                      <p className="mt-0.5 text-sm">{benefitByKey.get(`${row.partnerId}:${row.tierCode}`)}</p>
+                    </div>
+                  ) : null}
+                </CardContent>
+              ) : null}
               <CardContent className="grid gap-2 pt-0 text-sm sm:grid-cols-2 lg:grid-cols-4">
                 <div>
                   <span className="text-muted-foreground">{t("merchantBrowseYourPrice" as never)}</span>

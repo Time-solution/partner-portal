@@ -17,6 +17,7 @@ import { listUsageRecords } from "@/lib/usage/usageStore";
 import { usageForPeriod } from "@/lib/usage/usageReports";
 import { buildUsageInvoiceBreakdown } from "@/lib/usage/usageInvoiceBreakdown";
 import { UsageInvoiceBreakdownCard } from "./UsageInvoiceBreakdownCard";
+import { PackageDetailsCard } from "./PackageDetailsCard";
 import { useTranslator, type Lang } from "@/lib/i18n";
 
 /** Merchant-view sell/fee price for a package (buy/margin are structurally absent here). */
@@ -149,30 +150,33 @@ export function MerchantUsagePackagesPanel({
                     return (
                       <li
                         key={pkg.id}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2"
+                        className="space-y-2 rounded-md border border-border px-3 py-2"
                       >
-                        <div>
-                          <p className="font-medium">{pkg.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {t(
-                              (pkg.mode === "Subscription"
-                                ? "usagePkgModeSubscription"
-                                : "usagePkgModeResale") as never,
-                            )}
-                            {" · "}
-                            {t("usageSelYourPrice" as never)}: <MoneyAmount amount={merchantPrice(pkg)} />
-                          </p>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <p className="font-medium">{pkg.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {t(
+                                (pkg.mode === "Subscription"
+                                  ? "usagePkgModeSubscription"
+                                  : "usagePkgModeResale") as never,
+                              )}
+                              {" · "}
+                              {t("usageSelYourPrice" as never)}: <MoneyAmount amount={merchantPrice(pkg)} />
+                            </p>
+                          </div>
+                          {isActive ? (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-teal-500/40 bg-teal-500/10 px-2.5 py-1 text-xs font-medium text-teal-800 dark:text-teal-200">
+                              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                              {t("usageSelActive" as never)}
+                            </span>
+                          ) : (
+                            <Button size="sm" disabled={busyId === pkg.id} onClick={() => handleSelect(pkg)}>
+                              {t("usageSelSelect" as never)}
+                            </Button>
+                          )}
                         </div>
-                        {isActive ? (
-                          <span className="inline-flex items-center gap-1 rounded-full border border-teal-500/40 bg-teal-500/10 px-2.5 py-1 text-xs font-medium text-teal-800 dark:text-teal-200">
-                            <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-                            {t("usageSelActive" as never)}
-                          </span>
-                        ) : (
-                          <Button size="sm" disabled={busyId === pkg.id} onClick={() => handleSelect(pkg)}>
-                            {t("usageSelSelect" as never)}
-                          </Button>
-                        )}
+                        <PackageDetailsCard lang={lang} pkg={pkg} />
                       </li>
                     );
                   })}

@@ -14,6 +14,9 @@ import {
 import { projectCatalogPrice } from "@/lib/catalog/catalogPriceVisibility";
 import { getPortalDataSource } from "@/lib/data";
 import type { PartnerCatalogItem } from "@/lib/data/types";
+import { listUsagePackages } from "@/lib/usage/usagePackageStore";
+import type { UsagePackage } from "@/lib/usage/usagePackage";
+import { PackageDetailsCard } from "../components/PackageDetailsCard";
 import { subscribePortalDataChanged } from "@/lib/data/portalDataEvents";
 import {
   MERCHANT_PREVIEW_DESC_KEYS,
@@ -43,7 +46,7 @@ function TierPrice({ item }: { item: PartnerCatalogItem }) {
   return <MoneyAmount amount={scoped.sell.amount} />;
 }
 
-function PartnerBrowseCard({
+export function PartnerBrowseCard({
   entry,
   lang,
   expanded,
@@ -51,6 +54,7 @@ function PartnerBrowseCard({
   activeCatalogIds,
   busyCatalogId,
   onActivate,
+  packages,
 }: {
   entry: MerchantBrowsePartnerEntry;
   lang: Lang;
@@ -59,6 +63,7 @@ function PartnerBrowseCard({
   activeCatalogIds: Set<string>;
   busyCatalogId: string | null;
   onActivate: (entry: MerchantBrowsePartnerEntry, item: PartnerCatalogItem) => void;
+  packages: UsagePackage[];
 }) {
   const t = useTranslator(lang);
   const { partner, offerings, hasTierMenu } = entry;
@@ -67,22 +72,38 @@ function PartnerBrowseCard({
   const serviceType = offerings[0]
     ? offeringKindLabel(lang, offerings[0].offeringKind)
     : "—";
+  // Lead the card with the partner's own company brief; fall back to the mock catalogue copy.
+  const brief = partner.partnerBrief ?? t(descKey as never);
+  const benefit = offerings.find((o) => o.merchantBenefit)?.merchantBenefit;
 
   const singleOffering = offerings.length === 1 ? offerings[0] : undefined;
   const singleActive = singleOffering ? activeCatalogIds.has(singleOffering.id) : false;
 
   return (
-    <Card className={["border-s-4", partner.accentClass].join(" ")}>
+    <Card className={["border-s-4", partner.accentClass].join(" ")} data-testid="partner-browse-card">
       <CardHeader className="space-y-1 pb-3">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-lg">{name}</CardTitle>
           <Store className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
         </div>
-        <CardDescription className="text-sm">
-          {t(descKey as never)} · {serviceType}
-        </CardDescription>
+        <CardDescription className="text-sm">{serviceType}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
+        <div data-testid="browse-partner-brief">
+          <p className="text-xs font-medium text-muted-foreground">{t("merchantBrowseAboutPartner" as never)}</p>
+          <p className="mt-0.5 whitespace-pre-line text-sm">{brief}</p>
+        </div>
+        {benefit ? (
+          <div
+            data-testid="browse-merchant-benefit"
+            className="rounded-md border border-teal-500/30 bg-teal-500/5 px-3 py-2"
+          >
+            <p className="text-xs font-medium text-teal-700 dark:text-teal-300">
+              {t("merchantBrowseWhatYouGet" as never)}
+            </p>
+            <p className="mt-0.5 text-sm">{benefit}</p>
+          </div>
+        ) : null}
         {hasTierMenu ? (
           <>
             <Button variant="outline" className="w-full justify-between" onClick={onToggleExpand}>
@@ -137,6 +158,17 @@ function PartnerBrowseCard({
             </Button>
           </>
         ) : null}
+
+        {packages.length > 0 ? (
+          <div className="space-y-2 border-t border-border/60 pt-3" data-testid="browse-partner-packages">
+            <p className="text-xs font-medium text-muted-foreground">
+              {t("merchantBrowsePackagesLabel" as never)}
+            </p>
+            {packages.map((pkg) => (
+              <PackageDetailsCard key={pkg.id} lang={lang} pkg={pkg} />
+            ))}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -148,6 +180,7 @@ export function MerchantPreviewPage({ lang }: { lang: Lang }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = parseMerchantTab(searchParams.get("tab"));
   const [browseGroups, setBrowseGroups] = useState(() => buildMerchantBrowseGroups([], []));
+  const [packagesByPartner, setPackagesByPartner] = useState<Map<string, UsagePackage[]>>(new Map());
   const [activeCatalogIds, setActiveCatalogIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [expandedPartnerId, setExpandedPartnerId] = useState<string | null>(null);
@@ -164,6 +197,11 @@ export function MerchantPreviewPage({ lang }: { lang: Lang }) {
         ds.getActivations(),
       ]);
       setBrowseGroups(buildMerchantBrowseGroups(partners, catalog));
+      const pkgMap = new Map<string, UsagePackage[]>();
+      for (const pkg of listUsagePackages().filter((p) => p.status === "Published")) {
+        pkgMap.set(pkg.partnerId, [...(pkgMap.get(pkg.partnerId) ?? []), pkg]);
+      }
+      setPackagesByPartner(pkgMap);
       const ids = new Set<string>();
       for (const row of activations) {
         if (
@@ -360,6 +398,7 @@ export function MerchantPreviewPage({ lang }: { lang: Lang }) {
                         activeCatalogIds={activeCatalogIds}
                         busyCatalogId={busyCatalogId}
                         onActivate={handleActivate}
+                        packages={packagesByPartner.get(entry.partner.id) ?? []}
                       />
                     ))}
                   </div>

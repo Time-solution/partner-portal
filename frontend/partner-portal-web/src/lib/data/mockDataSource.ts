@@ -29,6 +29,12 @@ import type {
   WebhookEndpoint,
 } from "./types";
 import { computeManualInvoiceLines, computeManualInvoiceTotals } from "@/lib/invoice/manualInvoice";
+import {
+  MAX_MERCHANT_BENEFIT,
+  MAX_OFFERING_SUMMARY,
+  MAX_PARTNER_BRIEF,
+  normalizeOptionalPresentation,
+} from "@/lib/catalog/presentationFields";
 import { DEFAULT_MERCHANT_PROFILES, DEFAULT_PARTNER_PROFILES } from "@/lib/profile/orgProfile";
 import {
   deriveInvoicePayment,
@@ -156,6 +162,15 @@ export class MockPortalDataSource implements IPortalDataSource {
     return this.view().partners.find((p) => p.id === id);
   }
 
+  async updatePartnerBrief(partnerId: string, brief: string | undefined) {
+    await delay();
+    const partner = this.data.partners.find((p) => p.id === partnerId);
+    if (!partner) throw new Error("Partner not found.");
+    partner.partnerBrief = normalizeOptionalPresentation(brief, MAX_PARTNER_BRIEF);
+    this.persist();
+    return { ...partner };
+  }
+
   async getCatalogItems(partnerId?: string) {
     await delay();
     const items = this.view().catalogItems;
@@ -195,6 +210,19 @@ export class MockPortalDataSource implements IPortalDataSource {
     item.name = input.name.trim();
     item.description = input.description?.trim();
     item.partnerCost = input.partnerCost;
+    this.persist();
+    return { ...item };
+  }
+
+  async updateCatalogPresentation(
+    id: string,
+    input: import("./IPortalDataSource").UpdateCatalogPresentationInput,
+  ) {
+    await delay();
+    const item = this.data.catalogItems.find((i) => i.id === id);
+    if (!item) throw new Error("Catalog item not found.");
+    item.description = normalizeOptionalPresentation(input.description, MAX_OFFERING_SUMMARY);
+    item.merchantBenefit = normalizeOptionalPresentation(input.merchantBenefit, MAX_MERCHANT_BENEFIT);
     this.persist();
     return { ...item };
   }

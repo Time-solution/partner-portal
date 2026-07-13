@@ -77,13 +77,25 @@ export interface UpdateCatalogItemInput {
   partnerCost: PartnerCatalogItem["partnerCost"];
 }
 
+/** Phase 6b — presentation-only update (no pricing, not draft-gated). */
+export interface UpdateCatalogPresentationInput {
+  /** Merchant-facing OfferingSummary (reuses the existing description field). */
+  description?: string;
+  /** "What the merchant gets / why activate this." */
+  merchantBenefit?: string;
+}
+
 export interface IPortalDataSource {
   getDashboardKpis(): Promise<DashboardKpis>;
   getPartners(): Promise<Partner[]>;
   getPartner(id: string): Promise<Partner | undefined>;
+  /** Phase 6b — set/clear the partner's company self-introduction (presentation only, all types). */
+  updatePartnerBrief(partnerId: string, brief: string | undefined): Promise<Partner>;
   getCatalogItems(partnerId?: string): Promise<PartnerCatalogItem[]>;
   createCatalogItem(input: CreateCatalogItemInput): Promise<PartnerCatalogItem>;
   updateCatalogItem(id: string, input: UpdateCatalogItemInput): Promise<PartnerCatalogItem>;
+  /** Phase 6b — update presentation fields (benefit/summary) regardless of status; never touches pricing. */
+  updateCatalogPresentation(id: string, input: UpdateCatalogPresentationInput): Promise<PartnerCatalogItem>;
   publishCatalogItem(id: string): Promise<PartnerCatalogItem>;
   archiveCatalogItem(id: string): Promise<PartnerCatalogItem>;
   getActivations(partnerId?: string): Promise<MerchantActivationRow[]>;

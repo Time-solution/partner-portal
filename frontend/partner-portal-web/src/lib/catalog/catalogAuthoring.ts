@@ -39,6 +39,17 @@ export function resolveCatalogAuthoringMode(input: {
   return "admin-managed-readonly";
 }
 
+/**
+ * Phase 6b — may the current viewer author the OFFERING/PACKAGE presentation fields
+ * (MerchantBenefit, OfferingSummary, PackageExplanation)? Follows the SAME authoring-by-type
+ * rule as catalog items: a service partner self-authors; delivery/3PL is admin-managed
+ * (read-only for the partner). NOTE: PartnerBrief is NOT gated here — it is company
+ * self-description, editable by every partner type.
+ */
+export function canAuthorOfferingPresentation(mode: CatalogAuthoringMode): boolean {
+  return mode === "self-service" || mode === "admin-managed-write";
+}
+
 /** Mock UI-only tier grouping key (Option A — separate items, grouped in UI). */
 export function tierGroupKey(code: string): string {
   const dash = code.indexOf("-");

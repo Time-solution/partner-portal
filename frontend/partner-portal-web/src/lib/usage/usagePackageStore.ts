@@ -4,6 +4,7 @@ import {
   type UsagePackage,
   type UsagePackageInput,
 } from "./usagePackage";
+import { MAX_PACKAGE_EXPLANATION, normalizeOptionalPresentation } from "@/lib/catalog/presentationFields";
 
 /**
  * U2 — sibling localStorage store for usage packages (mock), mirroring the `usageStore` / `bankRegistryStore`
@@ -239,6 +240,20 @@ export function updateUsagePackage(id: string, input: UsagePackageInput): UsageP
   next[idx] = updated;
   saveList(next);
   return updated;
+}
+
+/**
+ * Phase 6b — set/clear the partner-authored plain-text explanation for a package (presentation only,
+ * no pricing). Empty/blank clears it. Trimmed + capped to {@link MAX_PACKAGE_EXPLANATION}.
+ */
+export function setPackageExplanation(id: string, explanation: string | undefined): UsagePackage {
+  const list = loadList();
+  const idx = list.findIndex((p) => p.id === id);
+  if (idx < 0) throw new Error("Usage package not found");
+  const next = list.slice();
+  next[idx] = { ...list[idx], packageExplanation: normalizeOptionalPresentation(explanation, MAX_PACKAGE_EXPLANATION) };
+  saveList(next);
+  return next[idx];
 }
 
 function setStatus(id: string, status: UsagePackage["status"]): UsagePackage {

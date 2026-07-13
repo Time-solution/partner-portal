@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { MoneyAmount } from "@/components/MoneyAmount";
 import { usePortalSession } from "@/features/auth/usePortalSession";
 import {
+  canAuthorOfferingPresentation,
   groupCatalogTiers,
   isSelfServiceOfferingKind,
   resolveCatalogAuthoringMode,
@@ -14,10 +15,14 @@ import {
 import { portalRoleToPriceViewer, projectCatalogPrice } from "@/lib/catalog/catalogPriceVisibility";
 import { getPortalDataSource } from "@/lib/data";
 import type { OfferingKind, Partner, PartnerCatalogItem } from "@/lib/data/types";
+import { listUsagePackages, setPackageExplanation } from "@/lib/usage/usagePackageStore";
+import type { UsagePackage } from "@/lib/usage/usagePackage";
 import { useTranslator } from "@/lib/i18n";
 import { offeringKindLabel, participationModeLabel, settlementBookLabel } from "@/lib/i18n/domainLabels";
 import { PortalPermissions } from "@/lib/rbac/portalRoles";
 import { PageHeader } from "../components/PageHeader";
+import { PartnerBriefEditor } from "../components/PartnerBriefEditor";
+import { ProductPresentationEditor } from "../components/ProductPresentationEditor";
 import { TableEmptyRow } from "../components/EmptyState";
 import { filterByPartnerIds, useScopePartnerIds } from "../hooks/useScopePartnerIds";
 import type { ModuleScopeProps } from "../moduleScope";
@@ -54,6 +59,8 @@ export function CatalogPage({
 
   const [items, setItems] = useState<PartnerCatalogItem[]>([]);
   const [partner, setPartner] = useState<Partner | undefined>();
+  const [packages, setPackages] = useState<UsagePackage[]>([]);
+  const [presentationItem, setPresentationItem] = useState<PartnerCatalogItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -78,6 +85,8 @@ export function CatalogPage({
   );
 
   const canWrite = authoringMode === "self-service" || authoringMode === "admin-managed-write";
+  const canEditBrief = canAuthorSelf || canAuthorManaged;
+  const canEditPresentation = canAuthorOfferingPresentation(authoringMode);
   const tierGroups = useMemo(
     () => (authoringMode === "self-service" ? groupCatalogTiers(items) : []),
     [authoringMode, items],
@@ -91,6 +100,7 @@ export function CatalogPage({
       ds.getPartners(),
     ]);
     setItems(filterByPartnerIds(all, scopeIds));
+    setPackages(partnerId ? listUsagePackages(partnerId) : []);
     if (partnerId) {
       setPartner(partners.find((p) => p.id === partnerId));
     } else {
@@ -161,6 +171,36 @@ export function CatalogPage({
     }
   };
 
+  const handleSaveBrief = async (brief: string | undefined) => {
+    if (!partnerId) return;
+    setBusy(true);
+    try {
+      await getPortalDataSource().updatePartnerBrief(partnerId, brief);
+      await reload();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleSaveOffering = async (
+    id: string,
+    input: { description?: string; merchantBenefit?: string },
+  ) => {
+    setBusy(true);
+    try {
+      const updated = await getPortalDataSource().updateCatalogPresentation(id, input);
+      await reload();
+      setPresentationItem(updated);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleSavePackageNote = (packageId: string, note: string | undefined) => {
+    setPackageExplanation(packageId, note);
+    if (partnerId) setPackages(listUsagePackages(partnerId));
+  };
+
   const startEdit = (item: PartnerCatalogItem) => {
     setEditId(item.id);
     setFormCode(item.code);
@@ -203,8 +243,17 @@ export function CatalogPage({
   const renderItemRow = (item: PartnerCatalogItem, actions?: boolean) => (
     <tr key={item.id} className="border-b border-border/60">
       <td className="px-2 py-2">
-        <span className="font-medium">{item.name}</span>
+        <button
+          type="button"
+          className="text-start font-medium text-foreground underline-offset-2 hover:underline"
+          onClick={() => setPresentationItem(item)}
+        >
+          {item.name}
+        </button>
         <span className="ms-2 text-xs text-muted-foreground">{item.code}</span>
+        {item.merchantBenefit ? (
+          <p className="mt-0.5 text-xs text-teal-700 dark:text-teal-300">{item.merchantBenefit}</p>
+        ) : null}
         {item.description ? (
           <p className="mt-0.5 text-xs text-muted-foreground">{item.description}</p>
         ) : null}
@@ -250,6 +299,22 @@ export function CatalogPage({
       </p>
     ) : null;
 
+  if (presentationItem) {
+    return (
+      <ProductPresentationEditor
+        key={presentationItem.id}
+        lang={lang}
+        item={presentationItem}
+        packages={packages}
+        canEdit={canEditPresentation}
+        busy={busy}
+        onBack={() => setPresentationItem(null)}
+        onSaveOffering={(input) => void handleSaveOffering(presentationItem.id, input)}
+        onSavePackageNote={handleSavePackageNote}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       {showHeader ? (
@@ -257,6 +322,17 @@ export function CatalogPage({
       ) : null}
 
       {readOnlyNotice}
+
+      {partnerId ? (
+        <PartnerBriefEditor
+          key={partner?.id ?? partnerId}
+          lang={lang}
+          brief={partner?.partnerBrief}
+          canEdit={canEditBrief}
+          busy={busy}
+          onSave={(brief) => void handleSaveBrief(brief)}
+        />
+      ) : null}
 
       {canWrite && partnerId ? (
         <Card>
