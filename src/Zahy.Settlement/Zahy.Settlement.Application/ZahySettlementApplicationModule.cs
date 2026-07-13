@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Volo.Abp;
 using Volo.Abp.Application;
 using Volo.Abp.Modularity;
@@ -30,6 +31,13 @@ public class ZahySettlementApplicationModule : AbpModule
         context.Services.AddTransient<ISettlementFlowProfileResolver, SettlementFlowProfileResolver>();
         context.Services.AddTransient<IResaleVatCalculator, ResaleVatCalculator>();
         context.Services.AddTransient<ISettlementResaleTriggerPort, SettlementResaleTriggerService>();
+
+        // Gate 1 — aggregator statement reconciliation (compute-only; no posting, no money movement).
+        // The reflected-order source stays the mock/in-memory default until the live wiring gate.
+        context.Services.AddTransient<AggregatorReconciliationService>();
+        context.Services.AddSingleton<InMemoryAggregatorReflectedOrderSource>();
+        context.Services.TryAddSingleton<IAggregatorReflectedOrderSource>(sp =>
+            sp.GetRequiredService<InMemoryAggregatorReflectedOrderSource>());
 
         // P4 — webhook ingestion + allocation + explain.
         context.Services.AddTransient<ISigningSecretResolver, ConfigSigningSecretResolver>();

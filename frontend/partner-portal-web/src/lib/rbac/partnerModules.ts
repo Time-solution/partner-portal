@@ -220,7 +220,8 @@ export type FinanceWorkspaceTabId =
   | "balances"
   | "vat"
   | "pending-approvals"
-  | "commission-approvals";
+  | "commission-approvals"
+  | "reconcile";
 
 export interface FinanceTabDef {
   id: FinanceWorkspaceTabId;
@@ -239,4 +240,5 @@ export const FINANCE_WORKSPACE_TABS: readonly FinanceTabDef[] = [
   { id: "vat", path: "vat", labelKey: "financeTab_vat" },
   { id: "pending-approvals", path: "pending-approvals", labelKey: "financeTab_pendingApprovals" },
   { id: "commission-approvals", path: "commission-approvals", labelKey: "financeTab_commissionApprovals" },
+  { id: "reconcile", path: "reconcile", labelKey: "financeTab_aggregatorReconcile" },
 ];

@@ -28,6 +28,7 @@ import { BalancesPage } from "./BalancesPage";
 import { ReportsPage } from "./ReportsPage";
 import { CommissionApprovalsPage, CommissionApprovalsNavLink } from "./CommissionApprovalsPage";
 import { ManualInvoicePage } from "./ManualInvoicePage";
+import { AggregatorReconcilePage } from "./AggregatorReconcilePage";
 import { FinanceDrillDown } from "../components/FinanceDrillDown";
 
 function FinanceTabNav({ lang }: { lang: Lang }) {
@@ -299,6 +300,7 @@ export function FinanceWorkspacePage({ lang }: { lang: Lang }) {
         <Route path="pending-approvals" element={<FinancePendingApprovals lang={lang} />} />
         <Route path="commission-approvals" element={<CommissionApprovalsPage lang={lang} />} />
         <Route path="invoices/new" element={<ManualInvoicePage lang={lang} />} />
+        <Route path="reconcile" element={<AggregatorReconcilePage lang={lang} />} />
         <Route path="*" element={<Navigate to="overview" replace />} />
       </Routes>
     </div>

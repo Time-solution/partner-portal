@@ -30,6 +30,12 @@ public class ZahySettlementDbContext : AbpDbContext<ZahySettlementDbContext>
 
     public DbSet<UsageRecord> UsageRecords => Set<UsageRecord>();
 
+    public DbSet<AggregatorStatement> AggregatorStatements => Set<AggregatorStatement>();
+
+    public DbSet<AggregatorStatementLine> AggregatorStatementLines => Set<AggregatorStatementLine>();
+
+    public DbSet<AggregatorStatementException> AggregatorStatementExceptions => Set<AggregatorStatementException>();
+
     public ZahySettlementDbContext(DbContextOptions<ZahySettlementDbContext> options)
         : base(options)
     {
@@ -282,6 +288,69 @@ public class ZahySettlementDbContext : AbpDbContext<ZahySettlementDbContext>
             // NOT unique — a rejected and a later valid event for the same id may both be recorded.
             b.HasIndex(x => x.SettlementCaseId);
             b.HasIndex(x => new { x.Book, x.ExternalEventId });
+        });
+
+        builder.Entity<AggregatorStatement>(b =>
+        {
+            b.ToTable("StlAggregatorStatements");
+            b.ConfigureByConvention();
+
+            b.Property(x => x.PartnerId).IsRequired();
+            b.Property(x => x.Source).IsRequired().HasMaxLength(SettlementAggregatorStatementConsts.MaxSourceLength);
+            b.Property(x => x.PeriodFrom).IsRequired();
+            b.Property(x => x.PeriodTo).IsRequired();
+            b.Property(x => x.ImportIdempotencyKey).IsRequired()
+                .HasMaxLength(SettlementAggregatorStatementConsts.MaxImportIdempotencyKeyLength);
+            b.Property(x => x.DeclaredGross).IsRequired().HasColumnType("decimal(18,2)");
+            b.Property(x => x.DeclaredFees).IsRequired().HasColumnType("decimal(18,2)");
+            b.Property(x => x.DeclaredNet).IsRequired().HasColumnType("decimal(18,2)");
+            b.Property(x => x.Currency).IsRequired().HasMaxLength(3);
+            b.Property(x => x.Status).IsRequired();
+            b.Property(x => x.ImportedBy).IsRequired().HasMaxLength(SettlementAggregatorStatementConsts.MaxActorLength);
+            b.Property(x => x.ClosedBy).HasMaxLength(SettlementAggregatorStatementConsts.MaxActorLength);
+
+            // Content-hash idempotency: one statement per imported content — re-import is a no-op.
+            b.HasIndex(x => x.ImportIdempotencyKey).IsUnique();
+            b.HasIndex(x => new { x.PartnerId, x.PeriodFrom, x.PeriodTo });
+
+            // Derived views are never stored.
+            b.Ignore(x => x.IsClosed);
+            b.Ignore(x => x.IsImmutable);
+        });
+
+        builder.Entity<AggregatorStatementLine>(b =>
+        {
+            b.ToTable("StlAggregatorStatementLines");
+            b.ConfigureByConvention();
+
+            b.Property(x => x.StatementId).IsRequired();
+            b.Property(x => x.ExternalOrderRef).IsRequired()
+                .HasMaxLength(SettlementAggregatorStatementConsts.MaxExternalOrderRefLength);
+            b.Property(x => x.OrderDate).IsRequired();
+            b.Property(x => x.Gross).IsRequired().HasColumnType("decimal(18,2)");
+            b.Property(x => x.AggregatorFee).IsRequired().HasColumnType("decimal(18,2)");
+            b.Property(x => x.Net).IsRequired().HasColumnType("decimal(18,2)");
+
+            // Duplicate refs are LEGAL rows (DuplicateLine variances) — indexed, NOT unique.
+            b.HasIndex(x => new { x.StatementId, x.ExternalOrderRef });
+        });
+
+        builder.Entity<AggregatorStatementException>(b =>
+        {
+            b.ToTable("StlAggregatorStatementExceptions");
+            b.ConfigureByConvention();
+
+            b.Property(x => x.StatementId).IsRequired();
+            b.Property(x => x.Type).IsRequired();
+            b.Property(x => x.ExternalOrderRef)
+                .HasMaxLength(SettlementAggregatorStatementConsts.MaxExternalOrderRefLength);
+            b.Property(x => x.ExpectedAmount).HasColumnType("decimal(18,2)");
+            b.Property(x => x.ActualAmount).HasColumnType("decimal(18,2)");
+            b.Property(x => x.Details).HasMaxLength(SettlementAggregatorStatementConsts.MaxDetailsLength);
+            b.Property(x => x.ResolutionNote).HasMaxLength(SettlementAggregatorStatementConsts.MaxResolutionNoteLength);
+            b.Property(x => x.ResolvedBy).HasMaxLength(SettlementAggregatorStatementConsts.MaxActorLength);
+
+            b.HasIndex(x => x.StatementId);
         });
     }
 }
