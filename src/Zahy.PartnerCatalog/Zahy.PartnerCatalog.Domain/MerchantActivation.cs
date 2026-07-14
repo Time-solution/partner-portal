@@ -48,12 +48,19 @@ public class MerchantActivation : FullAuditedAggregateRoot<Guid>, IMultiTenant
         Guid tenantId,
         PartnerCatalogItem catalogItem,
         Money resalePrice,
-        string? externalReference = null)
+        string? externalReference = null,
+        int priorEndedCount = 0)
     {
         if (tenantId == Guid.Empty)
         {
             throw new BusinessException(PartnerCatalogErrorCodes.InvalidActivation)
                 .WithData("Reason", "TenantIdRequired");
+        }
+
+        if (priorEndedCount < 0)
+        {
+            throw new BusinessException(PartnerCatalogErrorCodes.InvalidActivation)
+                .WithData("Reason", "NegativePriorEndedCount");
         }
 
         Check.NotNull(catalogItem, nameof(catalogItem));
@@ -71,7 +78,7 @@ public class MerchantActivation : FullAuditedAggregateRoot<Guid>, IMultiTenant
             PartnerId = catalogItem.PartnerId,
             PartnerCatalogItemId = catalogItem.Id,
             Status = MerchantActivationStatus.Pending,
-            IdempotencyKey = BuildIdempotencyKey(tenantId, catalogItem.Id),
+            IdempotencyKey = BuildIdempotencyKey(tenantId, catalogItem.Id, priorEndedCount),
             ExternalReference = NormalizeOptional(externalReference, PartnerCatalogConsts.MaxExternalReferenceLength)
         };
 
@@ -97,8 +104,15 @@ public class MerchantActivation : FullAuditedAggregateRoot<Guid>, IMultiTenant
 
     public void Cancel(DateTime atUtc) => TransitionTo(MerchantActivationStatus.Ended, atUtc, setEndedAt: true);
 
-    public static string BuildIdempotencyKey(Guid tenantId, Guid partnerCatalogItemId) =>
-        $"activation:{tenantId:D}:{partnerCatalogItemId:D}";
+    /// <summary>
+    /// Sequence-suffixed key (re-activation ratified ALLOWED): each ENDED cycle for the same
+    /// (tenant, item) pair increments the suffix, so a re-activation is a NEW row under the same
+    /// plain unique index — no filtered index needed, provider-safe. Concurrent duplicate submits
+    /// compute the same suffix and collide on the index; the loser resolves to the open-activation
+    /// pre-check no-op on retry. Ended rows are never mutated.
+    /// </summary>
+    public static string BuildIdempotencyKey(Guid tenantId, Guid partnerCatalogItemId, int priorEndedCount) =>
+        $"activation:{tenantId:D}:{partnerCatalogItemId:D}:{priorEndedCount}";
 
     private void TransitionTo(
         MerchantActivationStatus target,

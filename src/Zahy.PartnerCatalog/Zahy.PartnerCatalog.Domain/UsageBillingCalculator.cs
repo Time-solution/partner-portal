@@ -186,10 +186,8 @@ public static class UsageBillingCalculator
         IReadOnlyList<UsagePackageTier> tiers,
         Func<UsagePackageTier, decimal> rateOf)
     {
-        // Base pro-rated by ACTUAL CALENDAR DAYS (reuse the locked subscription proration rule).
-        var proratedBase = activeDays >= daysInMonth
-            ? Round2(baseAmount)
-            : Round2(baseAmount * activeDays / daysInMonth);
+        // Base pro-rated by ACTUAL CALENDAR DAYS — the shared locked rule, single source.
+        var proratedBase = SettlementProration.ProrateByCalendarDays(baseAmount, activeDays, daysInMonth);
 
         // Overage = whole units beyond the included allowance, counted to deactivation (usage already is).
         var excess = Math.Max(0m, usage - includedQuantity);

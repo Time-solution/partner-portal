@@ -46,7 +46,8 @@ public class MerchantActivationTests
         activation.TenantId.ShouldBe(TenantId);
         activation.ResalePrice.Amount.ShouldBe(100m);
         activation.ResalePrice.VatInclusive.ShouldBeTrue();
-        activation.IdempotencyKey.ShouldBe(MerchantActivation.BuildIdempotencyKey(TenantId, item.Id));
+        activation.IdempotencyKey.ShouldBe(MerchantActivation.BuildIdempotencyKey(TenantId, item.Id, 0));
+        activation.IdempotencyKey.ShouldBe($"activation:{TenantId:D}:{item.Id:D}:0");
     }
 
     [Fact]

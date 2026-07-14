@@ -42,6 +42,8 @@ public static class PartnerCatalogErrorCodes
     public const string InvalidBillingLink = Namespace + ":013";
     public const string BillingChargeAlreadyLinked = Namespace + ":014";
     public const string InvalidSubscriptionFee = Namespace + ":015";
+    /// <summary>RETIRED (CAT-FIX): re-activation after End is ratified ALLOWED via sequence-suffixed
+    /// idempotency keys — no production path throws this anymore. Code stays reserved; do not reuse :016.</summary>
     public const string ActivationAlreadyEnded = Namespace + ":016";
     public const string ActivationNotFound = Namespace + ":017";
     public const string AuthoringNotPermitted = Namespace + ":018";

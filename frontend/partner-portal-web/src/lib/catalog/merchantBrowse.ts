@@ -46,13 +46,28 @@ const MOCK_LISTED_SELL_BY_CATALOG_ID: Record<string, number> = {
   "a1000007-0007-4000-8000-000000000007": 13,
 };
 
-export function merchantListedSellPrice(item: PartnerCatalogItem): Money {
-  const amount = MOCK_LISTED_SELL_BY_CATALOG_ID[item.id] ?? 0;
+/**
+ * The merchant-named Price (mirrors backend MerchantPartnerOfferingReadDto.Price): the resolved
+ * SELL the merchant sees on browse and gets charged on activation — never the partner buy leg.
+ * Items without a curated listed sell fall back to the backend's ResolveResalePrice default
+ * (the cost VALUE re-used as the default sell), so browse price == what activation charges.
+ */
+export function merchantOfferingPrice(item: PartnerCatalogItem): Money {
+  const amount = MOCK_LISTED_SELL_BY_CATALOG_ID[item.id] ?? item.partnerCost.amount;
   return { amount, currency: item.partnerCost.currency, vatInclusive: item.partnerCost.vatInclusive };
 }
 
-export function buildMerchantActivationIdempotencyKey(tenantId: string, catalogItemId: string): string {
-  return `activation:${tenantId}:${catalogItemId}`;
+/**
+ * Mirrors backend MerchantActivation.BuildIdempotencyKey: sequence-suffixed so a merchant can
+ * re-activate after ending (ratified) — each ended cycle increments the suffix; the new cycle is a
+ * NEW activation (new window/snapshot), ended rows are never mutated.
+ */
+export function buildMerchantActivationIdempotencyKey(
+  tenantId: string,
+  catalogItemId: string,
+  priorEndedCount: number,
+): string {
+  return `activation:${tenantId}:${catalogItemId}:${priorEndedCount}`;
 }
 
 export function isPartnerBrowsable(partner: Partner, activeOfferings: PartnerCatalogItem[]): boolean {

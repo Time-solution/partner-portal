@@ -256,14 +256,17 @@ public class ServiceOrderAppService : ApplicationService, IServiceOrderAppServic
         return queryable.FirstOrDefault(x => x.PartnerCatalogItemId == itemId);
     }
 
-    /// <summary>The SAME merchant-price resolution the activation flow uses: the activation's
+    /// <summary>The SAME merchant-price resolution the activation flow uses: the OPEN activation's
     /// ResalePrice when one exists for (tenant, offering); otherwise the offering PartnerCost
-    /// (ResolveResalePrice's default). Zero new money math.</summary>
+    /// (ResolveResalePrice's default). Ended cycles never drive pricing — re-activation is allowed
+    /// (CAT-FIX), so ended + open rows can coexist for the pair. Zero new money math.</summary>
     private async Task<Money> ResolveMerchantPriceAsync(Guid tenantId, PartnerCatalogItem item)
     {
         var queryable = await _activations.GetQueryableAsync();
         var activation = queryable.FirstOrDefault(a =>
-            a.TenantId == tenantId && a.PartnerCatalogItemId == item.Id);
+            a.TenantId == tenantId &&
+            a.PartnerCatalogItemId == item.Id &&
+            a.Status != MerchantActivationStatus.Ended);
 
         return activation?.ResalePrice ?? item.PartnerCost;
     }

@@ -2,7 +2,7 @@ import type { CreateActivationInput, IPortalDataSource, RecordPaymentInput, Regi
 import { loadOrSeedData, resetToSeedData, savePersistedData } from "./mockStore";
 import {
   buildMerchantActivationIdempotencyKey,
-  merchantListedSellPrice,
+  merchantOfferingPrice,
 } from "@/lib/catalog/merchantBrowse";
 import type {
   ActivationFeeConfig,
@@ -655,25 +655,31 @@ export class MockPortalDataSource implements IPortalDataSource {
     );
     if (!catalogItem) throw new Error("Catalog item not found");
 
-    const idempotencyKey = buildMerchantActivationIdempotencyKey(input.tenantId, input.catalogItemId);
     const existing = this.data.activations.find(
-      (a) => a.idempotencyKey === idempotencyKey && a.status !== "Ended",
+      (a) =>
+        a.tenantId === input.tenantId &&
+        a.catalogItemId === input.catalogItemId &&
+        a.status !== "Ended",
     );
     if (existing) {
       return row(this.data, existing);
     }
 
-    const ended = this.data.activations.find(
+    // Re-activation after End is ALLOWED (mirrors backend ratified rule): the ended count becomes
+    // the key suffix, so the re-activation is a NEW activation and ended rows stay untouched.
+    const endedCount = this.data.activations.filter(
       (a) =>
         a.tenantId === input.tenantId &&
         a.catalogItemId === input.catalogItemId &&
         a.status === "Ended",
+    ).length;
+    const idempotencyKey = buildMerchantActivationIdempotencyKey(
+      input.tenantId,
+      input.catalogItemId,
+      endedCount,
     );
-    if (ended) {
-      throw new Error("This offering was previously ended and cannot be re-activated.");
-    }
 
-    const sell = input.resalePrice ?? merchantListedSellPrice(catalogItem);
+    const sell = input.resalePrice ?? merchantOfferingPrice(catalogItem);
     const now = new Date().toISOString();
 
     const activation: MerchantActivation = {

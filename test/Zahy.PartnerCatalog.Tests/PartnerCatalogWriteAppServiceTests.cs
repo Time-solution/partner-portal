@@ -50,6 +50,36 @@ public class PartnerCatalogWriteAppServiceTests : ZahyPartnerCatalogTestBase
     }
 
     [Fact]
+    public async Task Update_On_A_Published_Item_Throws_CannotUpdateNonDraft()
+    {
+        // CAT-FIX 4 — edit-after-publish guard: item scalars are frozen once Active; only the
+        // separate Listing/Profile presentation entities stay editable post-publish.
+        await WithUnitOfWorkAsync(async () =>
+        {
+            ConfigureSelfServiceAuthor(ServicePartnerId, PartnerType.Service);
+
+            var write = GetRequiredService<IPartnerCatalogWriteAppService>();
+            var created = await write.CreateAsync(new CreatePartnerCatalogItemInput
+            {
+                PartnerId = ServicePartnerId,
+                Code = "SVC-FROZEN",
+                Name = "Frozen after publish",
+                OfferingKind = PartnerCatalogOfferingKind.ServiceOneOff,
+                PartnerCost = new Read.MoneyDto { Amount = 49m, Currency = "SAR", VatInclusive = true },
+            });
+            await write.PublishAsync(created.Id);
+
+            var ex = await Should.ThrowAsync<BusinessException>(() =>
+                write.UpdateAsync(created.Id, new UpdatePartnerCatalogItemInput
+                {
+                    Name = "Should not stick",
+                    PartnerCost = new Read.MoneyDto { Amount = 59m, Currency = "SAR", VatInclusive = true },
+                }));
+            ex.Code.ShouldBe(PartnerCatalogErrorCodes.CannotUpdateNonDraft);
+        });
+    }
+
+    [Fact]
     public async Task Service_Partner_Cannot_Author_Delivery_Type_Catalog()
     {
         await WithUnitOfWorkAsync(async () =>

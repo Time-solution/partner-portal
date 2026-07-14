@@ -130,10 +130,8 @@ public static class InvoiceReader
 
         var currency = s.MonthlyInclusive.Currency;
 
-        // Prorate the INCLUSIVE amount by actual calendar days, THEN split (round-per-line).
-        var prorated = activeDays >= daysInMonth
-            ? SettlementMoney.Round(s.MonthlyInclusive.Amount)
-            : SettlementMoney.Round(s.MonthlyInclusive.Amount * activeDays / daysInMonth);
+        // Prorate the INCLUSIVE amount by actual calendar days (shared locked rule), THEN split (round-per-line).
+        var prorated = SettlementProration.ProrateByCalendarDays(s.MonthlyInclusive.Amount, activeDays, daysInMonth);
 
         var (exVat, vat) = Split(prorated, vatRate);
 

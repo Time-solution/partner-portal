@@ -42,7 +42,7 @@ public class PartnerCatalogMerchantAppService : ApplicationService, IPartnerCata
     [Authorize(ZahyPermissions.Catalog.Read)]
     public async Task<List<MerchantPartnerOfferingReadDto>> GetAvailableOfferingsAsync()
     {
-        _ = await _accessGuard.GetRequiredMerchantTenantIdAsync();
+        var tenantId = await _accessGuard.GetRequiredMerchantTenantIdAsync();
 
         var items = await _itemRepository.GetListAsync(x => x.Status == PartnerCatalogItemStatus.Active);
 
@@ -52,10 +52,25 @@ public class PartnerCatalogMerchantAppService : ApplicationService, IPartnerCata
             .Where(p => !string.IsNullOrWhiteSpace(p.PartnerBrief))
             .ToDictionary(p => p.PartnerId, p => p.PartnerBrief);
 
+        // Price = the resolved sell per offering — the merchant's OPEN activation price when one
+        // exists, else the ResolveResalePrice default. Same resolution the activation flow charges.
+        var openActivations = await _activationRepository.GetListAsync(x =>
+            x.TenantId == tenantId && x.Status != MerchantActivationStatus.Ended);
+        var openPriceByItem = new Dictionary<Guid, Money>();
+        foreach (var activation in openActivations)
+        {
+            openPriceByItem[activation.PartnerCatalogItemId] = activation.ResalePrice;
+        }
+
         return items
             .OrderBy(x => x.PartnerId)
             .ThenBy(x => x.Code)
-            .Select(item => ToOfferingDto(item, briefByPartner))
+            .Select(item => PartnerCatalogOfferingVisibility.ToMerchantDto(
+                item,
+                briefByPartner.TryGetValue(item.PartnerId, out var brief) ? brief : null,
+                openPriceByItem.TryGetValue(item.Id, out var openPrice)
+                    ? openPrice
+                    : ResolveResalePrice(input: null, item)))
             .ToList();
     }
 
@@ -93,16 +108,13 @@ public class PartnerCatalogMerchantAppService : ApplicationService, IPartnerCata
             return PartnerCatalogReadDtoMapper.ToDto(existing);
         }
 
-        var ended = await _activationRepository.FirstOrDefaultAsync(x =>
+        // Re-activation after End is ALLOWED (ratified): only ENDED rows remain → create a NEW
+        // activation whose key suffix = the ended count, yielding a fresh snapshot + settlement case.
+        // Ended rows are never mutated; concurrent duplicates collide on the plain unique key index.
+        var endedCount = await _activationRepository.CountAsync(x =>
             x.TenantId == tenantId &&
             x.PartnerCatalogItemId == item.Id &&
             x.Status == MerchantActivationStatus.Ended);
-
-        if (ended != null)
-        {
-            throw new BusinessException(PartnerCatalogErrorCodes.ActivationAlreadyEnded)
-                .WithData("ActivationId", ended.Id);
-        }
 
         var resalePrice = ResolveResalePrice(input.ResalePrice, item);
         var activation = MerchantActivation.Create(
@@ -110,7 +122,8 @@ public class PartnerCatalogMerchantAppService : ApplicationService, IPartnerCata
             tenantId,
             item,
             resalePrice,
-            input.ExternalReference);
+            input.ExternalReference,
+            endedCount);
 
         await _activationRepository.InsertAsync(activation, autoSave: true);
 
@@ -172,23 +185,4 @@ public class PartnerCatalogMerchantAppService : ApplicationService, IPartnerCata
 
         return Money.Of(input.Amount, input.Currency, input.VatInclusive);
     }
-
-    private static MerchantPartnerOfferingReadDto ToOfferingDto(
-        PartnerCatalogItem item,
-        IReadOnlyDictionary<Guid, string?> briefByPartner) =>
-        new()
-        {
-            Id = item.Id,
-            PartnerId = item.PartnerId,
-            Code = item.Code,
-            Name = item.Name,
-            // Description doubles as the merchant-facing OfferingSummary (reused, not duplicated).
-            Description = item.Description,
-            PartnerBrief = briefByPartner.TryGetValue(item.PartnerId, out var brief) ? brief : null,
-            MerchantBenefit = item.MerchantBenefit,
-            OfferingKind = item.OfferingKind,
-            PartnerCost = PartnerCatalogReadDtoMapper.ToMoneyDto(item.PartnerCost),
-            SettlementParticipationMode = item.SettlementParticipationMode,
-            SettlementTriggerMode = item.SettlementTriggerMode,
-        };
 }

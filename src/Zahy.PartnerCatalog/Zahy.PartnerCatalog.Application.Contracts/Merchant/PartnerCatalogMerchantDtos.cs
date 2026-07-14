@@ -23,7 +23,14 @@ public class MerchantPartnerOfferingReadDto : EntityDto<Guid>
     public string? MerchantBenefit { get; set; }
 
     public PartnerCatalogOfferingKind OfferingKind { get; set; }
-    public MoneyDto PartnerCost { get; set; } = new();
+
+    /// <summary>
+    /// The RESOLVED sell — what an activation will charge this merchant: the open activation's
+    /// ResalePrice when one exists, else the default sell (ResolveResalePrice's fallback). The BUY
+    /// leg (PartnerCost) is STRUCTURALLY ABSENT from this DTO — merchant audience never sees it.
+    /// </summary>
+    public MoneyDto Price { get; set; } = new();
+
     public SettlementParticipationMode SettlementParticipationMode { get; set; }
     public SettlementTriggerMode SettlementTriggerMode { get; set; }
 }

@@ -3,7 +3,7 @@ import { forbiddenPriceKeys, projectCatalogPrice } from "./catalogPriceVisibilit
 import {
   buildMerchantActivationIdempotencyKey,
   buildMerchantBrowseGroups,
-  merchantListedSellPrice,
+  merchantOfferingPrice,
   partnerHasTierMenu,
 } from "./merchantBrowse";
 import type { Partner, PartnerCatalogItem } from "@/lib/data/types";
@@ -116,26 +116,40 @@ describe("buildMerchantBrowseGroups", () => {
   });
 });
 
-describe("merchantListedSellPrice + scoped visibility", () => {
+describe("merchantOfferingPrice + scoped visibility", () => {
   it("delivery merchant render has NO buy or margin", () => {
-    const sell = merchantListedSellPrice(deliveryItem);
+    const sell = merchantOfferingPrice(deliveryItem);
     const scoped = projectCatalogPrice({ buy: deliveryItem.partnerCost, sell }, "merchant");
     for (const key of forbiddenPriceKeys("merchant")) {
       expect(scoped).not.toHaveProperty(key);
     }
     expect(scoped.sell?.amount).toBe(13);
   });
+
+  it("unlisted items fall back to the backend default resolution (cost value as default sell)", () => {
+    const unlisted: PartnerCatalogItem = { ...deliveryItem, id: "no-curated-sell-entry" };
+    expect(merchantOfferingPrice(unlisted).amount).toBe(unlisted.partnerCost.amount);
+  });
 });
 
 describe("buildMerchantActivationIdempotencyKey", () => {
-  it("matches backend activation idempotency shape", () => {
+  it("matches backend activation idempotency shape (sequence-suffixed)", () => {
     expect(
       buildMerchantActivationIdempotencyKey(
         "11111111-1111-1111-1111-111111111001",
         "a1000003-0003-4000-8000-000000000003",
+        0,
       ),
     ).toBe(
-      "activation:11111111-1111-1111-1111-111111111001:a1000003-0003-4000-8000-000000000003",
+      "activation:11111111-1111-1111-1111-111111111001:a1000003-0003-4000-8000-000000000003:0",
+    );
+  });
+
+  it("ended cycles increment the suffix so a re-activation is a distinct key", () => {
+    const tenant = "11111111-1111-1111-1111-111111111001";
+    const item = "a1000003-0003-4000-8000-000000000003";
+    expect(buildMerchantActivationIdempotencyKey(tenant, item, 1)).not.toBe(
+      buildMerchantActivationIdempotencyKey(tenant, item, 0),
     );
   });
 });
@@ -143,8 +157,8 @@ describe("buildMerchantActivationIdempotencyKey", () => {
 describe("instant activation mock contract", () => {
   it("idempotent key is per catalog item not per partner", () => {
     const tenant = "11111111-1111-1111-1111-111111111001";
-    const k1 = buildMerchantActivationIdempotencyKey(tenant, tierBasic.id);
-    const k2 = buildMerchantActivationIdempotencyKey(tenant, tierPro.id);
+    const k1 = buildMerchantActivationIdempotencyKey(tenant, tierBasic.id, 0);
+    const k2 = buildMerchantActivationIdempotencyKey(tenant, tierPro.id, 0);
     expect(k1).not.toBe(k2);
   });
 
@@ -180,5 +194,42 @@ describe("instant activation mock contract", () => {
         r.activation.status !== "Ended",
     );
     expect(mine).toHaveLength(1);
+  });
+
+  it("re-activation after end creates a NEW activation with the next key suffix (mirrors backend)", async () => {
+    const { MockPortalDataSource } = await import("@/lib/data/mockDataSource");
+    const { MOCK_MERCHANT_PREVIEW } = await import("@/lib/mock/merchantPreview");
+    const ds = new MockPortalDataSource();
+    const catalogId = "a1000003b-0003-4000-8000-00000000003b";
+    const partnerId = "22222222-2222-2222-2222-222222222004";
+    const input = {
+      partnerId,
+      catalogItemId: catalogId,
+      tenantId: MOCK_MERCHANT_PREVIEW.tenantId,
+      merchantName: MOCK_MERCHANT_PREVIEW.merchantName,
+    };
+
+    const first = await ds.createActivation(input);
+    await ds.endActivation(first.activation.id);
+
+    const second = await ds.createActivation(input);
+    expect(second.activation.id).not.toBe(first.activation.id);
+    expect(second.activation.status).toBe("Active");
+    expect(second.activation.idempotencyKey).toBe(
+      buildMerchantActivationIdempotencyKey(MOCK_MERCHANT_PREVIEW.tenantId, catalogId, 1),
+    );
+
+    // Double-submit of the re-activation is a no-op on the open activation.
+    const resubmit = await ds.createActivation(input);
+    expect(resubmit.activation.id).toBe(second.activation.id);
+
+    // The ended cycle is preserved untouched — two rows total for the pair.
+    const all = (await ds.getActivations()).filter(
+      (r) =>
+        r.activation.tenantId === MOCK_MERCHANT_PREVIEW.tenantId &&
+        r.activation.catalogItemId === catalogId,
+    );
+    expect(all).toHaveLength(2);
+    expect(all.some((r) => r.activation.id === first.activation.id && r.activation.status === "Ended")).toBe(true);
   });
 });

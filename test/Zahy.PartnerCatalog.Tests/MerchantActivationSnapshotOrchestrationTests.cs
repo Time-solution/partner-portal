@@ -179,6 +179,51 @@ public class MerchantActivationSnapshotOrchestrationTests : ZahyPartnerCatalogTe
     }
 
     [Fact]
+    public async Task End_Then_Reactivate_Flag_On_Yields_Two_Snapshots_And_Two_Settlement_Cases()
+    {
+        // Ratified rule (CAT-FIX): a re-activation is a NEW activation — new sequence-suffixed key →
+        // new snapshot (orchestrator dedup is per MerchantActivationId) → new settlement case.
+        ResetBridgeTestState();
+        EnableParticipationBridge();
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var item = await InsertPrincipalServiceItemAsync("ORCH-REACT-1");
+            SetTenant(TenantA);
+
+            var merchant = GetRequiredService<IPartnerCatalogMerchantAppService>();
+            var first = await merchant.ActivateAsync(new ActivateMerchantOfferingInput
+            {
+                PartnerCatalogItemId = item.Id,
+                ResalePrice = new MoneyDto { Amount = 85m, Currency = "SAR", VatInclusive = true },
+            });
+            await merchant.DeactivateAsync(first.Id);
+
+            var second = await merchant.ActivateAsync(new ActivateMerchantOfferingInput
+            {
+                PartnerCatalogItemId = item.Id,
+                ResalePrice = new MoneyDto { Amount = 90m, Currency = "SAR", VatInclusive = true },
+            });
+            second.Id.ShouldNotBe(first.Id);
+
+            var snapshotRepo = GetRequiredService<IRepository<SettlementCostMarkupSnapshot, Guid>>();
+            var firstSnapshot = await snapshotRepo.GetAsync(x => x.MerchantActivationId == first.Id);
+            var secondSnapshot = await snapshotRepo.GetAsync(x => x.MerchantActivationId == second.Id);
+
+            // Exactly one snapshot per activation cycle, each frozen at its own cycle's sell price.
+            (await snapshotRepo.CountAsync(x =>
+                x.PartnerCatalogItemId == item.Id && x.TenantId == TenantA)).ShouldBe(2);
+            firstSnapshot.ExternalTransactionId.ShouldNotBe(secondSnapshot.ExternalTransactionId);
+            firstSnapshot.SellPrice.Amount.ShouldBe(85m);
+            secondSnapshot.SellPrice.Amount.ShouldBe(90m);
+
+            var cases = GetRequiredService<PartnerCatalogTestSettlementCaseStore>().Cases;
+            cases.Count.ShouldBe(2);
+            cases.Select(c => c.ExternalTransactionId).Distinct().Count().ShouldBe(2);
+        });
+    }
+
+    [Fact]
     public void Settlement_Engine_Posting_And_Disbursement_Remain_Off_By_Default()
     {
         var engineOptions = new SettlementEngineOptions();

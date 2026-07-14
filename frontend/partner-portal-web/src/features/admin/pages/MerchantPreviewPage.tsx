@@ -8,7 +8,7 @@ import { MerchantReflectionOrders } from "@/features/merchant/MerchantReflection
 import {
   browseCategoryLabelKey,
   buildMerchantBrowseGroups,
-  merchantListedSellPrice,
+  merchantOfferingPrice,
   type MerchantBrowsePartnerEntry,
 } from "@/lib/catalog/merchantBrowse";
 import { projectCatalogPrice } from "@/lib/catalog/catalogPriceVisibility";
@@ -44,7 +44,7 @@ function parseMerchantTab(raw: string | null): MerchantTab {
 }
 
 function TierPrice({ item }: { item: PartnerCatalogItem }) {
-  const sell = merchantListedSellPrice(item);
+  const sell = merchantOfferingPrice(item);
   const scoped = projectCatalogPrice({ buy: item.partnerCost, sell }, "merchant");
   if (!scoped.sell) return null;
   return <MoneyAmount amount={scoped.sell.amount} />;
@@ -268,7 +268,7 @@ export function MerchantPreviewPage({ lang }: { lang: Lang }) {
   const handleActivate = async (entry: MerchantBrowsePartnerEntry, item: PartnerCatalogItem) => {
     setBusyCatalogId(item.id);
     try {
-      const sell = merchantListedSellPrice(item);
+      const sell = merchantOfferingPrice(item);
       await getPortalDataSource().createActivation({
         partnerId: entry.partner.id,
         catalogItemId: item.id,
@@ -383,7 +383,7 @@ export function MerchantPreviewPage({ lang }: { lang: Lang }) {
               tenantId={MOCK_MERCHANT_PREVIEW.tenantId}
               participationMode={orderItem.participationMode === "SubscriptionFee" ? "SubscriptionFee" : "Principal"}
               buy={orderItem.partnerCost.amount}
-              sellOrFee={orderItem.partnerCost.amount}
+              sellOrFee={merchantOfferingPrice(orderItem).amount}
               requirements={getListing(orderItem.id).requirements}
               onDone={() => {
                 setOrderItem(null);

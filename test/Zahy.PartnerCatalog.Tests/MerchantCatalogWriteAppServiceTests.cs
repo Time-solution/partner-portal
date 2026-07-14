@@ -212,26 +212,70 @@ public class MerchantCatalogWriteAppServiceTests : ZahyPartnerCatalogTestBase
     }
 
     [Fact]
-    public async Task Activate_After_Ended_Is_Blocked()
+    public async Task Activate_After_Ended_Creates_A_New_Activation_With_Sequenced_Key()
     {
+        // Ratified rule (CAT-FIX): ending an activation does NOT block the merchant — re-activation
+        // is a NEW row (new window, sequence-suffixed key); the ended row is preserved untouched.
         await WithUnitOfWorkAsync(async () =>
         {
             var item = await InsertActiveItemAsync("MERCH-REACT-1");
             SetTenant(TenantA);
 
             var merchant = GetRequiredService<IPartnerCatalogMerchantAppService>();
-            var created = await merchant.ActivateAsync(new ActivateMerchantOfferingInput
+            var first = await merchant.ActivateAsync(new ActivateMerchantOfferingInput
             {
                 PartnerCatalogItemId = item.Id,
             });
-            await merchant.DeactivateAsync(created.Id);
+            first.IdempotencyKey.ShouldEndWith(":0");
+            await merchant.DeactivateAsync(first.Id);
 
-            var ex = await Should.ThrowAsync<BusinessException>(() =>
-                merchant.ActivateAsync(new ActivateMerchantOfferingInput
-                {
-                    PartnerCatalogItemId = item.Id,
-                }));
-            ex.Code.ShouldBe(PartnerCatalogErrorCodes.ActivationAlreadyEnded);
+            var second = await merchant.ActivateAsync(new ActivateMerchantOfferingInput
+            {
+                PartnerCatalogItemId = item.Id,
+            });
+
+            second.Id.ShouldNotBe(first.Id);
+            second.Status.ShouldBe(MerchantActivationStatus.Active);
+            second.IdempotencyKey.ShouldBe(MerchantActivation.BuildIdempotencyKey(TenantA, item.Id, 1));
+
+            // The ended cycle is history — never mutated.
+            var activationRepo = GetRequiredService<IRepository<MerchantActivation, Guid>>();
+            var ended = await activationRepo.GetAsync(first.Id);
+            ended.Status.ShouldBe(MerchantActivationStatus.Ended);
+            ended.EndedAt.ShouldNotBeNull();
+        });
+    }
+
+    [Fact]
+    public async Task Reactivation_Double_Submit_Is_A_NoOp_On_The_Open_Activation()
+    {
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var item = await InsertActiveItemAsync("MERCH-REACT-2");
+            SetTenant(TenantA);
+
+            var merchant = GetRequiredService<IPartnerCatalogMerchantAppService>();
+            var first = await merchant.ActivateAsync(new ActivateMerchantOfferingInput
+            {
+                PartnerCatalogItemId = item.Id,
+            });
+            await merchant.DeactivateAsync(first.Id);
+
+            var second = await merchant.ActivateAsync(new ActivateMerchantOfferingInput
+            {
+                PartnerCatalogItemId = item.Id,
+            });
+            var resubmit = await merchant.ActivateAsync(new ActivateMerchantOfferingInput
+            {
+                PartnerCatalogItemId = item.Id,
+            });
+
+            resubmit.Id.ShouldBe(second.Id);
+            resubmit.IdempotencyKey.ShouldBe(second.IdempotencyKey);
+
+            var activationRepo = GetRequiredService<IRepository<MerchantActivation, Guid>>();
+            (await activationRepo.CountAsync(x =>
+                x.TenantId == TenantA && x.PartnerCatalogItemId == item.Id)).ShouldBe(2);
         });
     }
 
