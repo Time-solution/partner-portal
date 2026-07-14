@@ -1062,6 +1062,10 @@ export const translations: Record<Lang, Dict> = {
     settlementAccount_MerchantPayable: "مستحق التاجر",
     settlementAccount_Cash: "النقد / البنك",
     settlementAccount_DeliveryClearing: "تصفية شركة التوصيل",
+    // F12 — the 3 backend-only control/clearing accounts, so the display vocabulary covers the full canonical chart.
+    settlementAccount_PartnerReceivable: "ذمم الشريك المدينة",
+    settlementAccount_VatControl: "حساب مراقبة الضريبة",
+    settlementAccount_ReflectionClearing: "تصفية الانعكاس",
     settlementAccount_MerchantReceivable: "ذمم التاجر المدينة",
     settlementAccount_RevenueNetSell: "الإيراد (صافي البيع)",
     settlementAccount_PartnerCost: "تكلفة الشريك (الصافي)",
@@ -2293,6 +2297,10 @@ export const translations: Record<Lang, Dict> = {
     settlementAccount_MerchantPayable: "Merchant payable",
     settlementAccount_Cash: "Cash / bank",
     settlementAccount_DeliveryClearing: "Delivery company clearing",
+    // F12 — the 3 backend-only control/clearing accounts, so the display vocabulary covers the full canonical chart.
+    settlementAccount_PartnerReceivable: "Partner receivable",
+    settlementAccount_VatControl: "VAT control",
+    settlementAccount_ReflectionClearing: "Reflection clearing",
     settlementAccount_MerchantReceivable: "Merchant receivable",
     settlementAccount_RevenueNetSell: "Revenue (net sell)",
     settlementAccount_PartnerCost: "Partner cost (net)",

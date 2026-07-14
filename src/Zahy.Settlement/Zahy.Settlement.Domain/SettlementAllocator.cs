@@ -42,11 +42,11 @@ public sealed class SettlementAllocator : ISettlementAllocator
         var commissionNet = VatMath.NetOfInclusive(commissionInclusive, input.VatRate);
         var commissionVat = SettlementMoney.Round(commissionInclusive - commissionNet);
 
-        // F16 — round each leg ONCE, then push any sub-tolerance rounding residual onto the largest leg
-        // (largest-remainder method) so the four legs sum byte-exactly to the collected total. A clean
-        // (zero-residual) input is unchanged; a residual bigger than one cent per leg is a genuine
-        // imbalance and is left for the four-way invariant below to reject.
-        var legs = ReconcilePennyResidualToLargestLeg(
+        // F16 — round each leg ONCE, then reconcile any sub-tolerance rounding residual across the legs
+        // (largest-remainder method, extracted to SettlementPennyReconciler) so the four legs sum
+        // byte-exactly to the collected total. A clean (zero-residual) input is unchanged; a residual
+        // bigger than one cent per leg is a genuine imbalance left for the four-way invariant to reject.
+        var legs = SettlementPennyReconciler.Reconcile(
             new[] { payout, delivery, commissionNet, commissionVat },
             collected);
         payout = legs[0];
@@ -96,45 +96,4 @@ public sealed class SettlementAllocator : ISettlementAllocator
         }
     }
 
-    /// <summary>
-    /// Round each leg once, then reconcile any residual penny between the legs' total and the collected
-    /// total onto the LARGEST-share leg (largest-remainder method — the standard, audit-friendly rule for
-    /// distributing a rounding cent). Returns the legs unchanged when:
-    ///   • the residual is zero (clean input — byte-identical to the previous per-leg rounding), or
-    ///   • the residual exceeds one cent per leg (a genuine imbalance — left for the caller to reject).
-    /// </summary>
-    private static decimal[] ReconcilePennyResidualToLargestLeg(decimal[] legs, decimal collected)
-    {
-        var rounded = new decimal[legs.Length];
-        var sum = 0m;
-        for (var i = 0; i < legs.Length; i++)
-        {
-            rounded[i] = SettlementMoney.Round(legs[i]);
-            sum += rounded[i];
-        }
-
-        var residual = SettlementMoney.Round(SettlementMoney.Round(collected) - sum);
-        if (residual == 0m)
-        {
-            return rounded;
-        }
-
-        var pennyTolerance = 0.01m * legs.Length;
-        if (Math.Abs(residual) > pennyTolerance)
-        {
-            return rounded;
-        }
-
-        var largest = 0;
-        for (var i = 1; i < rounded.Length; i++)
-        {
-            if (rounded[i] > rounded[largest])
-            {
-                largest = i;
-            }
-        }
-
-        rounded[largest] = SettlementMoney.Round(rounded[largest] + residual);
-        return rounded;
-    }
 }
