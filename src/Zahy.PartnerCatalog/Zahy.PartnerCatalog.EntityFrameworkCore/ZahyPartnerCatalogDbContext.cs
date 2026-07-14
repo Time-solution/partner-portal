@@ -164,8 +164,16 @@ public class ZahyPartnerCatalogDbContext : AbpDbContext<ZahyPartnerCatalogDbCont
             b.Property(x => x.Shape2HandshakeVersion)
                 .HasMaxLength(PartnerCatalogConsts.MaxShape2HandshakeVersionLength);
 
+            b.HasIndex(x => x.PartnerId);
             b.HasIndex(x => x.PartnerCatalogItemId);
             b.HasIndex(x => x.TenantId);
+
+            // P12 — same partner scoping as the other ten chain entities (eleven now).
+            // Platform/null-partner context short-circuits: integration + admin reads unchanged.
+            b.HasQueryFilter(x =>
+                !IsPartnerFilterEnabled ||
+                CurrentPartnerId == null ||
+                x.PartnerId == CurrentPartnerId);
         });
 
         builder.Entity<UsagePackage>(b =>

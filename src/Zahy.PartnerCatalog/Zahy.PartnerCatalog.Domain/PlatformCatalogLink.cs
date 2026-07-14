@@ -9,6 +9,10 @@ namespace Zahy.PartnerCatalog;
 /// </summary>
 public class PlatformCatalogLink : Entity<Guid>
 {
+    /// <summary>Denormalized from the source item at creation (P12) — carries the partner scope so the
+    /// standard partner query filter applies; NOT NULL, immutable thereafter.</summary>
+    public Guid PartnerId { get; private set; }
+
     public Guid PartnerCatalogItemId { get; private set; }
 
     public Guid? TenantId { get; private set; }
@@ -54,6 +58,7 @@ public class PlatformCatalogLink : Entity<Guid>
         return new PlatformCatalogLink
         {
             Id = id,
+            PartnerId = catalogItem.PartnerId,
             PartnerCatalogItemId = catalogItem.Id,
             TenantId = tenantId,
             Status = PlatformCatalogLinkStatus.DeferredShape2,
