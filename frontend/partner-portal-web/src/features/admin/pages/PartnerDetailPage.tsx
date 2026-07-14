@@ -8,6 +8,7 @@ import type { Partner } from "@/lib/data/types";
 import { partnerTypeLabel } from "@/lib/rbac/partnerNav";
 import {
   MODULE_BY_ID,
+  PARTNER_DIRECT_SCREENS,
   getVisibleModuleScreens,
   moduleLabelKey,
   resolvePartnerModule,
@@ -82,7 +83,14 @@ export function PartnerDetailPage({ lang }: { lang: Lang }) {
     );
   }
 
-  const screens = getVisibleModuleScreens(moduleId, user?.permissions ?? []);
+  // Partner-scoped roles navigate DIRECT screens (module-agnostic — every sidebar entry resolves);
+  // admins keep the business-module screen set.
+  const granted = user?.permissions ?? [];
+  const screens = partnerScoped
+    ? PARTNER_DIRECT_SCREENS.filter(
+        (s) => s.permissions.length === 0 || s.permissions.some((p) => granted.includes(p)),
+      )
+    : getVisibleModuleScreens(moduleId, granted);
   const defaultTab = partnerScoped ? "active-merchants" : screens[0]?.path;
   const showPartnerProfile = partnerScoped;
 

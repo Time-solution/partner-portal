@@ -1,20 +1,20 @@
 import { MoneyAmount } from "@/components/MoneyAmount";
 import {
   assertMerchantPackageScope,
-  merchantPackageDisplay,
+  type MerchantPackageDisplay,
 } from "@/lib/usage/usagePackageDisplay";
-import type { UsagePackage } from "@/lib/usage/usagePackage";
 import { useTranslator, type Lang } from "@/lib/i18n";
 
 /**
  * Phase 6b — read-only MERCHANT view of a package's structured details + the optional partner note.
- * Pure projection (no recompute) via {@link merchantPackageDisplay}; SELL/fee only — partner buy and
- * margin are structurally absent (asserted defensively).
+ * Prop hygiene: this merchant-facing component receives the ALREADY-SCOPED display (built by the
+ * single merchantPackageDisplay mapper upstream) — never the raw UsagePackage with its buy fields.
+ * SELL/fee only — partner buy and margin are structurally absent (asserted defensively).
  */
-export function PackageDetailsCard({ lang, pkg }: { lang: Lang; pkg: UsagePackage }) {
+export function PackageDetailsCard({ lang, display }: { lang: Lang; display: MerchantPackageDisplay }) {
   const t = useTranslator(lang);
   const isRtl = lang === "ar";
-  const d = merchantPackageDisplay(pkg);
+  const d = display;
   assertMerchantPackageScope(d);
 
   const tierBound = (to?: number | null) =>

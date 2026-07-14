@@ -18,7 +18,7 @@ import {
 } from "@/lib/usage/usagePackageDisplay";
 import type { UsagePackage } from "@/lib/usage/usagePackage";
 import { listUsagePackages, resetUsagePackages, setPackageExplanation } from "@/lib/usage/usagePackageStore";
-import type { MerchantBrowsePartnerEntry } from "@/lib/catalog/merchantBrowse";
+import { toMerchantViewEntry, type MerchantBrowsePartnerEntry } from "@/lib/catalog/merchantBrowse";
 import type { Partner, PartnerCatalogItem } from "@/lib/data/types";
 import { createSeedData } from "@/lib/data/fixtures";
 import { MockPortalDataSource } from "@/lib/data/mockDataSource";
@@ -26,7 +26,7 @@ import { savePersistedData } from "@/lib/data/mockStore";
 import { PartnerBriefEditor } from "./PartnerBriefEditor";
 import { ProductPresentationEditor } from "./ProductPresentationEditor";
 import { PackageDetailsCard } from "./PackageDetailsCard";
-import { PartnerBrowseCard } from "../pages/MerchantPreviewPage";
+import { PartnerBrowseCard } from "./MerchantBrowseCards";
 
 function stubLocalStorage() {
   const bag = new Map<string, string>();
@@ -188,14 +188,11 @@ describe("Catalog Phase 6b — merchant browse card", () => {
   it("leads with the company brief, then the merchant benefit, then package details + note", () => {
     const html = renderToStaticMarkup(
       <PartnerBrowseCard
-        entry={browseEntry()}
+        entry={toMerchantViewEntry(browseEntry())}
         lang="ar"
-        expanded={false}
-        onToggleExpand={() => {}}
         activeCatalogIds={new Set()}
-        busyCatalogId={null}
-        onActivate={() => {}}
-        packages={[RESALE_PKG]}
+        onViewDetails={() => {}}
+        packages={[merchantPackageDisplay(RESALE_PKG)]}
       />,
     );
     const brief = servicePartner().partnerBrief as string;
@@ -218,7 +215,9 @@ describe("Catalog Phase 6b — merchant browse card", () => {
     expect(JSON.stringify(display)).not.toContain("150"); // buy absent
     expect(JSON.stringify(display)).not.toContain("0.03"); // buy absent
 
-    const cardHtml = renderToStaticMarkup(<PackageDetailsCard lang="en" pkg={RESALE_PKG} />);
+    const cardHtml = renderToStaticMarkup(
+      <PackageDetailsCard lang="en" display={merchantPackageDisplay(RESALE_PKG)} />,
+    );
     expect(cardHtml).toContain("0.05"); // overage SELL shown
     expect(cardHtml).not.toContain("150.00"); // base BUY never shown
     expect(cardHtml).not.toContain("0.03"); // overage BUY never shown
@@ -226,14 +225,11 @@ describe("Catalog Phase 6b — merchant browse card", () => {
 
     const browseHtml = renderToStaticMarkup(
       <PartnerBrowseCard
-        entry={browseEntry()}
+        entry={toMerchantViewEntry(browseEntry())}
         lang="en"
-        expanded={false}
-        onToggleExpand={() => {}}
         activeCatalogIds={new Set()}
-        busyCatalogId={null}
-        onActivate={() => {}}
-        packages={[RESALE_PKG]}
+        onViewDetails={() => {}}
+        packages={[merchantPackageDisplay(RESALE_PKG)]}
       />,
     );
     expect(browseHtml).not.toContain("150.00");

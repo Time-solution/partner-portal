@@ -13,6 +13,7 @@ import type { PartnerCatalogItem } from "@/lib/data/types";
 import type { UsagePackage } from "@/lib/usage/usagePackage";
 import { useTranslator, type Lang } from "@/lib/i18n";
 import { PackageDetailsCard } from "./PackageDetailsCard";
+import { merchantPackageDisplay } from "@/lib/usage/usagePackageDisplay";
 import { ListingSectionsEditor } from "./ListingSectionsEditor";
 import { ListingDetails } from "./ListingDetails";
 import type { OfferingListing } from "@/lib/catalog/listingSchema";
@@ -203,7 +204,8 @@ export function ProductPresentationEditor({
           ) : (
             packages.map((pkg) => (
               <div key={pkg.id} className="space-y-1">
-                <PackageDetailsCard lang={lang} pkg={pkg} />
+                {/* Partner/admin preview of the MERCHANT view — scoped through the same single mapper. */}
+                <PackageDetailsCard lang={lang} display={merchantPackageDisplay(pkg)} />
                 {canEdit ? (
                   <PackageNoteEditor
                     lang={lang}

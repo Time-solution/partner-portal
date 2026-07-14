@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Archive, Loader2, Pencil, Plus, Send } from "lucide-react";
+import { Archive, Pencil, Plus, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MoneyAmount } from "@/components/MoneyAmount";
+import { StatusBadge } from "@/components/catalog/badges";
+import { CardGridSkeleton, ErrorState } from "@/components/states";
 import { usePortalSession } from "@/features/auth/usePortalSession";
 import {
   canAuthorOfferingPresentation,
@@ -36,17 +38,6 @@ type CatalogPageProps = ModuleScopeProps & {
 
 const SERVICE_KINDS: OfferingKind[] = ["ServiceOneOff", "ServiceSubscription"];
 
-function statusBadgeClass(status: PartnerCatalogItem["status"]): string {
-  switch (status) {
-    case "Active":
-      return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300";
-    case "Draft":
-      return "bg-amber-500/15 text-amber-700 dark:text-amber-300";
-    default:
-      return "bg-muted text-muted-foreground";
-  }
-}
-
 export function CatalogPage({
   lang,
   moduleId,
@@ -64,6 +55,7 @@ export function CatalogPage({
   const [packages, setPackages] = useState<UsagePackage[]>([]);
   const [presentationItem, setPresentationItem] = useState<PartnerCatalogItem | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -96,19 +88,25 @@ export function CatalogPage({
 
   const reload = useCallback(async () => {
     setLoading(true);
-    const ds = getPortalDataSource();
-    const [all, partners] = await Promise.all([
-      ds.getCatalogItems(partnerId),
-      ds.getPartners(),
-    ]);
-    setItems(filterByPartnerIds(all, scopeIds));
-    setPackages(partnerId ? listUsagePackages(partnerId) : []);
-    if (partnerId) {
-      setPartner(partners.find((p) => p.id === partnerId));
-    } else {
-      setPartner(undefined);
+    setLoadError(null);
+    try {
+      const ds = getPortalDataSource();
+      const [all, partners] = await Promise.all([
+        ds.getCatalogItems(partnerId),
+        ds.getPartners(),
+      ]);
+      setItems(filterByPartnerIds(all, scopeIds));
+      setPackages(partnerId ? listUsagePackages(partnerId) : []);
+      if (partnerId) {
+        setPartner(partners.find((p) => p.id === partnerId));
+      } else {
+        setPartner(undefined);
+      }
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [partnerId, scopeIds]);
 
   useEffect(() => {
@@ -264,9 +262,7 @@ export function CatalogPage({
       <td className="px-2 py-2">{participationModeLabel(lang, item.participationMode)}</td>
       <td className="px-2 py-2">{settlementBookLabel(lang, item.settlementBook)}</td>
       <td className="px-2 py-2">
-        <span className={`inline-flex rounded-md border px-2 py-0.5 text-xs font-medium ${statusBadgeClass(item.status)}`}>
-          {item.status}
-        </span>
+        <StatusBadge status={item.status} label={item.status} />
       </td>
       <td className="px-2 py-2">{renderPriceCell(item)}</td>
       {actions ? (
@@ -422,10 +418,13 @@ export function CatalogPage({
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              {t("loadingData" as never)}
-            </div>
+            <CardGridSkeleton count={2} />
+          ) : loadError ? (
+            <ErrorState
+              message={t("stateErrorGeneric" as never)}
+              retryLabel={t("stateRetry" as never)}
+              onRetry={() => void reload()}
+            />
           ) : tierGroups.length > 0 ? (
             <div className="space-y-8">
               {tierGroups.map((group) => (

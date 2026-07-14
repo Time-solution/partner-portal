@@ -6,6 +6,7 @@
  * merchant sees SELL/fee only, partner sees BUY only — margin exists on neither (6b standard).
  */
 import type { ListingRequirementRow } from "@/lib/catalog/listingSchema";
+import { loadPersistedData } from "@/lib/data/mockStore";
 
 export type ServiceOrderStatus =
   | "Draft"
@@ -347,6 +348,14 @@ export function createOrder(input: {
   const planError = validateMilestonePlan(input.sellOrFee, plan);
   if (planError) return { error: planError };
 
+  // Merchant callers never supply buy (prop hygiene — the merchant UI never touches the buy leg).
+  // The STORE resolves the partner buy snapshot itself, mirroring the backend where
+  // ServiceOrder.Create reads the item's PartnerCost server-side. Seeds/tests may still pin buy.
+  const resolvedBuy =
+    input.buy ??
+    loadPersistedData()?.catalogItems.find((c) => c.id === input.catalogItemId)?.partnerCost.amount ??
+    0;
+
   const order: ServiceOrder = {
     id: newId(),
     tenantId: input.tenantId,
@@ -355,7 +364,7 @@ export function createOrder(input: {
     offeringName: input.offeringName,
     participationMode: input.participationMode,
     status: "Draft",
-    buySnapshot: input.participationMode === "Principal" ? round2(input.buy ?? 0) : undefined,
+    buySnapshot: input.participationMode === "Principal" ? round2(resolvedBuy) : undefined,
     sellSnapshot: input.participationMode === "Principal" ? round2(input.sellOrFee) : undefined,
     feeSnapshot: input.participationMode === "SubscriptionFee" ? round2(input.sellOrFee) : undefined,
     currency: "SAR",

@@ -1,21 +1,28 @@
 import {
+  Boxes,
   Building2,
   Calculator,
   CheckCircle2,
+  ClipboardList,
   FileBarChart,
   FilePlus,
+  FileText,
   Home,
   KeyRound,
   LayoutDashboard,
   Package,
+  Receipt,
   Settings,
   ShoppingBag,
+  Sparkles,
   Store,
   Truck,
+  UserRound,
   UtensilsCrossed,
   Users,
   Warehouse,
   Webhook,
+  Zap,
 } from "lucide-react";
 import { PortalPermissions as PP } from "@/lib/rbac/portalRoles";
 import {
@@ -25,7 +32,7 @@ import {
   canAccessMerchantPreview,
 } from "@/lib/rbac/partnerModules";
 import type { PortalRole } from "@/lib/rbac/portalRoles";
-import { ROLE_NAV_KEYS, roleExperience, partnerHomePath } from "@/lib/rbac/roleNavConfig";
+import { ROLE_NAV_KEYS, partnerHomePath } from "@/lib/rbac/roleNavConfig";
 
 export interface AdminNavItem {
   key: string;
@@ -97,6 +104,116 @@ export const adminNav: readonly AdminNavItem[] = [
     roles: ["PlatformAdmin", "MerchantPreview"],
     section: "core",
   },
+  // ---- Merchant sidebar (MerchantPreview role) — tabs promoted to nav entries ----
+  {
+    key: "merchant-dashboard",
+    path: "/merchant-preview",
+    labelKey: "navMerchantDashboard",
+    icon: LayoutDashboard,
+    permissions: [PP.MerchantPreview.Read],
+    roles: ["MerchantPreview"],
+    section: "core",
+  },
+  {
+    key: "merchant-browse",
+    path: "/merchant-preview?tab=browse",
+    labelKey: "navMerchantBrowse",
+    icon: ShoppingBag,
+    permissions: [PP.MerchantPreview.Read],
+    roles: ["MerchantPreview"],
+    section: "core",
+  },
+  {
+    key: "merchant-services",
+    path: "/merchant-preview?tab=services",
+    labelKey: "navMerchantServices",
+    icon: Sparkles,
+    permissions: [PP.MerchantPreview.Read],
+    roles: ["MerchantPreview"],
+    section: "core",
+  },
+  {
+    key: "merchant-orders",
+    path: "/merchant-preview?tab=orders",
+    labelKey: "navMerchantOrders",
+    icon: ClipboardList,
+    permissions: [PP.MerchantPreview.Read],
+    roles: ["MerchantPreview"],
+    section: "core",
+  },
+  {
+    key: "merchant-invoices",
+    path: "/merchant-preview?tab=invoices",
+    labelKey: "navMerchantInvoices",
+    icon: Receipt,
+    permissions: [PP.MerchantPreview.Read],
+    roles: ["MerchantPreview"],
+    section: "core",
+  },
+  {
+    key: "merchant-statement",
+    path: "/merchant-preview?tab=statement",
+    labelKey: "navMerchantStatement",
+    icon: FileBarChart,
+    permissions: [PP.MerchantPreview.Read],
+    roles: ["MerchantPreview"],
+    section: "core",
+  },
+  {
+    key: "merchant-profile",
+    path: "/merchant-preview?tab=profile",
+    labelKey: "navMerchantProfile",
+    icon: UserRound,
+    permissions: [PP.MerchantPreview.Read],
+    roles: ["MerchantPreview"],
+    section: "core",
+  },
+  // ---- Partner sidebar (PSM / PartnerFinance) — direct entries; paths bound to own partner id ----
+  {
+    key: "partner-catalog",
+    path: "/partner",
+    labelKey: "navPartnerCatalog",
+    icon: Package,
+    permissions: [PP.Catalog.Read],
+    roles: ["PartnerSuccessManager", "PartnerFinance"],
+    section: "partner",
+  },
+  {
+    key: "partner-packages",
+    path: "/partner",
+    labelKey: "navPartnerPackages",
+    icon: Boxes,
+    permissions: [PP.Catalog.Read],
+    roles: ["PartnerSuccessManager", "PartnerFinance"],
+    section: "partner",
+  },
+  {
+    key: "partner-activations",
+    path: "/partner",
+    labelKey: "navPartnerActivations",
+    icon: Zap,
+    permissions: [PP.Activations.Read],
+    roles: ["PartnerSuccessManager", "PartnerFinance"],
+    section: "partner",
+  },
+  {
+    key: "partner-orders",
+    path: "/partner",
+    labelKey: "navPartnerOrders",
+    icon: ClipboardList,
+    permissions: [PP.Catalog.Read],
+    roles: ["PartnerSuccessManager", "PartnerFinance"],
+    section: "partner",
+  },
+  {
+    key: "partner-statements",
+    path: "/partner",
+    labelKey: "navPartnerStatements",
+    icon: FileText,
+    permissions: [PP.Settlement.Read],
+    roles: ["PartnerSuccessManager", "PartnerFinance"],
+    section: "partner",
+  },
   {
     key: "finance",
     path: "/finance/overview",
@@ -161,6 +278,16 @@ export const adminNav: readonly AdminNavItem[] = [
     section: "admin",
   },
   {
+    // Last partner entry by design (matches the ratified sidebar order: … Webhooks / Credentials / الإعدادات).
+    key: "partner-settings",
+    path: "/partner",
+    labelKey: "navPartnerSettings",
+    icon: Settings,
+    permissions: [PP.Partners.Read, PP.PartnerFinance.ReadOwn],
+    roles: ["PartnerSuccessManager", "PartnerFinance"],
+    section: "partner",
+  },
+  {
     key: "settings",
     path: "/settings",
     labelKey: "navSettings",
@@ -203,22 +330,28 @@ export function filterNavByPermissions(
   });
 }
 
-/** Resolve nav for the signed-in role — partner home path uses scoped partner id. */
+/** Partner sidebar entries → the partner-scoped screen each one opens (all under /partners/{ownId}). */
+const PARTNER_NAV_PATHS: Record<string, (partnerId: string) => string> = {
+  "partner-home": partnerHomePath,
+  "partner-catalog": (id) => `/partners/${id}/catalog`,
+  "partner-packages": (id) => `/partners/${id}/usage-packages`,
+  "partner-activations": (id) => `/partners/${id}/activations`,
+  "partner-orders": (id) => `/partners/${id}/orders`,
+  "partner-statements": (id) => `/partners/${id}/statement`,
+  "partner-settings": (id) => `/partners/${id}/profile`,
+};
+
+/** Resolve nav for the signed-in role — partner entry paths bind to the scoped partner id. */
 export function navForRole(
   role: PortalRole,
   granted: readonly string[],
   scopedPartnerId?: string,
 ): AdminNavItem[] {
-  const items = filterNavByPermissions(adminNav, granted, role).map((item) => {
-    if (item.key === "partner-home" && scopedPartnerId) {
-      return { ...item, path: partnerHomePath(scopedPartnerId) };
+  return filterNavByPermissions(adminNav, granted, role).map((item) => {
+    const partnerPath = PARTNER_NAV_PATHS[item.key];
+    if (partnerPath && scopedPartnerId) {
+      return { ...item, path: partnerPath(scopedPartnerId) };
     }
     return item;
   });
-
-  if (roleExperience(role) === "partner") {
-    return items;
-  }
-
-  return items;
 }

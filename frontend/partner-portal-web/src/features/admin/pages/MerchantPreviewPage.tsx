@@ -1,221 +1,83 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ChevronDown, ChevronUp, Loader2, Sparkles, Store } from "lucide-react";
+import { ArrowRight, PackageCheck, ShoppingBag, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { EmptyState, ErrorState, CardGridSkeleton } from "@/components/states";
 import { MoneyAmount } from "@/components/MoneyAmount";
 import { MerchantReflectionOrders } from "@/features/merchant/MerchantReflectionOrders";
 import {
   browseCategoryLabelKey,
   buildMerchantBrowseGroups,
-  merchantOfferingPrice,
-  type MerchantBrowsePartnerEntry,
+  toMerchantViewEntry,
+  type MerchantBrowsePartnerViewEntry,
+  type MerchantOfferingView,
 } from "@/lib/catalog/merchantBrowse";
-import { projectCatalogPrice } from "@/lib/catalog/catalogPriceVisibility";
 import { getPortalDataSource } from "@/lib/data";
-import type { PartnerCatalogItem } from "@/lib/data/types";
 import { listUsagePackages } from "@/lib/usage/usagePackageStore";
-import type { UsagePackage } from "@/lib/usage/usagePackage";
-import { PackageDetailsCard } from "../components/PackageDetailsCard";
-import { ListingDetails } from "../components/ListingDetails";
-import { isListingEmpty, type OfferingListing } from "@/lib/catalog/listingSchema";
+import { merchantPackageDisplay, type MerchantPackageDisplay } from "@/lib/usage/usagePackageDisplay";
+import {
+  OfferingDetailSheet,
+  PartnerBrowseCard,
+} from "../components/MerchantBrowseCards";
 import { getListing } from "@/lib/catalog/listingStore";
 import { MerchantServiceOrdersPanel, ServiceOrderForm } from "../components/ServiceOrderPanels";
+import { listOrdersForTenant } from "@/lib/orders/serviceOrders";
 import { subscribePortalDataChanged } from "@/lib/data/portalDataEvents";
-import {
-  MERCHANT_PREVIEW_DESC_KEYS,
-  MOCK_MERCHANT_PREVIEW,
-} from "@/lib/mock/merchantPreview";
+import { MOCK_MERCHANT_PREVIEW } from "@/lib/mock/merchantPreview";
 import { OrgProfileForm } from "@/features/settings/profile/OrgProfileForm";
 import { PageHeader } from "../components/PageHeader";
 import { MerchantActivePartnersPanel } from "../components/MerchantActivePartnersPanel";
 import { MerchantUsagePackagesPanel } from "../components/MerchantUsagePackagesPanel";
 import { MerchantStatementView } from "@/features/merchant/MerchantStatementView";
+import { usePortalSession } from "@/features/auth/usePortalSession";
+import { roleExperience } from "@/lib/rbac/roleNavConfig";
+import type { PortalRole } from "@/lib/rbac/portalRoles";
 import { tabBarClass, tabLinkClass } from "@/lib/ui/tabs";
 import type { Lang } from "@/lib/i18n";
 import { useTranslator } from "@/lib/i18n";
 import { offeringKindLabel } from "@/lib/i18n/domainLabels";
 
-type MerchantTab = "partners" | "browse" | "profile" | "statement";
+import { parseMerchantTab, type MerchantTab } from "@/lib/rbac/merchantTabs";
 
-function parseMerchantTab(raw: string | null): MerchantTab {
-  if (raw === "browse" || raw === "profile" || raw === "statement") return raw;
-  return "partners";
-}
-
-function TierPrice({ item }: { item: PartnerCatalogItem }) {
-  const sell = merchantOfferingPrice(item);
-  const scoped = projectCatalogPrice({ buy: item.partnerCost, sell }, "merchant");
-  if (!scoped.sell) return null;
-  return <MoneyAmount amount={scoped.sell.amount} />;
-}
-
-export function PartnerBrowseCard({
-  entry,
-  lang,
-  expanded,
-  onToggleExpand,
-  activeCatalogIds,
-  busyCatalogId,
-  onActivate,
-  packages,
-  listings,
-  onOrderService,
-}: {
-  entry: MerchantBrowsePartnerEntry;
-  lang: Lang;
-  expanded: boolean;
-  onToggleExpand: () => void;
-  activeCatalogIds: Set<string>;
-  busyCatalogId: string | null;
-  onActivate: (entry: MerchantBrowsePartnerEntry, item: PartnerCatalogItem) => void;
-  packages: UsagePackage[];
-  /** Gate 2a — structured listings keyed by offering id (read-only merchant rendering). */
-  listings?: Record<string, OfferingListing>;
-  /** Gate 2b — start a service order from the listing view. */
-  onOrderService?: (item: PartnerCatalogItem) => void;
-}) {
-  const t = useTranslator(lang);
-  const { partner, offerings, hasTierMenu } = entry;
-  const name = partner.tradeName ?? partner.legalName;
-  const descKey = MERCHANT_PREVIEW_DESC_KEYS[partner.id] ?? "merchantPreviewDesc_default";
-  const serviceType = offerings[0]
-    ? offeringKindLabel(lang, offerings[0].offeringKind)
-    : "—";
-  // Lead the card with the partner's own company brief; fall back to the mock catalogue copy.
-  const brief = partner.partnerBrief ?? t(descKey as never);
-  const benefit = offerings.find((o) => o.merchantBenefit)?.merchantBenefit;
-
-  const singleOffering = offerings.length === 1 ? offerings[0] : undefined;
-  const singleActive = singleOffering ? activeCatalogIds.has(singleOffering.id) : false;
-
-  return (
-    <Card className={["border-s-4", partner.accentClass].join(" ")} data-testid="partner-browse-card">
-      <CardHeader className="space-y-1 pb-3">
-        <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-lg">{name}</CardTitle>
-          <Store className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
-        </div>
-        <CardDescription className="text-sm">{serviceType}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div data-testid="browse-partner-brief">
-          <p className="text-xs font-medium text-muted-foreground">{t("merchantBrowseAboutPartner" as never)}</p>
-          <p className="mt-0.5 whitespace-pre-line text-sm">{brief}</p>
-        </div>
-        {benefit ? (
-          <div
-            data-testid="browse-merchant-benefit"
-            className="rounded-md border border-teal-500/30 bg-teal-500/5 px-3 py-2"
-          >
-            <p className="text-xs font-medium text-teal-700 dark:text-teal-300">
-              {t("merchantBrowseWhatYouGet" as never)}
-            </p>
-            <p className="mt-0.5 text-sm">{benefit}</p>
-          </div>
-        ) : null}
-        {hasTierMenu ? (
-          <>
-            <Button variant="outline" className="w-full justify-between" onClick={onToggleExpand}>
-              {expanded ? t("merchantBrowseHideTiers" as never) : t("merchantBrowseChooseTier" as never)}
-              {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </Button>
-            {expanded ? (
-              <ul className="space-y-2">
-                {offerings.map((item) => {
-                  const isActive = activeCatalogIds.has(item.id);
-                  return (
-                    <li
-                      key={item.id}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2"
-                    >
-                      <div>
-                        <p className="font-medium">{item.name}</p>
-                        <p className="text-xs text-muted-foreground">{item.code}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <TierPrice item={item} />
-                        <Button
-                          size="sm"
-                          disabled={isActive || busyCatalogId === item.id}
-                          onClick={() => onActivate(entry, item)}
-                        >
-                          {isActive
-                            ? t("merchantPreviewAlreadyActive" as never)
-                            : t("merchantPreviewActivate" as never)}
-                        </Button>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : null}
-          </>
-        ) : singleOffering ? (
-          <>
-            <p className="text-sm text-muted-foreground">{singleOffering.name}</p>
-            <p className="text-sm font-medium">
-              {t("merchantBrowseYourPrice" as never)}: <TierPrice item={singleOffering} />
-            </p>
-            <Button
-              className="w-full"
-              disabled={singleActive || busyCatalogId === singleOffering.id}
-              onClick={() => onActivate(entry, singleOffering)}
-            >
-              {singleActive
-                ? t("merchantPreviewAlreadyActive" as never)
-                : t("merchantPreviewActivate" as never)}
-            </Button>
-          </>
-        ) : null}
-
-        {listings
-          ? offerings
-              .filter((item) => listings[item.id] && !isListingEmpty(listings[item.id]))
-              .map((item) => (
-                <div key={item.id} className="space-y-2 border-t border-border/60 pt-3" data-testid="browse-offering-listing">
-                  <ListingDetails lang={lang} listing={listings[item.id]} />
-                  {onOrderService ? (
-                    <Button size="sm" data-testid={`order-service-${item.id}`} onClick={() => onOrderService(item)}>
-                      {t("orderThisService" as never)}
-                    </Button>
-                  ) : null}
-                </div>
-              ))
-          : null}
-
-        {packages.length > 0 ? (
-          <div className="space-y-2 border-t border-border/60 pt-3" data-testid="browse-partner-packages">
-            <p className="text-xs font-medium text-muted-foreground">
-              {t("merchantBrowsePackagesLabel" as never)}
-            </p>
-            {packages.map((pkg) => (
-              <PackageDetailsCard key={pkg.id} lang={lang} pkg={pkg} />
-            ))}
-          </div>
-        ) : null}
-      </CardContent>
-    </Card>
-  );
-}
+export { parseMerchantTab, type MerchantTab } from "@/lib/rbac/merchantTabs";
 
 export function MerchantPreviewPage({ lang }: { lang: Lang }) {
   const t = useTranslator(lang);
   const isRtl = lang === "ar";
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = parseMerchantTab(searchParams.get("tab"));
-  const [browseGroups, setBrowseGroups] = useState(() => buildMerchantBrowseGroups([], []));
-  const [packagesByPartner, setPackagesByPartner] = useState<Map<string, UsagePackage[]>>(new Map());
+  const { role } = usePortalSession();
+  const isMerchantExperience = roleExperience(role as PortalRole) === "merchant";
+
+  const [viewGroups, setViewGroups] = useState<
+    { moduleId: string; partners: MerchantBrowsePartnerViewEntry[] }[]
+  >([]);
+  const [packagesByPartner, setPackagesByPartner] = useState<Map<string, MerchantPackageDisplay[]>>(
+    new Map(),
+  );
   const [activeCatalogIds, setActiveCatalogIds] = useState<Set<string>>(new Set());
+  const [activeServiceCount, setActiveServiceCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [expandedPartnerId, setExpandedPartnerId] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [busyCatalogId, setBusyCatalogId] = useState<string | null>(null);
-  const [orderItem, setOrderItem] = useState<PartnerCatalogItem | null>(null);
+  const [orderItem, setOrderItem] = useState<MerchantOfferingView | null>(null);
   const [ordersVersion, setOrdersVersion] = useState(0);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; showServicesAction?: boolean } | null>(null);
+  const [detail, setDetail] = useState<
+    { entry: MerchantBrowsePartnerViewEntry; offering: MerchantOfferingView } | null
+  >(null);
+  const [confirmActivate, setConfirmActivate] = useState<
+    { entry: MerchantBrowsePartnerViewEntry; offering: MerchantOfferingView } | null
+  >(null);
+  const [confirmEndId, setConfirmEndId] = useState<string | null>(null);
+  const [kindFilter, setKindFilter] = useState<string>("all");
+  const [partnerFilter, setPartnerFilter] = useState<string>("all");
 
   const loadBrowse = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const ds = getPortalDataSource();
       const [partners, catalog, activations] = await Promise.all([
@@ -223,22 +85,33 @@ export function MerchantPreviewPage({ lang }: { lang: Lang }) {
         ds.getCatalogItems(),
         ds.getActivations(),
       ]);
-      setBrowseGroups(buildMerchantBrowseGroups(partners, catalog));
-      const pkgMap = new Map<string, UsagePackage[]>();
+      // Merchant scope boundary: raw items projected ONCE through the single merchant mapper.
+      setViewGroups(
+        buildMerchantBrowseGroups(partners, catalog).map((group) => ({
+          moduleId: group.moduleId,
+          partners: group.partners.map(toMerchantViewEntry),
+        })),
+      );
+      const pkgMap = new Map<string, MerchantPackageDisplay[]>();
       for (const pkg of listUsagePackages().filter((p) => p.status === "Published")) {
-        pkgMap.set(pkg.partnerId, [...(pkgMap.get(pkg.partnerId) ?? []), pkg]);
+        pkgMap.set(pkg.partnerId, [...(pkgMap.get(pkg.partnerId) ?? []), merchantPackageDisplay(pkg)]);
       }
       setPackagesByPartner(pkgMap);
       const ids = new Set<string>();
+      let activeCount = 0;
       for (const row of activations) {
         if (
           row.activation.tenantId === MOCK_MERCHANT_PREVIEW.tenantId &&
           row.activation.status !== "Ended"
         ) {
           ids.add(row.activation.catalogItemId);
+          activeCount += 1;
         }
       }
       setActiveCatalogIds(ids);
+      setActiveServiceCount(activeCount);
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
@@ -253,34 +126,83 @@ export function MerchantPreviewPage({ lang }: { lang: Lang }) {
 
   useEffect(() => {
     if (!toast) return;
-    const timer = window.setTimeout(() => setToast(null), 5000);
+    const timer = window.setTimeout(() => setToast(null), 6000);
     return () => window.clearTimeout(timer);
   }, [toast]);
 
   const setTab = (tab: MerchantTab) => {
-    if (tab === "partners") {
+    if (tab === "dashboard") {
       setSearchParams({});
     } else {
       setSearchParams({ tab });
     }
   };
 
-  const handleActivate = async (entry: MerchantBrowsePartnerEntry, item: PartnerCatalogItem) => {
-    setBusyCatalogId(item.id);
+  const openOrderCount = useMemo(
+    () =>
+      listOrdersForTenant(MOCK_MERCHANT_PREVIEW.tenantId).filter(
+        (o) => o.status !== "Closed" && o.status !== "MerchantCancelled" && o.status !== "PartnerDeclined",
+      ).length,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [ordersVersion, activeTab],
+  );
+
+  const kindOptions = useMemo(() => {
+    const kinds = new Set<string>();
+    for (const group of viewGroups)
+      for (const entry of group.partners)
+        for (const offering of entry.offerings) kinds.add(offering.offeringKind);
+    return [...kinds];
+  }, [viewGroups]);
+
+  const partnerOptions = useMemo(
+    () =>
+      viewGroups.flatMap((g) =>
+        g.partners.map((p) => ({
+          id: p.partner.id,
+          name: p.partner.tradeName ?? p.partner.legalName,
+        })),
+      ),
+    [viewGroups],
+  );
+
+  const filteredGroups = useMemo(
+    () =>
+      viewGroups
+        .map((group) => ({
+          moduleId: group.moduleId,
+          partners: group.partners
+            .filter((entry) => partnerFilter === "all" || entry.partner.id === partnerFilter)
+            .map((entry) => ({
+              ...entry,
+              offerings:
+                kindFilter === "all"
+                  ? entry.offerings
+                  : entry.offerings.filter((o) => o.offeringKind === kindFilter),
+            }))
+            .filter((entry) => entry.offerings.length > 0),
+        }))
+        .filter((group) => group.partners.length > 0),
+    [viewGroups, kindFilter, partnerFilter],
+  );
+
+  const handleActivate = async (entry: MerchantBrowsePartnerViewEntry, offering: MerchantOfferingView) => {
+    setBusyCatalogId(offering.id);
     try {
-      const sell = merchantOfferingPrice(item);
       await getPortalDataSource().createActivation({
         partnerId: entry.partner.id,
-        catalogItemId: item.id,
+        catalogItemId: offering.id,
         tenantId: MOCK_MERCHANT_PREVIEW.tenantId,
         merchantName: MOCK_MERCHANT_PREVIEW.merchantName,
-        resalePrice: sell,
+        resalePrice: offering.price,
       });
-      setToast(t("merchantBrowseActivatedToast" as never));
-      setExpandedPartnerId(null);
+      setToast({ message: t("merchantBrowseActivatedToast" as never), showServicesAction: true });
+      setConfirmActivate(null);
+      setDetail(null);
       await loadBrowse();
     } catch (err) {
-      setToast(err instanceof Error ? err.message : String(err));
+      setToast({ message: err instanceof Error ? err.message : String(err) });
+      setConfirmActivate(null);
     } finally {
       setBusyCatalogId(null);
     }
@@ -290,11 +212,46 @@ export function MerchantPreviewPage({ lang }: { lang: Lang }) {
     setBusyCatalogId(activationId);
     try {
       await getPortalDataSource().endActivation(activationId);
+      setConfirmEndId(null);
       await loadBrowse();
     } finally {
       setBusyCatalogId(null);
     }
   };
+
+  const toastBanner = toast ? (
+    <div
+      role="alert"
+      className="flex items-start gap-3 rounded-lg border border-teal-500/40 bg-teal-500/10 px-4 py-3 text-sm text-teal-950 dark:text-teal-50"
+    >
+      <Sparkles className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+      <span className="flex-1">{toast.message}</span>
+      {toast.showServicesAction ? (
+        <Button
+          size="sm"
+          variant="outline"
+          data-testid="toast-view-services"
+          onClick={() => {
+            setToast(null);
+            setTab("services");
+          }}
+        >
+          {t("toastViewServices" as never)}
+          <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" aria-hidden="true" />
+        </Button>
+      ) : null}
+    </div>
+  ) : null;
+
+  const tabs: { key: MerchantTab; labelKey: string }[] = [
+    { key: "dashboard", labelKey: "navMerchantDashboard" },
+    { key: "browse", labelKey: "navMerchantBrowse" },
+    { key: "services", labelKey: "navMerchantServices" },
+    { key: "orders", labelKey: "navMerchantOrders" },
+    { key: "invoices", labelKey: "navMerchantInvoices" },
+    { key: "statement", labelKey: "navMerchantStatement" },
+    { key: "profile", labelKey: "navMerchantProfile" },
+  ];
 
   return (
     <div className="space-y-6" dir={isRtl ? "rtl" : "ltr"}>
@@ -314,36 +271,23 @@ export function MerchantPreviewPage({ lang }: { lang: Lang }) {
         </p>
       </div>
 
-      <nav className={tabBarClass} aria-label={t("merchantPreviewNav" as never)}>
-        <button
-          type="button"
-          className={tabLinkClass(activeTab === "partners")}
-          onClick={() => setTab("partners")}
-        >
-          {t("merchantTabPartners" as never)}
-        </button>
-        <button
-          type="button"
-          className={tabLinkClass(activeTab === "statement")}
-          onClick={() => setTab("statement")}
-        >
-          {t("merchantTabStatement" as never)}
-        </button>
-        <button
-          type="button"
-          className={tabLinkClass(activeTab === "browse")}
-          onClick={() => setTab("browse")}
-        >
-          {t("merchantTabBrowse" as never)}
-        </button>
-        <button
-          type="button"
-          className={tabLinkClass(activeTab === "profile")}
-          onClick={() => setTab("profile")}
-        >
-          {t("merchantTabProfile" as never)}
-        </button>
-      </nav>
+      {/* The merchant role drives these views from the SIDEBAR; the in-page tab bar stays for admin preview. */}
+      {!isMerchantExperience ? (
+        <nav className={tabBarClass} aria-label={t("merchantPreviewNav" as never)}>
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              className={tabLinkClass(activeTab === tab.key)}
+              onClick={() => setTab(tab.key)}
+            >
+              {t(tab.labelKey as never)}
+            </button>
+          ))}
+        </nav>
+      ) : null}
+
+      {toastBanner}
 
       {activeTab === "profile" ? (
         <OrgProfileForm
@@ -355,25 +299,18 @@ export function MerchantPreviewPage({ lang }: { lang: Lang }) {
         />
       ) : activeTab === "statement" ? (
         <MerchantStatementView lang={lang} tenantId={MOCK_MERCHANT_PREVIEW.tenantId} />
-      ) : activeTab === "partners" ? (
-        <MerchantActivePartnersPanel
-          lang={lang}
-          tenantId={MOCK_MERCHANT_PREVIEW.tenantId}
-          onDeactivate={(id) => void handleEnd(id)}
-          busyActivationId={busyCatalogId}
-        />
-      ) : (
-        <>
-          {toast ? (
-            <div
-              role="alert"
-              className="flex items-start gap-3 rounded-lg border border-teal-500/40 bg-teal-500/10 px-4 py-3 text-sm text-teal-950 dark:text-teal-50"
-            >
-              <Sparkles className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-              <span>{toast}</span>
-            </div>
-          ) : null}
-
+      ) : activeTab === "services" ? (
+        <div className="space-y-4" data-testid="merchant-services-view">
+          <MerchantActivePartnersPanel
+            lang={lang}
+            tenantId={MOCK_MERCHANT_PREVIEW.tenantId}
+            onDeactivate={(id) => setConfirmEndId(id)}
+            busyActivationId={busyCatalogId}
+            onInvoicesLink={() => setTab("invoices")}
+          />
+        </div>
+      ) : activeTab === "orders" ? (
+        <div className="space-y-4" data-testid="merchant-orders-view">
           {orderItem ? (
             <ServiceOrderForm
               lang={lang}
@@ -381,9 +318,10 @@ export function MerchantPreviewPage({ lang }: { lang: Lang }) {
               offeringName={orderItem.name}
               partnerId={orderItem.partnerId}
               tenantId={MOCK_MERCHANT_PREVIEW.tenantId}
-              participationMode={orderItem.participationMode === "SubscriptionFee" ? "SubscriptionFee" : "Principal"}
-              buy={orderItem.partnerCost.amount}
-              sellOrFee={merchantOfferingPrice(orderItem).amount}
+              participationMode={
+                orderItem.participationMode === "SubscriptionFee" ? "SubscriptionFee" : "Principal"
+              }
+              sellOrFee={orderItem.price.amount}
               requirements={getListing(orderItem.id).requirements}
               onDone={() => {
                 setOrderItem(null);
@@ -392,9 +330,74 @@ export function MerchantPreviewPage({ lang }: { lang: Lang }) {
               onCancel={() => setOrderItem(null)}
             />
           ) : null}
-          <MerchantServiceOrdersPanel key={ordersVersion} lang={lang} tenantId={MOCK_MERCHANT_PREVIEW.tenantId} />
+          <MerchantServiceOrdersPanel
+            key={ordersVersion}
+            lang={lang}
+            tenantId={MOCK_MERCHANT_PREVIEW.tenantId}
+          />
+        </div>
+      ) : activeTab === "invoices" ? (
+        <div className="space-y-6" data-testid="merchant-invoices-view">
+          <div>
+            <h2 className="text-lg font-semibold">{t("merchantInvoicesTitle" as never)}</h2>
+            <p className="text-sm text-muted-foreground">{t("merchantInvoicesDesc" as never)}</p>
+          </div>
+          <MerchantUsagePackagesPanel
+            lang={lang}
+            tenantId={MOCK_MERCHANT_PREVIEW.tenantId}
+            merchantName={MOCK_MERCHANT_PREVIEW.merchantName}
+          />
           <MerchantReflectionOrders lang={lang} tenantId={MOCK_MERCHANT_PREVIEW.tenantId} />
-
+        </div>
+      ) : activeTab === "dashboard" ? (
+        <div className="space-y-4" data-testid="merchant-dashboard-view">
+          <div>
+            <h2 className="text-lg font-semibold">{t("merchantDashTitle" as never)}</h2>
+            <p className="text-sm text-muted-foreground">{t("merchantDashDesc" as never)}</p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>{t("merchantDashActiveServices" as never)}</CardDescription>
+                <CardTitle className="flex items-center gap-2 text-3xl tabular-nums">
+                  <Sparkles className="h-5 w-5 text-teal-600" aria-hidden="true" />
+                  {activeServiceCount}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Button size="sm" variant="outline" onClick={() => setTab("services")}>
+                  {t("navMerchantServices" as never)}
+                </Button>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>{t("merchantDashOpenOrders" as never)}</CardDescription>
+                <CardTitle className="flex items-center gap-2 text-3xl tabular-nums">
+                  <PackageCheck className="h-5 w-5 text-indigo-600" aria-hidden="true" />
+                  {openOrderCount}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Button size="sm" variant="outline" onClick={() => setTab("orders")}>
+                  {t("navMerchantOrders" as never)}
+                </Button>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>{t("merchantDashBrowseCta" as never)}</CardDescription>
+                <CardTitle className="flex items-center gap-2 text-3xl">
+                  <ShoppingBag className="h-5 w-5 text-primary" aria-hidden="true" />
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Button size="sm" onClick={() => setTab("browse")} data-testid="dash-browse-cta">
+                  {t("navMerchantBrowse" as never)}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base">{t("merchantPreviewTenantTitle" as never)}</CardTitle>
@@ -411,59 +414,178 @@ export function MerchantPreviewPage({ lang }: { lang: Lang }) {
               </div>
             </CardContent>
           </Card>
+        </div>
+      ) : (
+        <section className="space-y-6" data-testid="merchant-browse-view">
+          <div>
+            <h2 className="text-lg font-semibold">{t("merchantPreviewBrowseTitle" as never)}</h2>
+            <p className="text-sm text-muted-foreground">{t("merchantPreviewBrowseDesc" as never)}</p>
+          </div>
 
-          <section className="space-y-6">
-            <div>
-              <h2 className="text-lg font-semibold">{t("merchantPreviewBrowseTitle" as never)}</h2>
-              <p className="text-sm text-muted-foreground">{t("merchantPreviewBrowseDesc" as never)}</p>
+          {/* Client-side filter chips — OfferingKind + partner (partner-type chips deferred: lookup gated). */}
+          <div className="space-y-2" data-testid="browse-filters">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground">
+                {t("browseFilterKindLabel" as never)}:
+              </span>
+              <FilterChip
+                active={kindFilter === "all"}
+                label={t("browseFilterAll" as never)}
+                onClick={() => setKindFilter("all")}
+              />
+              {kindOptions.map((kind) => (
+                <FilterChip
+                  key={kind}
+                  active={kindFilter === kind}
+                  label={offeringKindLabel(lang, kind as never)}
+                  onClick={() => setKindFilter(kind)}
+                  testId={`kind-chip-${kind}`}
+                />
+              ))}
             </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground">
+                {t("browseFilterPartnerLabel" as never)}:
+              </span>
+              <FilterChip
+                active={partnerFilter === "all"}
+                label={t("browseFilterAll" as never)}
+                onClick={() => setPartnerFilter("all")}
+              />
+              {partnerOptions.map((p) => (
+                <FilterChip
+                  key={p.id}
+                  active={partnerFilter === p.id}
+                  label={p.name}
+                  onClick={() => setPartnerFilter(p.id)}
+                  testId={`partner-chip-${p.id}`}
+                />
+              ))}
+            </div>
+          </div>
 
-            {loading ? (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Loader2 className="h-5 w-5 animate-spin" />
-                {t("loadingData" as never)}
-              </div>
-            ) : (
-              browseGroups.map((group) => (
-                <div key={group.moduleId} className="space-y-3">
-                  <h3 className="text-base font-semibold text-foreground">
-                    {t(browseCategoryLabelKey(group.moduleId) as never)}
-                  </h3>
-                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                    {group.partners.map((entry) => (
-                      <PartnerBrowseCard
-                        key={entry.partner.id}
-                        entry={entry}
-                        lang={lang}
-                        expanded={expandedPartnerId === entry.partner.id}
-                        onToggleExpand={() =>
-                          setExpandedPartnerId((id) =>
-                            id === entry.partner.id ? null : entry.partner.id,
-                          )
-                        }
-                        activeCatalogIds={activeCatalogIds}
-                        listings={Object.fromEntries(
-                          entry.offerings.map((item) => [item.id, getListing(item.id)]),
-                        )}
-                        onOrderService={(item) => setOrderItem(item)}
-                        busyCatalogId={busyCatalogId}
-                        onActivate={handleActivate}
-                        packages={packagesByPartner.get(entry.partner.id) ?? []}
-                      />
-                    ))}
-                  </div>
+          {loading ? (
+            <CardGridSkeleton count={3} />
+          ) : loadError ? (
+            <ErrorState
+              message={t("stateErrorGeneric" as never)}
+              retryLabel={t("stateRetry" as never)}
+              onRetry={() => void loadBrowse()}
+            />
+          ) : filteredGroups.length === 0 ? (
+            <EmptyState
+              icon={ShoppingBag}
+              message={t("stateEmptyCatalog" as never)}
+            />
+          ) : (
+            filteredGroups.map((group) => (
+              <div key={group.moduleId} className="space-y-3">
+                <h3 className="text-base font-semibold text-foreground">
+                  {t(browseCategoryLabelKey(group.moduleId as never) as never)}
+                </h3>
+                <div className="grid gap-4 lg:grid-cols-2">
+                  {group.partners.map((entry) => (
+                    <PartnerBrowseCard
+                      key={entry.partner.id}
+                      entry={entry}
+                      lang={lang}
+                      activeCatalogIds={activeCatalogIds}
+                      onViewDetails={(e, offering) => setDetail({ entry: e, offering })}
+                      packages={packagesByPartner.get(entry.partner.id) ?? []}
+                    />
+                  ))}
                 </div>
-              ))
-            )}
-          </section>
-
-          <MerchantUsagePackagesPanel
-            lang={lang}
-            tenantId={MOCK_MERCHANT_PREVIEW.tenantId}
-            merchantName={MOCK_MERCHANT_PREVIEW.merchantName}
-          />
-        </>
+              </div>
+            ))
+          )}
+        </section>
       )}
+
+      <OfferingDetailSheet
+        lang={lang}
+        detail={detail}
+        isActive={detail ? activeCatalogIds.has(detail.offering.id) : false}
+        busy={detail ? busyCatalogId === detail.offering.id : false}
+        onClose={() => setDetail(null)}
+        onActivate={() => detail && setConfirmActivate(detail)}
+        onOrderService={(offering) => {
+          setDetail(null);
+          setOrderItem(offering);
+          setTab("orders");
+        }}
+      />
+
+      {confirmActivate ? (
+        <ConfirmDialog
+          open
+          dir={isRtl ? "rtl" : "ltr"}
+          testId="activate-confirm"
+          title={t("activateConfirmTitle" as never)}
+          confirmLabel={t("confirmActivate" as never)}
+          cancelLabel={t("confirmCancel" as never)}
+          busy={busyCatalogId === confirmActivate.offering.id}
+          onCancel={() => setConfirmActivate(null)}
+          onConfirm={() => void handleActivate(confirmActivate.entry, confirmActivate.offering)}
+        >
+          <p className="font-medium text-foreground">{confirmActivate.offering.name}</p>
+          <p>
+            {t("activateConfirmPriceLabel" as never)}:{" "}
+            <MoneyAmount amount={confirmActivate.offering.price.amount} />
+          </p>
+          <p>
+            {t("browseActivationFeeLabel" as never)}: {t("browseNoActivationFee" as never)}
+          </p>
+          <p>{t("activateConfirmStartsNow" as never)}</p>
+        </ConfirmDialog>
+      ) : null}
+
+      {confirmEndId ? (
+        <ConfirmDialog
+          open
+          dir={isRtl ? "rtl" : "ltr"}
+          testId="deactivate-confirm"
+          destructive
+          title={t("deactivateConfirmTitle" as never)}
+          confirmLabel={t("confirmDeactivate" as never)}
+          cancelLabel={t("confirmCancel" as never)}
+          busy={busyCatalogId === confirmEndId}
+          onCancel={() => setConfirmEndId(null)}
+          onConfirm={() => void handleEnd(confirmEndId)}
+        >
+          <p>{t("deactivateProrationSentence" as never)}</p>
+          <p>{t("deactivateReactivateSentence" as never)}</p>
+        </ConfirmDialog>
+      ) : null}
     </div>
+  );
+}
+
+function FilterChip({
+  active,
+  label,
+  onClick,
+  testId,
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+  testId?: string;
+}) {
+  return (
+    <button
+      type="button"
+      data-testid={testId}
+      aria-pressed={active}
+      onClick={onClick}
+      className={[
+        "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        active
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-border text-muted-foreground hover:bg-muted hover:text-foreground",
+      ].join(" ")}
+    >
+      {label}
+    </button>
   );
 }

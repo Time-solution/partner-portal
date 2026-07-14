@@ -93,7 +93,7 @@ describe("buildOrgSession", () => {
   it("merchant session carries tenant ctx", () => {
     const s = buildOrgSession(orgs[3], users[4]);
     expect(s.ctx.tenantId).toBe("tenant-qb");
-    expect(s.landing).toBe("/merchant-preview?tab=partners");
+    expect(s.landing).toBe("/merchant-preview");
   });
 });
 

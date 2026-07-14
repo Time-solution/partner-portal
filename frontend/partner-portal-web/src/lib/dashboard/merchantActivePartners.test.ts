@@ -97,7 +97,7 @@ describe("buildMerchantActivePartners", () => {
 
 describe("merchant dashboard RBAC paths", () => {
   it("merchant landing defaults to partners tab", () => {
-    expect(defaultLandingPath("MerchantPreview")).toBe("/merchant-preview?tab=partners");
+    expect(defaultLandingPath("MerchantPreview")).toBe("/merchant-preview");
   });
 
   it("blocks merchant from partner and finance URLs", () => {

@@ -24,6 +24,57 @@ export interface MerchantBrowsePartnerEntry {
   hasTierMenu: boolean;
 }
 
+/**
+ * The merchant-scoped offering projection — FE mirror of the backend's single audited mapper
+ * (PartnerCatalogOfferingVisibility → MerchantPartnerOfferingReadDto). Fresh object literal:
+ * partnerCost / buy / margin are STRUCTURALLY ABSENT (no key exists), the only money field is
+ * the merchant-named `price`. Merchant-facing components must receive THIS shape, never the raw
+ * PartnerCatalogItem.
+ */
+export interface MerchantOfferingView {
+  id: string;
+  partnerId: string;
+  code: string;
+  name: string;
+  description?: string;
+  merchantBenefit?: string;
+  offeringKind: PartnerCatalogItem["offeringKind"];
+  participationMode: PartnerCatalogItem["participationMode"];
+  /** The resolved sell — what activation will charge (merchantOfferingPrice). */
+  price: Money;
+}
+
+export function merchantOfferingView(item: PartnerCatalogItem): MerchantOfferingView {
+  return {
+    id: item.id,
+    partnerId: item.partnerId,
+    code: item.code,
+    name: item.name,
+    description: item.description,
+    merchantBenefit: item.merchantBenefit,
+    offeringKind: item.offeringKind,
+    participationMode: item.participationMode,
+    price: merchantOfferingPrice(item),
+  };
+}
+
+/** A browse entry with offerings already projected through the merchant scope. */
+export interface MerchantBrowsePartnerViewEntry {
+  partner: Partner;
+  moduleId: PartnerBusinessModuleId;
+  offerings: MerchantOfferingView[];
+  hasTierMenu: boolean;
+}
+
+export function toMerchantViewEntry(entry: MerchantBrowsePartnerEntry): MerchantBrowsePartnerViewEntry {
+  return {
+    partner: entry.partner,
+    moduleId: entry.moduleId,
+    offerings: entry.offerings.map(merchantOfferingView),
+    hasTierMenu: entry.hasTierMenu,
+  };
+}
+
 export interface MerchantBrowseCategoryGroup {
   moduleId: PartnerBusinessModuleId;
   partners: MerchantBrowsePartnerEntry[];

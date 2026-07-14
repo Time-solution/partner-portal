@@ -77,7 +77,6 @@ export function ServiceOrderForm({
   partnerId,
   tenantId,
   participationMode,
-  buy,
   sellOrFee,
   requirements,
   onDone,
@@ -89,7 +88,7 @@ export function ServiceOrderForm({
   partnerId: string;
   tenantId: string;
   participationMode: "Principal" | "SubscriptionFee";
-  buy?: number;
+  /** Merchant-scoped price only — the buy leg never reaches this component (prop hygiene); the store resolves it. */
   sellOrFee: number;
   requirements: ListingRequirementRow[];
   onDone: () => void;
@@ -113,7 +112,6 @@ export function ServiceOrderForm({
       partnerId,
       tenantId,
       participationMode,
-      buy,
       sellOrFee,
       actor: tenantId,
       at: new Date().toISOString(),

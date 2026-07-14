@@ -29,9 +29,40 @@ export const ROLE_NAV_KEYS: Record<PortalRole, readonly string[]> = {
     "settings",
   ],
   Accountant: ["finance", "reports", "commission-approvals", "manual-invoice-new", "settings"],
-  PartnerSuccessManager: ["partner-home", "webhooks", "credentials"],
-  PartnerFinance: ["partner-home", "webhooks", "credentials"],
-  MerchantPreview: ["merchant-preview"],
+  // Partner sidebar — direct entries into the partner-scoped screens (no cross-role leakage:
+  // these keys exist only here, and every path resolves under /partners/{ownId}/…).
+  PartnerSuccessManager: [
+    "partner-home",
+    "partner-catalog",
+    "partner-packages",
+    "partner-activations",
+    "partner-orders",
+    "partner-statements",
+    "webhooks",
+    "credentials",
+    "partner-settings",
+  ],
+  PartnerFinance: [
+    "partner-home",
+    "partner-catalog",
+    "partner-packages",
+    "partner-activations",
+    "partner-orders",
+    "partner-statements",
+    "webhooks",
+    "credentials",
+    "partner-settings",
+  ],
+  // Merchant sidebar — the query-param tabs promoted to real nav entries (params keep working).
+  MerchantPreview: [
+    "merchant-dashboard",
+    "merchant-browse",
+    "merchant-services",
+    "merchant-orders",
+    "merchant-invoices",
+    "merchant-statement",
+    "merchant-profile",
+  ],
 };
 
 export function roleExperience(role: PortalRole): RoleExperience {
@@ -58,7 +89,8 @@ export function partnerHomePath(partnerId: string): string {
 export function defaultLandingPath(role: PortalRole): string {
   switch (role) {
     case "MerchantPreview":
-      return "/merchant-preview?tab=partners";
+      // Lands on the merchant dashboard; legacy ?tab=partners still resolves (services alias).
+      return "/merchant-preview";
     case "Accountant":
       return "/finance/overview";
     case "PartnerSuccessManager":

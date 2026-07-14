@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MoneyAmount } from "@/components/MoneyAmount";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatusBadge } from "@/components/catalog/badges";
+import { CardGridSkeleton, ErrorState } from "@/components/states";
+import { roleExperience } from "@/lib/rbac/roleNavConfig";
 import { getPortalDataSource } from "@/lib/data";
 import type { MerchantActivationRow } from "@/lib/data/types";
 import { PortalPermissions, roleLabels, type PortalRole } from "@/lib/rbac/portalRoles";
@@ -27,7 +29,10 @@ export function ActivationsPage({ lang, moduleId, partnerId, financeMode }: Modu
   const showHeader = !moduleId && !partnerId && !financeMode;
   const [activations, setActivations] = useState<MerchantActivationRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Partner roles get a READ-ONLY list of who activated their offerings — no workflow actions.
+  const partnerReadOnly = roleExperience(role as never) === "partner";
 
   // Date filter layers ON TOP of scope — narrows by activation date (undated rows stay visible).
   const visibleActivations = useMemo(
@@ -37,6 +42,7 @@ export function ActivationsPage({ lang, moduleId, partnerId, financeMode }: Modu
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const rows = await getPortalDataSource().getActivations(partnerId);
       setActivations(
@@ -44,6 +50,8 @@ export function ActivationsPage({ lang, moduleId, partnerId, financeMode }: Modu
           ? rows.filter((r) => scopeIds.includes(r.activation.partnerId))
           : rows,
       );
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
@@ -84,10 +92,13 @@ export function ActivationsPage({ lang, moduleId, partnerId, financeMode }: Modu
         <DateRangeFilter range={range} onChange={setRange} lang={lang} />
       </div>
       {loading ? (
-        <div className="flex items-center gap-2 text-base text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          {t("loadingData" as never)}
-        </div>
+        <CardGridSkeleton count={3} />
+      ) : loadError ? (
+        <ErrorState
+          message={t("stateErrorGeneric" as never)}
+          retryLabel={t("stateRetry" as never)}
+          onRetry={() => void load()}
+        />
       ) : visibleActivations.length === 0 ? (
         <Card>
           <CardContent className="p-0">
@@ -102,12 +113,12 @@ export function ActivationsPage({ lang, moduleId, partnerId, financeMode }: Modu
                 <div>
                   <CardTitle className="text-lg">{a.merchantName}</CardTitle>
                   <CardDescription className="text-base">
-                    {a.catalogItemName} · <MoneyAmount amount={a.resalePrice.amount} /> ·{" "}
-                    {activationStatusLabel(lang, a.status)}
+                    {a.catalogItemName} · <MoneyAmount amount={a.resalePrice.amount} />
                   </CardDescription>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {canRequest && wf.stage === "Pending" ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusBadge status={a.status} label={activationStatusLabel(lang, a.status)} />
+                  {!partnerReadOnly && canRequest && wf.stage === "Pending" ? (
                     <Button
                       size="sm"
                       variant="outline"
@@ -117,7 +128,7 @@ export function ActivationsPage({ lang, moduleId, partnerId, financeMode }: Modu
                       {t("activationRequest" as never)}
                     </Button>
                   ) : null}
-                  {canSetTerms && wf.stage === "PsmRequested" ? (
+                  {!partnerReadOnly && canSetTerms && wf.stage === "PsmRequested" ? (
                     <Button
                       size="sm"
                       variant="outline"
@@ -127,10 +138,10 @@ export function ActivationsPage({ lang, moduleId, partnerId, financeMode }: Modu
                       {t("activationSetTerms" as never)}
                     </Button>
                   ) : null}
-                  {canSetTerms && wf.stage === "AccountantTermsSet" && !canApprove ? (
+                  {!partnerReadOnly && canSetTerms && wf.stage === "AccountantTermsSet" && !canApprove ? (
                     <span className="text-sm text-muted-foreground">{t("activationAwaitAdmin" as never)}</span>
                   ) : null}
-                  {canApprove && wf.stage === "AccountantTermsSet" ? (
+                  {!partnerReadOnly && canApprove && wf.stage === "AccountantTermsSet" ? (
                     <Button
                       size="sm"
                       disabled={busyId === a.id}

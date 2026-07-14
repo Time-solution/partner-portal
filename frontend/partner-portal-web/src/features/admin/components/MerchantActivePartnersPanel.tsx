@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Loader2, Sparkles } from "lucide-react";
+import { Loader2, ReceiptText, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatusBadge } from "@/components/catalog/badges";
 import { MoneyAmount } from "@/components/MoneyAmount";
 import { BetaBadge } from "@/components/brand/BetaBadge";
 import { getPortalDataSource } from "@/lib/data";
@@ -20,11 +21,14 @@ export function MerchantActivePartnersPanel({
   tenantId,
   onDeactivate,
   busyActivationId,
+  onInvoicesLink,
 }: {
   lang: Lang;
   tenantId: string;
   onDeactivate?: (activationId: string) => void;
   busyActivationId?: string | null;
+  /** Jump to the invoices/usage breakdown view (kills the my-services dead end). */
+  onInvoicesLink?: () => void;
 }) {
   const t = useTranslator(lang);
   const isRtl = lang === "ar";
@@ -52,7 +56,10 @@ export function MerchantActivePartnersPanel({
             .map((c) => [`${c.partnerId}:${c.code}`, c.merchantBenefit as string]),
         ),
       );
-      const built = buildMerchantActivePartners(data, tenantId, partnerNameById);
+      // includeEnded — My Services keeps the ended history visible (rendered muted below).
+      const built = buildMerchantActivePartners(data, tenantId, partnerNameById, new Date(), {
+        includeEnded: true,
+      });
       for (const row of built) {
         assertMerchantRowFieldScope(row);
       }
@@ -113,8 +120,13 @@ export function MerchantActivePartnersPanel({
         <p className="text-sm text-muted-foreground">{t("merchantActivePartnersEmpty" as never)}</p>
       ) : (
         <div className="space-y-3">
-          {rows.map((row) => (
-            <Card key={row.activationId}>
+          {[...rows.filter((r) => r.status !== "Ended"), ...rows.filter((r) => r.status === "Ended")].map((row) => (
+            <Card
+              key={row.activationId}
+              data-testid={`service-card-${row.activationId}`}
+              data-status={row.status}
+              className={row.status === "Ended" ? "opacity-60" : undefined}
+            >
               <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 pb-2">
                 <div>
                   <CardTitle className="text-base">{row.partnerName}</CardTitle>
@@ -135,16 +147,23 @@ export function MerchantActivePartnersPanel({
                   </CardDescription>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  {row.status === "Active" ? (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-teal-500/40 bg-teal-500/10 px-2.5 py-1 text-xs font-medium text-teal-800 dark:text-teal-200">
-                      <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-                      {t("merchantPreviewInstantActive" as never)}
-                    </span>
+                  <StatusBadge status={row.status} label={activationStatusLabel(lang, row.status)} />
+                  {onInvoicesLink ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      data-testid={`service-invoices-link-${row.activationId}`}
+                      onClick={onInvoicesLink}
+                    >
+                      <ReceiptText className="h-3.5 w-3.5" aria-hidden="true" />
+                      {t("myServicesInvoiceLink" as never)}
+                    </Button>
                   ) : null}
                   {row.status !== "Ended" && onDeactivate ? (
                     <Button
                       size="sm"
                       variant="outline"
+                      data-testid={`service-end-${row.activationId}`}
                       disabled={busyActivationId === row.activationId}
                       onClick={() => onDeactivate(row.activationId)}
                     >

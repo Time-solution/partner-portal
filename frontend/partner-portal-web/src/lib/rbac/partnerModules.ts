@@ -25,7 +25,8 @@ export type ModuleScreenId =
   | "invoices"
   | "activations"
   | "snapshots"
-  | "usage-packages";
+  | "usage-packages"
+  | "orders";
 
 export interface ModuleScreenDef {
   id: ModuleScreenId;
@@ -33,6 +34,19 @@ export interface ModuleScreenDef {
   labelKey: string;
   permissions: readonly string[];
 }
+
+/**
+ * Partner-scoped DIRECT screens — what the partner sidebar links to, independent of the
+ * partner's business module (every entry resolves for every partner type, so no sidebar
+ * entry can point at a missing route). Rendered by the same screen registry and
+ * permission-filtered against the signed-in partner user's grants.
+ */
+export const PARTNER_DIRECT_SCREENS: readonly ModuleScreenDef[] = [
+  { id: "catalog", path: "catalog", labelKey: "navPartnerCatalog", permissions: [PP.Catalog.Read] },
+  { id: "usage-packages", path: "usage-packages", labelKey: "navPartnerPackages", permissions: [PP.Catalog.Read] },
+  { id: "activations", path: "activations", labelKey: "navPartnerActivations", permissions: [PP.Activations.Read] },
+  { id: "orders", path: "orders", labelKey: "navPartnerOrders", permissions: [PP.Catalog.Read] },
+];
 
 export interface PartnerModuleDef {
   id: PartnerBusinessModuleId;

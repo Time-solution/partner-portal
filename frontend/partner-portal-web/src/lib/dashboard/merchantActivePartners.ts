@@ -83,9 +83,12 @@ export function buildMerchantActivePartners(
   tenantId: string,
   partnerNameById: Map<string, string>,
   now: Date = new Date(),
+  /** Opt-in: include ENDED history rows (My Services renders them muted). Default false —
+   * the statement rollup and dashboard consumers keep open-activation semantics unchanged. */
+  options?: { includeEnded?: boolean },
 ): MerchantActivePartnerRow[] {
   return data.activations
-    .filter((a) => a.tenantId === tenantId && a.status !== "Ended")
+    .filter((a) => a.tenantId === tenantId && (options?.includeEnded || a.status !== "Ended"))
     .sort((a, b) => {
       const nameA = partnerNameById.get(a.partnerId) ?? a.partnerId;
       const nameB = partnerNameById.get(b.partnerId) ?? b.partnerId;

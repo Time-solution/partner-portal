@@ -16,7 +16,7 @@ describe("filterNavByPermissions", () => {
     expect(keys).toEqual([]);
   });
 
-  it("Partner Success Manager sees partner home only (no platform modules)", () => {
+  it("Partner Success Manager sees the partner sidebar only (no platform modules)", () => {
     const granted = [
       PP.Partners.Read,
       PP.Catalog.Read,
@@ -32,7 +32,18 @@ describe("filterNavByPermissions", () => {
     const keys = filterNavByPermissions(adminNav, granted, "PartnerSuccessManager").map(
       (item) => item.key,
     );
-    expect(keys).toEqual(["partner-home", "webhooks", "credentials"]);
+    // FE redesign — partner-home expanded into direct entries; still zero platform-module leakage.
+    expect(keys).toEqual([
+      "partner-home",
+      "partner-catalog",
+      "partner-packages",
+      "partner-activations",
+      "partner-orders",
+      "partner-statements",
+      "webhooks",
+      "credentials",
+      "partner-settings",
+    ]);
   });
 
   it("shows every item to Platform Admin (all portal permissions)", () => {
@@ -50,13 +61,22 @@ describe("filterNavByPermissions", () => {
     expect(keys).toEqual(["finance", "reports", "settings"]);
   });
 
-  it("MerchantPreview role sees merchant preview nav only", () => {
+  it("MerchantPreview role sees the merchant sidebar entries only", () => {
     const keys = filterNavByPermissions(
       adminNav,
       [PP.MerchantPreview.Read],
       "MerchantPreview",
     ).map((item) => item.key);
-    expect(keys).toEqual(["merchant-preview"]);
+    // FE redesign — query-param tabs promoted to nav entries; admin's preview entry excluded.
+    expect(keys).toEqual([
+      "merchant-dashboard",
+      "merchant-browse",
+      "merchant-services",
+      "merchant-orders",
+      "merchant-invoices",
+      "merchant-statement",
+      "merchant-profile",
+    ]);
   });
 
   it("Partner Finance resolves partner home path to scoped partner id", () => {
@@ -75,7 +95,7 @@ describe("defaultLandingPath", () => {
   it("routes each role to its own home", () => {
     expect(defaultLandingPath("PlatformAdmin")).toBe("/dashboard");
     expect(defaultLandingPath("Accountant")).toBe("/finance/overview");
-    expect(defaultLandingPath("MerchantPreview")).toBe("/merchant-preview?tab=partners");
+    expect(defaultLandingPath("MerchantPreview")).toBe("/merchant-preview");
     expect(defaultLandingPath("PartnerSuccessManager")).toBe(
       partnerHomePath(MOCK_PARTNER_PSM_PARTNER_ID),
     );

@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Archive, Loader2, Pencil, Plus, Send } from "lucide-react";
+import { Archive, Pencil, Plus, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MoneyAmount } from "@/components/MoneyAmount";
+import { StatusBadge } from "@/components/catalog/badges";
+import { CardGridSkeleton, ErrorState } from "@/components/states";
 import { usePortalSession } from "@/features/auth/usePortalSession";
 import { resolveCatalogAuthoringMode } from "@/lib/catalog/catalogAuthoring";
 import { portalRoleToPriceViewer } from "@/lib/catalog/catalogPriceVisibility";
@@ -34,17 +36,6 @@ type UsagePackagesPageProps = ModuleScopeProps & {
   titleKey?: string;
   descKey?: string;
 };
-
-function statusBadgeClass(status: UsagePackage["status"]): string {
-  switch (status) {
-    case "Published":
-      return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300";
-    case "Draft":
-      return "bg-amber-500/15 text-amber-700 dark:text-amber-300";
-    default:
-      return "bg-muted text-muted-foreground";
-  }
-}
 
 interface TierRow {
   fromQuantity: string;
@@ -92,6 +83,7 @@ export function UsagePackagesPage({
   const [packages, setPackages] = useState<UsagePackage[]>([]);
   const [partner, setPartner] = useState<Partner | undefined>();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -115,14 +107,20 @@ export function UsagePackagesPage({
 
   const reload = useCallback(async () => {
     setLoading(true);
-    if (partnerId) {
-      const partners = await getPortalDataSource().getPartners();
-      setPartner(partners.find((p) => p.id === partnerId));
-    } else {
-      setPartner(undefined);
+    setLoadError(null);
+    try {
+      if (partnerId) {
+        const partners = await getPortalDataSource().getPartners();
+        setPartner(partners.find((p) => p.id === partnerId));
+      } else {
+        setPartner(undefined);
+      }
+      setPackages(listUsagePackages(partnerId));
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
     }
-    setPackages(listUsagePackages(partnerId));
-    setLoading(false);
   }, [partnerId]);
 
   useEffect(() => {
@@ -279,9 +277,7 @@ export function UsagePackagesPage({
             : "—"}
         </td>
         <td className="px-2 py-2">
-          <span className={`inline-flex rounded-md border px-2 py-0.5 text-xs font-medium ${statusBadgeClass(pkg.status)}`}>
-            {pkg.status}
-          </span>
+          <StatusBadge status={pkg.status} label={pkg.status} />
         </td>
         {canWrite ? (
           <td className="px-2 py-2 text-end">
@@ -488,10 +484,13 @@ export function UsagePackagesPage({
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              {t("loadingData" as never)}
-            </div>
+            <CardGridSkeleton count={2} />
+          ) : loadError ? (
+            <ErrorState
+              message={t("stateErrorGeneric" as never)}
+              retryLabel={t("stateRetry" as never)}
+              onRetry={() => void reload()}
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[820px] text-sm">

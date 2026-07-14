@@ -13,6 +13,7 @@ import { SettlementPage } from "./pages/SettlementPage";
 import { SnapshotsPage } from "./pages/SnapshotsPage";
 import { SubscriptionsOverviewPage } from "./pages/SubscriptionsOverviewPage";
 import { UsagePackagesPage } from "./pages/UsagePackagesPage";
+import { PartnerServiceOrdersPanel } from "./components/ServiceOrderPanels";
 
 export interface ModuleScreenContext {
   lang: Lang;
@@ -61,6 +62,9 @@ export function ModuleScreenRenderer({
       return <ActivationsPage {...scope} />;
     case "snapshots":
       return <SnapshotsPage {...scope} />;
+    case "orders":
+      // Partner incoming service orders (Gate 2b panel) — partner-scoped, BUY side only.
+      return partnerId ? <PartnerServiceOrdersPanel lang={lang} partnerId={partnerId} /> : null;
     default:
       return null;
   }

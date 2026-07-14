@@ -18,6 +18,7 @@ import { usageForPeriod } from "@/lib/usage/usageReports";
 import { buildUsageInvoiceBreakdown } from "@/lib/usage/usageInvoiceBreakdown";
 import { UsageInvoiceBreakdownCard } from "./UsageInvoiceBreakdownCard";
 import { PackageDetailsCard } from "./PackageDetailsCard";
+import { merchantPackageDisplay } from "@/lib/usage/usagePackageDisplay";
 import { useTranslator, type Lang } from "@/lib/i18n";
 
 /** Merchant-view sell/fee price for a package (buy/margin are structurally absent here). */
@@ -176,7 +177,7 @@ export function MerchantUsagePackagesPanel({
                             </Button>
                           )}
                         </div>
-                        <PackageDetailsCard lang={lang} pkg={pkg} />
+                        <PackageDetailsCard lang={lang} display={merchantPackageDisplay(pkg)} />
                       </li>
                     );
                   })}
