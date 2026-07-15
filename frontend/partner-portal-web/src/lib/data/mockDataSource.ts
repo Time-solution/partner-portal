@@ -1182,7 +1182,8 @@ export class MockPortalDataSource implements IPortalDataSource {
   }
 
   private nextManualInvoiceNumber(year: number): string {
-    const prefix = `ZMI-${year}-`;
+    // Mirrors backend FinanceInvoiceNumberFormat.FormatManual — MAN-yyyy-####, internal + non-fiscal.
+    const prefix = `MAN-${year}-`;
     const seq = this.data.manualInvoices.filter((m) => m.invoiceNumber.startsWith(prefix)).length + 1;
     return `${prefix}${String(seq).padStart(4, "0")}`;
   }
@@ -1218,6 +1219,7 @@ export class MockPortalDataSource implements IPortalDataSource {
       id: uid("minv"),
       invoiceNumber: this.nextManualInvoiceNumber(year),
       source: "Manual",
+      status: "Draft", // P4 lifecycle — issue is a separate, single transition
       recipientType: input.recipientType,
       recipientReference: input.recipientType === "External" ? undefined : input.recipientReference,
       recipient,
@@ -1238,6 +1240,27 @@ export class MockPortalDataSource implements IPortalDataSource {
       actor: actorNameSafe(),
       role: "Accountant",
       action: "Created manual invoice (BETA)",
+      target: `${invoice.invoiceNumber} · ${invoice.recipient}`,
+    });
+    this.persist();
+    return structuredClone(invoice);
+  }
+
+  /** P4 — the single Draft → Issued transition (mirrors backend Issue(); Zahy.Finance:009 on repeat). */
+  async issueManualInvoice(id: string): Promise<ManualInvoice> {
+    await delay();
+    const invoice = this.data.manualInvoices.find((m) => m.id === id);
+    if (!invoice) throw new Error("Manual invoice not found.");
+    if (invoice.status !== "Draft") {
+      // Mirrors backend Zahy.Finance:009 (IllegalStatusTransition) — exactly one Draft → Issued edge.
+      throw new Error("Only a draft invoice can be issued.");
+    }
+    invoice.status = "Issued";
+    invoice.issuedAt = new Date().toISOString();
+    appendAudit(this.data, {
+      actor: actorNameSafe(),
+      role: "Accountant",
+      action: "Issued manual invoice (BETA)",
       target: `${invoice.invoiceNumber} · ${invoice.recipient}`,
     });
     this.persist();

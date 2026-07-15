@@ -91,7 +91,9 @@ public class FinanceManualInvoiceAppService : ApplicationService, IFinanceDocume
         var issueDate = request.IssueDate ?? Clock.Now;
         var currency = string.IsNullOrWhiteSpace(request.Currency) ? FinanceConsts.DefaultCurrency : request.Currency.Trim();
 
-        var allocation = await _invoiceNumberAllocator.AllocateInvoiceNumberAsync(issueDate, cancellationToken);
+        // P4 — manual invoices draw from the MAN-yyyy-#### pool (internal, non-fiscal); the ledger
+        // pipeline keeps its own ZAHY-INV pool untouched.
+        var allocation = await _invoiceNumberAllocator.AllocateManualInvoiceNumberAsync(issueDate, cancellationToken);
 
         var document = FinanceDocument.CreateManualInvoice(
             GuidGenerator.Create(),
@@ -109,6 +111,21 @@ public class FinanceManualInvoiceAppService : ApplicationService, IFinanceDocume
             currency);
 
         await _documentRepository.InsertAsync(document, autoSave: true, cancellationToken: cancellationToken);
+
+        return await MapToDtoAsync(document, includePdf: true, cancellationToken);
+    }
+
+    /// <summary>P4 — the single Draft → Issued transition (domain-guarded; immutable afterwards).</summary>
+    [Authorize(ZahyPermissions.Finance.WriteManualInvoice)]
+    [UnitOfWork]
+    public virtual async Task<FinanceDocumentDto> IssueManualInvoiceAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var document = await _documentRepository.GetAsync(id, cancellationToken: cancellationToken);
+
+        document.Issue();
+        await _documentRepository.UpdateAsync(document, autoSave: true, cancellationToken: cancellationToken);
 
         return await MapToDtoAsync(document, includePdf: true, cancellationToken);
     }
@@ -295,6 +312,7 @@ public class FinanceManualInvoiceAppService : ApplicationService, IFinanceDocume
             FiscalYear = document.FiscalYear,
             SequenceNumber = document.SequenceNumber,
             Source = document.Source,
+            Status = document.Status,
             Recipient = document.Recipient,
             RecipientType = document.RecipientType,
             RecipientReference = document.RecipientReference,

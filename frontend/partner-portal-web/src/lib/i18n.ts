@@ -1238,6 +1238,15 @@ export const translations: Record<Lang, Dict> = {
     partnerActivationsTitle: "التفعيلات",
     partnerActivationsDesc: "المتاجر التي فعّلت خدماتك — عرض للاطلاع فقط.",
     partnerOrdersPageDesc: "طلبات الخدمة الواردة من المتاجر.",
+    // ---- P4: manual invoice lifecycle ----
+    manualInvListTitle: "الفواتير اليدوية",
+    manualInvListDesc: "مسودات وفواتير صادرة برقم داخلي غير ضريبي (MAN).",
+    manualInvIssueAction: "إصدار",
+    manualInvIssueConfirmTitle: "إصدار الفاتورة",
+    manualInvIssueConfirmBody: "بعد الإصدار تصبح الفاتورة نهائية ولا يمكن تعديل بنودها.",
+    manualInvStatusDraft: "مسودة",
+    manualInvStatusIssued: "صادرة",
+    manualInvListEmpty: "لا توجد فواتير يدوية بعد.",
   },
   en: {
     brand: "Zahy Partner Platform",
@@ -2474,6 +2483,15 @@ export const translations: Record<Lang, Dict> = {
     partnerActivationsTitle: "Activations",
     partnerActivationsDesc: "Merchants who activated your offerings — read-only.",
     partnerOrdersPageDesc: "Incoming service orders from merchants.",
+    // ---- P4: manual invoice lifecycle ----
+    manualInvListTitle: "Manual invoices",
+    manualInvListDesc: "Drafts and issued invoices with an internal, non-fiscal reference (MAN).",
+    manualInvIssueAction: "Issue",
+    manualInvIssueConfirmTitle: "Issue invoice",
+    manualInvIssueConfirmBody: "After issuing, the invoice is final and its lines can no longer be edited.",
+    manualInvStatusDraft: "Draft",
+    manualInvStatusIssued: "Issued",
+    manualInvListEmpty: "No manual invoices yet.",
   },
 };
 

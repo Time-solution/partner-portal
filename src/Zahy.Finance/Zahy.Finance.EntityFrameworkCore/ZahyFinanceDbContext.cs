@@ -169,6 +169,9 @@ public class ZahyFinanceDbContext : AbpDbContext<ZahyFinanceDbContext>
 
             // Manual (ad-hoc) invoice columns — nullable / defaulted, so existing LedgerDerived rows are unaffected.
             b.Property(x => x.Source).IsRequired().HasDefaultValue(FinanceDocumentSource.LedgerDerived);
+            // P4 lifecycle — plain ADD COLUMN NOT NULL DEFAULT: every pre-existing row backfills to
+            // Issued (generated documents are final); only newly-created manual drafts carry Draft.
+            b.Property(x => x.Status).IsRequired().HasDefaultValue(FinanceDocumentStatus.Issued);
             b.Property(x => x.Recipient).HasMaxLength(FinanceConsts.MaxRecipientLength);
             b.Property(x => x.RecipientType);
             b.Property(x => x.RecipientReference);

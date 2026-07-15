@@ -94,6 +94,9 @@ public static class FinanceErrorCodes
 
     /// <summary>A manual invoice was submitted with no line items, or a line failed validation.</summary>
     public const string ManualInvoiceInvalidLines = Namespace + ":081";
+
+    /// <summary>P4 — an Issued manual invoice is immutable: its lines can never be replaced.</summary>
+    public const string ManualInvoiceImmutable = Namespace + ":082";
 }
 
 public static class FinanceDocumentIdempotency
@@ -106,8 +109,16 @@ public static class FinanceInvoiceNumberFormat
 {
     public const string InvoicePrefix = "ZAHY-INV";
 
+    /// <summary>P4 — internal manual-invoice reference prefix. Deliberately distinct from the fiscal
+    /// pipeline: NOT a ZATCA &lt;cbc:ID&gt;, no ICV semantics (that pipeline is Main-side and gated).</summary>
+    public const string ManualPrefix = "MAN";
+
     public static string Format(int fiscalYear, int sequenceNumber) =>
         $"{InvoicePrefix}-{fiscalYear}-{sequenceNumber:D6}";
+
+    /// <summary>MAN-yyyy-#### — clearly non-fiscal, BETA-labeled at render time.</summary>
+    public static string FormatManual(int fiscalYear, int sequenceNumber) =>
+        $"{ManualPrefix}-{fiscalYear}-{sequenceNumber:D4}";
 }
 
 public sealed class FinanceInvoiceNumberAllocation

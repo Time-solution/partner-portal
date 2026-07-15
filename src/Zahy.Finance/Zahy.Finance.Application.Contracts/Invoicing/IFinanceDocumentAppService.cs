@@ -18,6 +18,11 @@ public interface IFinanceDocumentAppService : IApplicationService
         CreateManualInvoiceRequest request,
         CancellationToken cancellationToken = default);
 
+    /// <summary>P4 — the single Draft → Issued transition for a manual invoice.</summary>
+    Task<FinanceDocumentDto> IssueManualInvoiceAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
+
     Task<FinanceDocumentDto> GetAsync(
         Guid id,
         CancellationToken cancellationToken = default);
@@ -82,6 +87,9 @@ public sealed class FinanceDocumentDto
     public int SequenceNumber { get; set; }
 
     public FinanceDocumentSource Source { get; set; }
+
+    /// <summary>P4 lifecycle — Draft until issued; LedgerDerived documents are always Issued.</summary>
+    public FinanceDocumentStatus Status { get; set; }
 
     public string? Recipient { get; set; }
 

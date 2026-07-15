@@ -41,6 +41,11 @@ public class FinanceDocument : AggregateRoot<Guid>
     /// invoice's behaviour byte-identical; Manual carries line items + a recipient.</summary>
     public FinanceDocumentSource Source { get; private set; } = FinanceDocumentSource.LedgerDerived;
 
+    /// <summary>P4 lifecycle — LedgerDerived documents are born Issued (generated final); manual
+    /// invoices start Draft and take exactly one <see cref="Issue"/> transition. Default matches the
+    /// migration backfill (Issued) so every pre-existing row keeps its final semantics.</summary>
+    public FinanceDocumentStatus Status { get; private set; } = FinanceDocumentStatus.Issued;
+
     /// <summary>Human-readable recipient name (required for Manual). Null for LedgerDerived.</summary>
     public string? Recipient { get; private set; }
 
@@ -90,7 +95,8 @@ public class FinanceDocument : AggregateRoot<Guid>
             Currency = currency,
             GeneratedAt = generatedAt,
             SourceRowId = sourceRowId,
-            Source = FinanceDocumentSource.LedgerDerived
+            Source = FinanceDocumentSource.LedgerDerived,
+            Status = FinanceDocumentStatus.Issued
         };
     }
 
@@ -151,6 +157,7 @@ public class FinanceDocument : AggregateRoot<Guid>
             GeneratedAt = generatedAt,
             SourceRowId = null,
             Source = FinanceDocumentSource.Manual,
+            Status = FinanceDocumentStatus.Draft,
             Recipient = recipient.Trim(),
             RecipientType = recipientType,
             RecipientReference = recipientReference,
@@ -161,6 +168,89 @@ public class FinanceDocument : AggregateRoot<Guid>
 
         document.EnsureManualInvoiceTotalsBalance();
         return document;
+    }
+
+    /// <summary>
+    /// P4 — the single Draft → Issued transition. Requires at least one line (a manual draft cannot be
+    /// issued empty) and throws <see cref="FinanceErrorCodes.IllegalStatusTransition"/> (009) from any
+    /// state other than Draft. After Issue the document is immutable (see <see cref="ReplaceLines"/>).
+    /// </summary>
+    public void Issue()
+    {
+        if (Status != FinanceDocumentStatus.Draft)
+        {
+            throw new BusinessException(FinanceErrorCodes.IllegalStatusTransition)
+                .WithData("From", Status.ToString())
+                .WithData("To", FinanceDocumentStatus.Issued.ToString());
+        }
+
+        if (Source == FinanceDocumentSource.Manual && _lines.Count == 0)
+        {
+            throw new BusinessException(FinanceErrorCodes.ManualInvoiceInvalidLines)
+                .WithData("Reason", "A manual invoice requires at least one line to be issued.");
+        }
+
+        EnsureManualInvoiceTotalsBalance();
+        RunPreIssueValidationGate();
+
+        Status = FinanceDocumentStatus.Issued;
+    }
+
+    /// <summary>
+    /// P5 SEAM — the pre-invoice validation gate will slot in HERE (single entry point, called by
+    /// <see cref="Issue"/> just before the transition). Intentionally empty: P5 is a separate design
+    /// phase and no validation logic may be built yet.
+    /// </summary>
+    private void RunPreIssueValidationGate()
+    {
+    }
+
+    /// <summary>
+    /// P4 — replace a DRAFT manual invoice's lines (whole-document replace; EF reconciles the owned
+    /// collection as DELETE+INSERT). LINE-NUMBER RULE: RENUMBER-ON-REMOVE — callers pass the surviving
+    /// lines re-built contiguously 1..N. Justification: a Draft is a pre-audit workspace and the Issued
+    /// snapshot is the immutable audit record, so contiguous renumbering before issue breaks no history.
+    /// Validate-then-mutate: any invalid input throws BEFORE the collection changes, so a failed add
+    /// leaves the existing 1..N intact (no gaps). Throws <see cref="FinanceErrorCodes.ManualInvoiceImmutable"/>
+    /// (082) once Issued.
+    /// </summary>
+    public void ReplaceLines(IReadOnlyList<FinanceInvoiceLine> lines)
+    {
+        if (Source != FinanceDocumentSource.Manual)
+        {
+            throw new BusinessException(FinanceErrorCodes.ManualInvoiceInvalidLines)
+                .WithData("Reason", "Only manual invoices carry editable lines.");
+        }
+
+        if (Status != FinanceDocumentStatus.Draft)
+        {
+            throw new BusinessException(FinanceErrorCodes.ManualInvoiceImmutable)
+                .WithData("Status", Status.ToString());
+        }
+
+        if (lines == null || lines.Count == 0)
+        {
+            throw new BusinessException(FinanceErrorCodes.ManualInvoiceInvalidLines)
+                .WithData("Reason", "A manual invoice requires at least one line.");
+        }
+
+        // Contiguity 1..N asserted BEFORE any mutation (validate-then-mutate).
+        for (var i = 0; i < lines.Count; i++)
+        {
+            if (lines[i].LineNo != i + 1)
+            {
+                throw new BusinessException(FinanceErrorCodes.ManualInvoiceInvalidLines)
+                    .WithData("Reason", "Line numbers must be contiguous 1..N.")
+                    .WithData("Position", i + 1)
+                    .WithData("LineNo", lines[i].LineNo);
+            }
+        }
+
+        _lines.Clear();
+        _lines.AddRange(lines);
+        PostingSum = FinanceMoney.RoundPosting(_lines.Sum(x => x.LineTotalInclusive));
+
+        EnsureManualInvoiceTotalsBalance();
     }
 
     /// <summary>

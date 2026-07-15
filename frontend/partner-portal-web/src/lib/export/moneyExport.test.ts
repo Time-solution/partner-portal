@@ -1,6 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { buildInvoiceRows, buildMoneyCsv, buildReceiptRows } from "./moneyExport";
 import type { Receipt, SubscriptionBillingPeriod } from "@/lib/data/types";
+
+// Payment status derives from the REAL clock vs the fixture's dueDate (2026-07-15) — pin "now"
+// before the due date so "Partial" never flips to "Overdue" when the calendar catches up
+// (this exact rollover broke the suite on 2026-07-15).
+beforeAll(() => {
+  vi.useFakeTimers({ now: new Date("2026-07-01T00:00:00Z"), toFake: ["Date"] });
+});
+afterAll(() => {
+  vi.useRealTimers();
+});
 
 const sar = (amount: number) => ({ amount, currency: "SAR", vatInclusive: true });
 

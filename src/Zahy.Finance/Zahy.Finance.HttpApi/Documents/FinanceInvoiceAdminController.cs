@@ -34,6 +34,11 @@ public class FinanceInvoiceAdminController : AbpControllerBase
         return CreatedAtAction(nameof(GetAsync), new { id = dto.Id }, dto);
     }
 
+    [HttpPost("manual/{id:guid}/issue")]
+    [Authorize(ZahyPermissions.Finance.WriteManualInvoice)]
+    public Task<FinanceDocumentDto> IssueManualAsync(Guid id, CancellationToken cancellationToken) =>
+        _financeDocumentAppService.IssueManualInvoiceAsync(id, cancellationToken);
+
     [HttpGet("{id:guid}")]
     [Authorize(ZahyPermissions.Finance.ReadAll)]
     public Task<FinanceDocumentDto> GetAsync(Guid id, CancellationToken cancellationToken) =>

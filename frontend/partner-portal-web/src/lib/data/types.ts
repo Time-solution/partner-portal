@@ -487,6 +487,9 @@ export type ManualInvoiceRecipientType = "Partner" | "Merchant" | "External";
 
 export type ManualInvoiceSource = "Manual" | "LedgerDerived";
 
+/** P4 lifecycle — mirrors backend FinanceDocumentStatus: Draft until issued, then immutable. */
+export type ManualInvoiceStatus = "Draft" | "Issued";
+
 /** Raw line as captured in the form — unit price is VAT-INCLUSIVE. */
 export interface ManualInvoiceLineInput {
   description: string;
@@ -512,6 +515,10 @@ export interface ManualInvoice {
   id: string;
   invoiceNumber: string;
   source: ManualInvoiceSource;
+  /** P4 lifecycle — Draft until Issue; the Issued snapshot is immutable. */
+  status: ManualInvoiceStatus;
+  /** Set on the single Draft → Issued transition. */
+  issuedAt?: string;
   recipientType: ManualInvoiceRecipientType;
   /** Partner/Merchant id when the recipient is internal; absent for External. */
   recipientReference?: string;

@@ -86,7 +86,8 @@ describe("ManualInvoicePage / data source", () => {
     expect(inv.subtotalNet).toBe(347.83);
     expect(inv.vatTotal).toBe(52.17);
     expect(inv.grandTotalInclusive).toBe(400);
-    expect(inv.invoiceNumber).toMatch(/^ZMI-\d{4}-\d{4}$/);
+    expect(inv.invoiceNumber).toMatch(/^MAN-\d{4}-\d{4}$/); // internal, non-fiscal (backend FormatManual mirror)
+    expect(inv.status).toBe("Draft"); // P4 — created as a draft; issue is a separate transition
     expect(inv.idempotencyKey).toBe("test:worked-example");
 
     const manual = await ds.listInvoices({ source: "Manual" });
@@ -119,5 +120,31 @@ describe("ManualInvoicePage / data source", () => {
     expect(b.id).toBe(a.id);
     const after = (await ds.listInvoices({ source: "Manual" })).length;
     expect(after).toBe(before + 1);
+  });
+
+  it("seeds exactly 2 manual invoices — one Draft + one Issued, MAN-numbered (page list renders both)", async () => {
+    const ds = new MockPortalDataSource();
+    const seeded = await ds.listInvoices({ source: "Manual" });
+
+    expect(seeded).toHaveLength(2);
+    expect(seeded.map((m) => m.status).sort()).toEqual(["Draft", "Issued"]);
+    for (const invoice of seeded) {
+      expect(invoice.source).toBe("Manual");
+      expect(invoice.invoiceNumber).toMatch(/^MAN-\d{4}-\d{4}$/);
+    }
+  });
+
+  it("P4 lifecycle: Issue is a single Draft → Issued transition; the Issued snapshot is immutable", async () => {
+    const ds = new MockPortalDataSource();
+    const draft = (await ds.listInvoices({ source: "Manual" })).find((m) => m.status === "Draft")!;
+    expect(draft).toBeDefined();
+
+    const issued = await ds.issueManualInvoice(draft.id);
+    expect(issued.status).toBe("Issued");
+    expect(issued.issuedAt).toBeTruthy();
+    expect(issued.lines).toEqual(draft.lines); // the issued snapshot carries the draft's exact lines
+
+    // Second issue is rejected (mirrors backend Zahy.Finance:009).
+    await expect(ds.issueManualInvoice(draft.id)).rejects.toThrow(/draft/i);
   });
 });

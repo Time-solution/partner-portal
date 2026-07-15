@@ -181,8 +181,10 @@ export interface IPortalDataSource {
   setBankAccountStatus(id: string, status: BankAccountStatus): Promise<BankAccount>;
 
   /* ---- Manual (ad-hoc) invoices (platform finance) — mock preview ---- */
-  /** Create a manual invoice (Source=Manual). Idempotent on idempotencyKey. */
+  /** Create a manual invoice DRAFT (Source=Manual). Idempotent on idempotencyKey. */
   createManualInvoice(input: import("./types").CreateManualInvoiceInput): Promise<import("./types").ManualInvoice>;
+  /** P4 — the single Draft → Issued transition; the Issued snapshot is immutable. */
+  issueManualInvoice(id: string): Promise<import("./types").ManualInvoice>;
   /** List invoices, optionally filtered by source / recipient type. */
   listInvoices(filter?: import("./types").ManualInvoiceFilter): Promise<import("./types").ManualInvoice[]>;
   getManualInvoice(id: string): Promise<import("./types").ManualInvoice | undefined>;

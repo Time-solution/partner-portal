@@ -991,8 +991,10 @@ function seedManualInvoices(): import("./types").ManualInvoice[] {
   return [
     {
       id: "minv-seed-external-1",
-      invoiceNumber: "ZMI-2026-0001",
+      invoiceNumber: "MAN-2026-0001",
       source: "Manual",
+      status: "Issued", // P4 — one Issued seed (immutable snapshot)
+      issuedAt: "2026-06-20T10:00:00Z",
       recipientType: "External",
       recipient: "Gulf Advisory Partners",
       issueDate: "2026-06-20T09:00:00Z",
@@ -1008,8 +1010,9 @@ function seedManualInvoices(): import("./types").ManualInvoice[] {
     },
     {
       id: "minv-seed-partner-1",
-      invoiceNumber: "ZMI-2026-0002",
+      invoiceNumber: "MAN-2026-0002",
       source: "Manual",
+      status: "Draft", // P4 — one Draft seed (issuable from the page)
       recipientType: "Partner",
       recipientReference: PARTNER_WHATSAPP,
       recipient: "WhatsApp Business Co.",

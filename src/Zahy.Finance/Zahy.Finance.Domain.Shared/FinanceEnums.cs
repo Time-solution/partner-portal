@@ -46,7 +46,11 @@ public enum FinanceDocumentKind
     Statement = 1,
     Invoice = 2,
     TransactionExport = 3,
-    CommissionExport = 4
+    CommissionExport = 4,
+
+    /// <summary>P4 — sequence-pool key ONLY (the MAN-yyyy-#### internal, non-fiscal manual counter).
+    /// No FinanceDocument row ever carries this kind; manual invoices remain DocumentKind.Invoice.</summary>
+    ManualInvoice = 5
 }
 
 public enum InvoiceGenerationMode
@@ -69,4 +73,15 @@ public enum FinanceDocumentRecipientType
     Partner = 1,
     Merchant = 2,
     External = 3
+}
+
+/// <summary>
+/// P4 — document lifecycle. LedgerDerived documents are born Issued (generated final, unchanged
+/// behavior); manual invoices start as Draft and take exactly one <c>Issue()</c> transition, after
+/// which they are immutable.
+/// </summary>
+public enum FinanceDocumentStatus
+{
+    Draft = 1,
+    Issued = 2
 }

@@ -21,4 +21,9 @@ public class SqlServerFinanceInvoiceNumberAllocatorAdapter : IFinanceInvoiceNumb
         DateTime issueDate,
         CancellationToken cancellationToken = default) =>
         _sqlServerAllocator.AllocateInvoiceNumberAsync(issueDate, cancellationToken);
+
+    public Task<FinanceInvoiceNumberAllocation> AllocateManualInvoiceNumberAsync(
+        DateTime issueDate,
+        CancellationToken cancellationToken = default) =>
+        _sqlServerAllocator.AllocateManualInvoiceNumberAsync(issueDate, cancellationToken);
 }

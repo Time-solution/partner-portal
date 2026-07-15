@@ -44,6 +44,12 @@ public interface IFinanceInvoiceNumberAllocator
     Task<FinanceInvoiceNumberAllocation> AllocateInvoiceNumberAsync(
         DateTime issueDate,
         CancellationToken cancellationToken = default);
+
+    /// <summary>P4 — the MAN-yyyy-#### internal reference pool for manual invoices (own sequence,
+    /// non-fiscal, gap-free under rollback). ZATCA numbering is Main-side and untouched.</summary>
+    Task<FinanceInvoiceNumberAllocation> AllocateManualInvoiceNumberAsync(
+        DateTime issueDate,
+        CancellationToken cancellationToken = default);
 }
 
 public interface IInvoiceTrigger
