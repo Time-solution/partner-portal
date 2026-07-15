@@ -97,6 +97,26 @@ public static class FinanceErrorCodes
 
     /// <summary>P4 — an Issued manual invoice is immutable: its lines can never be replaced.</summary>
     public const string ManualInvoiceImmutable = Namespace + ":082";
+
+    // ---- P5 pre-invoice validation gate (architect-assigned map — do not renumber) ----
+
+    /// <summary>P5 — a line's stored VAT split does not match the recompute via the single VAT source.</summary>
+    public const string InvoiceLineVatMismatch = Namespace + ":083";
+
+    /// <summary>P5 — counterparty missing or not Active.</summary>
+    public const string InvoiceCounterpartyInvalid = Namespace + ":084";
+
+    /// <summary>P5 — another document already carries this invoice reference.</summary>
+    public const string InvoiceDuplicateReference = Namespace + ":085";
+
+    /// <summary>P5 — issue date invalid (in the future, or the accounting period is not open).</summary>
+    public const string InvoiceDateInvalid = Namespace + ":086";
+
+    /// <summary>P5 — LedgerDerived only: header total does not tie to the ledger-source figure.</summary>
+    public const string InvoiceLedgerFigureMismatch = Namespace + ":087";
+
+    /// <summary>P5 — counterparty partner is ReflectionOnly (no money relationship): manual invoicing blocked.</summary>
+    public const string InvoiceCounterpartyReflectionOnly = Namespace + ":088";
 }
 
 public static class FinanceDocumentIdempotency

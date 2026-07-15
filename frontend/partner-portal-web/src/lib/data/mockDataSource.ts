@@ -29,6 +29,7 @@ import type {
   WebhookEndpoint,
 } from "./types";
 import { computeManualInvoiceLines, computeManualInvoiceTotals } from "@/lib/invoice/manualInvoice";
+import { ensureManualInvoiceGate } from "@/lib/invoice/manualInvoiceGate";
 import {
   MAX_MERCHANT_BENEFIT,
   MAX_OFFERING_SUMMARY,
@@ -1246,7 +1247,8 @@ export class MockPortalDataSource implements IPortalDataSource {
     return structuredClone(invoice);
   }
 
-  /** P4 — the single Draft → Issued transition (mirrors backend Issue(); Zahy.Finance:009 on repeat). */
+  /** P4 — the single Draft → Issued transition (mirrors backend Issue(); Zahy.Finance:009 on repeat),
+   * guarded by the P5 gate mirror: ALL checks evaluated, one throw with the full violation list. */
   async issueManualInvoice(id: string): Promise<ManualInvoice> {
     await delay();
     const invoice = this.data.manualInvoices.find((m) => m.id === id);
@@ -1255,6 +1257,11 @@ export class MockPortalDataSource implements IPortalDataSource {
       // Mirrors backend Zahy.Finance:009 (IllegalStatusTransition) — exactly one Draft → Issued edge.
       throw new Error("Only a draft invoice can be issued.");
     }
+    ensureManualInvoiceGate(invoice, {
+      partners: this.data.partners,
+      invoices: this.data.manualInvoices,
+      now: new Date(),
+    });
     invoice.status = "Issued";
     invoice.issuedAt = new Date().toISOString();
     appendAudit(this.data, {

@@ -24,6 +24,7 @@ public class FinanceInvoiceGenerationService : ApplicationService, IFinanceInvoi
     private readonly IRepository<PartnerFinancialAccount, Guid> _partnerAccountRepository;
     private readonly IRepository<MerchantAccount, Guid> _merchantAccountRepository;
     private readonly IGuidGenerator _guidGenerator;
+    private readonly IFinancePeriodStatusProvider _periodStatusProvider;
     private readonly decimal _vatRate;
 
     public FinanceInvoiceGenerationService(
@@ -37,7 +38,8 @@ public class FinanceInvoiceGenerationService : ApplicationService, IFinanceInvoi
         IRepository<FinanceDocument, Guid> documentRepository,
         IRepository<PartnerFinancialAccount, Guid> partnerAccountRepository,
         IRepository<MerchantAccount, Guid> merchantAccountRepository,
-        IGuidGenerator guidGenerator)
+        IGuidGenerator guidGenerator,
+        IFinancePeriodStatusProvider periodStatusProvider)
     {
         _postingReadService = postingReadService;
         _kycBlockBuilder = kycBlockBuilder;
@@ -50,6 +52,7 @@ public class FinanceInvoiceGenerationService : ApplicationService, IFinanceInvoi
         _partnerAccountRepository = partnerAccountRepository;
         _merchantAccountRepository = merchantAccountRepository;
         _guidGenerator = guidGenerator;
+        _periodStatusProvider = periodStatusProvider;
     }
 
     [UnitOfWork]
@@ -186,6 +189,20 @@ public class FinanceInvoiceGenerationService : ApplicationService, IFinanceInvoi
             ledger.PostingSum,
             issueDate,
             sourceRowId);
+
+        // P5 — call site B: LedgerDerived documents are born Issued and never pass Issue(), so the
+        // SAME gate runs here BEFORE persistence. The ledger figure is the read-only tie for :087;
+        // nothing is persisted when the gate throws.
+        var duplicateQueryable = await _documentRepository.GetQueryableAsync();
+        FinanceInvoicePreIssueGate.EnsureValid(document, new FinanceInvoiceGateContext
+        {
+            NowUtc = Clock.Now, // SAME IClock basis as the stored GeneratedAt (kind-agnostic compare)
+            VatRate = _vatRate,
+            DuplicateReferenceExists = duplicateQueryable.Any(
+                x => x.InvoiceNumber == document.InvoiceNumber && x.Id != document.Id),
+            PeriodOpen = await _periodStatusProvider.IsPeriodOpenAsync(document.GeneratedAt, cancellationToken),
+            LedgerSourceFigure = ledger.PostingSum
+        });
 
         await _documentRepository.InsertAsync(document, autoSave: false, cancellationToken: cancellationToken);
 

@@ -1247,6 +1247,16 @@ export const translations: Record<Lang, Dict> = {
     manualInvStatusDraft: "مسودة",
     manualInvStatusIssued: "صادرة",
     manualInvListEmpty: "لا توجد فواتير يدوية بعد.",
+    // ---- P5: pre-invoice gate violations (per architect code) ----
+    manualInvGateTitle: "تعذّر إصدار الفاتورة — يجب معالجة الملاحظات التالية:",
+    manualInvGate_080: "إجمالي الفاتورة لا يساوي مجموع البنود بعد إعادة الاحتساب.",
+    manualInvGate_081: "البنود غير صالحة: يلزم بند واحد على الأقل بكمية وسعر أكبر من صفر.",
+    manualInvGate_083: "تفصيل الضريبة لبند لا يطابق إعادة الاحتساب من المصدر الموحّد.",
+    manualInvGate_084: "الطرف المقابل غير موجود أو غير نشط.",
+    manualInvGate_085: "رقم مرجعي مكرر — توجد فاتورة أخرى بنفس الرقم.",
+    manualInvGate_086: "تاريخ الإصدار غير صالح (في المستقبل أو الفترة المحاسبية مقفلة).",
+    manualInvGate_087: "إجمالي الفاتورة لا يطابق رقم مصدر دفتر الأستاذ.",
+    manualInvGate_088: "الشريك بوضع الانعكاس فقط — لا توجد علاقة مالية، لا يمكن إصدار فاتورة يدوية له.",
   },
   en: {
     brand: "Zahy Partner Platform",
@@ -2492,6 +2502,16 @@ export const translations: Record<Lang, Dict> = {
     manualInvStatusDraft: "Draft",
     manualInvStatusIssued: "Issued",
     manualInvListEmpty: "No manual invoices yet.",
+    // ---- P5: pre-invoice gate violations (per architect code) ----
+    manualInvGateTitle: "The invoice could not be issued — resolve the following:",
+    manualInvGate_080: "The invoice total does not equal the recomputed sum of lines.",
+    manualInvGate_081: "Invalid lines: at least one line with quantity and price above zero is required.",
+    manualInvGate_083: "A line's VAT split does not match the single-source recompute.",
+    manualInvGate_084: "The counterparty does not exist or is not active.",
+    manualInvGate_085: "Duplicate reference — another invoice already carries this number.",
+    manualInvGate_086: "The issue date is invalid (in the future, or the accounting period is closed).",
+    manualInvGate_087: "The invoice total does not tie to its ledger-source figure.",
+    manualInvGate_088: "The partner is ReflectionOnly — no money relationship; manual invoicing is blocked.",
   },
 };
 

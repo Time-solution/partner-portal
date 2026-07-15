@@ -27,6 +27,8 @@ public class FinanceManualInvoiceAppService : ApplicationService, IFinanceDocume
     private readonly IFinanceInvoiceGenerationService _invoiceGenerationService;
     private readonly IKycCanonicalProfileProvider _kycProfileProvider;
     private readonly IZatcaInvoiceShaper _zatcaInvoiceShaper;
+    private readonly IFinanceCounterpartyLookup _counterpartyLookup;
+    private readonly IFinancePeriodStatusProvider _periodStatusProvider;
     private readonly FinanceBrandingOptions _branding;
     private readonly decimal _vatRate;
 
@@ -36,6 +38,8 @@ public class FinanceManualInvoiceAppService : ApplicationService, IFinanceDocume
         IFinanceInvoiceGenerationService invoiceGenerationService,
         IKycCanonicalProfileProvider kycProfileProvider,
         IZatcaInvoiceShaper zatcaInvoiceShaper,
+        IFinanceCounterpartyLookup counterpartyLookup,
+        IFinancePeriodStatusProvider periodStatusProvider,
         IOptions<FinanceBrandingOptions> branding,
         IOptions<FinanceVatOptions> vat)
     {
@@ -44,6 +48,8 @@ public class FinanceManualInvoiceAppService : ApplicationService, IFinanceDocume
         _invoiceGenerationService = invoiceGenerationService;
         _kycProfileProvider = kycProfileProvider;
         _zatcaInvoiceShaper = zatcaInvoiceShaper;
+        _counterpartyLookup = counterpartyLookup;
+        _periodStatusProvider = periodStatusProvider;
         _branding = branding.Value;
         _vatRate = vat.Value.StandardRate;
     }
@@ -115,7 +121,9 @@ public class FinanceManualInvoiceAppService : ApplicationService, IFinanceDocume
         return await MapToDtoAsync(document, includePdf: true, cancellationToken);
     }
 
-    /// <summary>P4 — the single Draft → Issued transition (domain-guarded; immutable afterwards).</summary>
+    /// <summary>P4 — the single Draft → Issued transition, now guarded by the P5 gate (call site A):
+    /// lookups are fetched READ-ONLY here and handed to the pure gate inside Issue(). Draft stays
+    /// Draft on failure; the typed exception carries the full violation list.</summary>
     [Authorize(ZahyPermissions.Finance.WriteManualInvoice)]
     [UnitOfWork]
     public virtual async Task<FinanceDocumentDto> IssueManualInvoiceAsync(
@@ -124,10 +132,42 @@ public class FinanceManualInvoiceAppService : ApplicationService, IFinanceDocume
     {
         var document = await _documentRepository.GetAsync(id, cancellationToken: cancellationToken);
 
-        document.Issue();
+        document.Issue(await BuildGateContextAsync(document, ledgerSourceFigure: null, cancellationToken));
         await _documentRepository.UpdateAsync(document, autoSave: true, cancellationToken: cancellationToken);
 
         return await MapToDtoAsync(document, includePdf: true, cancellationToken);
+    }
+
+    /// <summary>P5 — read-only context assembly for the gate: counterparty facts from the owning-module
+    /// lookup, duplicate reference from this repository, period status from the (null-object) provider.</summary>
+    private async Task<FinanceInvoiceGateContext> BuildGateContextAsync(
+        FinanceDocument document,
+        decimal? ledgerSourceFigure,
+        CancellationToken cancellationToken)
+    {
+        var counterparty = document.RecipientType switch
+        {
+            FinanceDocumentRecipientType.Partner when document.RecipientReference != null =>
+                await _counterpartyLookup.GetPartnerAsync(document.RecipientReference.Value, cancellationToken),
+            FinanceDocumentRecipientType.Merchant when document.RecipientReference != null =>
+                await _counterpartyLookup.GetMerchantAsync(document.RecipientReference.Value, cancellationToken),
+            _ => FinanceCounterpartySnapshot.Missing
+        };
+
+        var queryable = await _documentRepository.GetQueryableAsync();
+        var duplicate = queryable.Any(x => x.InvoiceNumber == document.InvoiceNumber && x.Id != document.Id);
+
+        return new FinanceInvoiceGateContext
+        {
+            NowUtc = Clock.Now, // SAME IClock basis as the stored GeneratedAt (kind-agnostic compare)
+            VatRate = _vatRate,
+            CounterpartyExists = counterparty.Exists,
+            CounterpartyActive = counterparty.IsActive,
+            CounterpartyIsReflectionOnlyPartner = counterparty.IsReflectionOnly,
+            DuplicateReferenceExists = duplicate,
+            PeriodOpen = await _periodStatusProvider.IsPeriodOpenAsync(document.GeneratedAt, cancellationToken),
+            LedgerSourceFigure = ledgerSourceFigure
+        };
     }
 
     public virtual async Task<FinanceDocumentDto> GetAsync(

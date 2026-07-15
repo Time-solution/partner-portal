@@ -33,6 +33,8 @@ export function ManualInvoicePage({ lang }: { lang: Lang }) {
   const [listError, setListError] = useState<string | null>(null);
   const [confirmIssueId, setConfirmIssueId] = useState<string | null>(null);
   const [issueBusy, setIssueBusy] = useState(false);
+  /** P5 — the gate verdict: full violation list for the invoice whose Issue was blocked. */
+  const [gateViolations, setGateViolations] = useState<{ invoiceId: string; keys: string[] } | null>(null);
 
   const loadInvoices = useCallback(async () => {
     setListLoading(true);
@@ -86,12 +88,19 @@ export function ManualInvoicePage({ lang }: { lang: Lang }) {
 
   const handleIssue = async (id: string) => {
     setIssueBusy(true);
+    setGateViolations(null);
     try {
       await getPortalDataSource().issueManualInvoice(id);
       setConfirmIssueId(null);
       await loadInvoices();
     } catch (e) {
-      setListError(e instanceof Error ? e.message : String(e));
+      // P5 — the gate throws ONE error carrying the COMPLETE violation list; the invoice stays Draft.
+      const violations = (e as { violations?: { i18nKey: string }[] }).violations;
+      if (Array.isArray(violations) && violations.length > 0) {
+        setGateViolations({ invoiceId: id, keys: violations.map((v) => v.i18nKey) });
+      } else {
+        setListError(e instanceof Error ? e.message : String(e));
+      }
       setConfirmIssueId(null);
     } finally {
       setIssueBusy(false);
@@ -121,6 +130,22 @@ export function ManualInvoicePage({ lang }: { lang: Lang }) {
           <CardDescription>{t("manualInvListDesc" as never)}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
+          {gateViolations ? (
+            <div
+              role="alert"
+              data-testid="gate-violations"
+              className="space-y-1 rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-900 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200"
+            >
+              <p className="font-medium">{t("manualInvGateTitle" as never)}</p>
+              <ul className="list-disc space-y-0.5 ps-5">
+                {gateViolations.keys.map((key, i) => (
+                  <li key={`${key}-${i}`} data-testid={`gate-violation-${key}`}>
+                    {t(key as never)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           {listLoading ? (
             <CardGridSkeleton count={2} />
           ) : listError ? (

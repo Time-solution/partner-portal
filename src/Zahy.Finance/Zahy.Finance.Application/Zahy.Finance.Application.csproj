@@ -11,5 +11,7 @@
     <ProjectReference Include="..\..\Zahy.Commission\Zahy.Commission.Application.Contracts\Zahy.Commission.Application.Contracts.csproj" />
     <ProjectReference Include="..\..\Zahy.Commission\Zahy.Commission.Application\Zahy.Commission.Application.csproj" />
     <ProjectReference Include="..\..\Zahy.Identity\Zahy.Identity.Domain\Zahy.Identity.Domain.csproj" />
+    <ProjectReference Include="..\..\Zahy.PartnerPlatform\Zahy.PartnerPlatform.Domain\Zahy.PartnerPlatform.Domain.csproj" />
+    <ProjectReference Include="..\..\Zahy.PartnerCatalog\Zahy.PartnerCatalog.Domain\Zahy.PartnerCatalog.Domain.csproj" />
   </ItemGroup>
 </Project>

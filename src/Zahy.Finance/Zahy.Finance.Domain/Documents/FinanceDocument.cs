@@ -171,12 +171,15 @@ public class FinanceDocument : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// P4 — the single Draft → Issued transition. Requires at least one line (a manual draft cannot be
-    /// issued empty) and throws <see cref="FinanceErrorCodes.IllegalStatusTransition"/> (009) from any
-    /// state other than Draft. After Issue the document is immutable (see <see cref="ReplaceLines"/>).
+    /// P4 — the single Draft → Issued transition. Throws <see cref="FinanceErrorCodes.IllegalStatusTransition"/>
+    /// (009) from any state other than Draft, then runs the P5 gate (which absorbed the P4 at-least-one-line
+    /// and totals preconditions into its aggregated checklist). Draft stays Draft on failure; after Issue
+    /// the document is immutable (see <see cref="ReplaceLines"/>).
     /// </summary>
-    public void Issue()
+    public void Issue(FinanceInvoiceGateContext context)
     {
+        Check.NotNull(context, nameof(context));
+
         if (Status != FinanceDocumentStatus.Draft)
         {
             throw new BusinessException(FinanceErrorCodes.IllegalStatusTransition)
@@ -184,25 +187,18 @@ public class FinanceDocument : AggregateRoot<Guid>
                 .WithData("To", FinanceDocumentStatus.Issued.ToString());
         }
 
-        if (Source == FinanceDocumentSource.Manual && _lines.Count == 0)
-        {
-            throw new BusinessException(FinanceErrorCodes.ManualInvoiceInvalidLines)
-                .WithData("Reason", "A manual invoice requires at least one line to be issued.");
-        }
-
-        EnsureManualInvoiceTotalsBalance();
-        RunPreIssueValidationGate();
+        RunPreIssueValidationGate(context);
 
         Status = FinanceDocumentStatus.Issued;
     }
 
     /// <summary>
-    /// P5 SEAM — the pre-invoice validation gate will slot in HERE (single entry point, called by
-    /// <see cref="Issue"/> just before the transition). Intentionally empty: P5 is a separate design
-    /// phase and no validation logic may be built yet.
+    /// P5 — the pre-invoice validation gate at the P4 seam: ONE gate (see
+    /// <see cref="FinanceInvoicePreIssueGate"/>), full violation list in a single typed throw.
     /// </summary>
-    private void RunPreIssueValidationGate()
+    private void RunPreIssueValidationGate(FinanceInvoiceGateContext context)
     {
+        FinanceInvoicePreIssueGate.EnsureValid(this, context);
     }
 
     /// <summary>

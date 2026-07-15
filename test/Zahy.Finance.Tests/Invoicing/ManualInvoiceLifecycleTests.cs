@@ -95,11 +95,14 @@ public class ManualInvoiceLifecycleTests : ZahyFinanceTestBase
         document.Status.ShouldBe(FinanceDocumentStatus.Issued);
     }
 
+    private static FinanceInvoiceGateContext AllClear() =>
+        FinanceInvoiceGateContext.AllClear(new DateTime(2026, 7, 16, 0, 0, 0, DateTimeKind.Utc), VatRate);
+
     [Fact]
     public void Issued_Manual_Invoice_Is_Immutable_082()
     {
         var draft = Draft(DomainLine(1, "Setup", 115.00m));
-        draft.Issue();
+        draft.Issue(AllClear());
 
         var ex = Should.Throw<BusinessException>(() =>
             draft.ReplaceLines(new[] { DomainLine(1, "Changed", 230.00m) }));
@@ -155,7 +158,7 @@ public class ManualInvoiceLifecycleTests : ZahyFinanceTestBase
         Should.Throw<BusinessException>(() => draft.ReplaceLines(Array.Empty<FinanceInvoiceLine>()))
             .Code.ShouldBe(FinanceErrorCodes.ManualInvoiceInvalidLines);
 
-        draft.Issue(); // still valid with its original line
+        draft.Issue(AllClear()); // still valid with its original line
         draft.Status.ShouldBe(FinanceDocumentStatus.Issued);
     }
 

@@ -92,5 +92,14 @@ public class ZahyFinanceIntegrationTestModule : AbpModule
         context.Services.AddSingleton<ConfigurableFinanceInvoicePdfGenerator>();
         context.Services.Replace(ServiceDescriptor.Singleton<IFinanceInvoicePdfGenerator>(
             sp => sp.GetRequiredService<ConfigurableFinanceInvoicePdfGenerator>()));
+
+        // P5 — replace the real lookups (the counterparty impl reads PartnerPlatform/PartnerCatalog
+        // repositories the Finance test host does not compose) with per-test-configurable fakes.
+        context.Services.AddSingleton<FinanceTestCounterpartyLookup>();
+        context.Services.Replace(ServiceDescriptor.Singleton<IFinanceCounterpartyLookup>(
+            sp => sp.GetRequiredService<FinanceTestCounterpartyLookup>()));
+        context.Services.AddSingleton<FinanceTestPeriodStatusProvider>();
+        context.Services.Replace(ServiceDescriptor.Singleton<IFinancePeriodStatusProvider>(
+            sp => sp.GetRequiredService<FinanceTestPeriodStatusProvider>()));
     }
 }
