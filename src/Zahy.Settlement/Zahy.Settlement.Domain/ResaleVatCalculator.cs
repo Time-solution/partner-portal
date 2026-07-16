@@ -9,8 +9,11 @@ public interface IResaleVatCalculator
 
 /// <summary>
 /// Computes margin + VAT for a cost/markup line. Round-per-line throughout (DESIGN.md §9.1).
-/// PRINCIPAL: output VAT on the sell, input VAT reclaimed on the buy; net-to-ZATCA = output − input.
-/// AGENT: output VAT on the commission only (the gross spread); no input reclaim; net-to-ZATCA = output.
+/// KSA is PRINCIPAL-ONLY: output VAT on the sell, input VAT reclaimed on the buy; net-to-ZATCA =
+/// output − input. The AGENT branch (output VAT on the commission only) is QUARANTINED (AF3): the
+/// production <see cref="Compute"/> entry HARD-REJECTS it with <see cref="SettlementVatErrorCodes.AgentTreatmentNotSupportedInKsa"/>,
+/// so no config/book-mapping wire can silently reach margin-only VAT. The math is preserved and
+/// regression-covered only via the explicit test-only <see cref="ComputeAgentForVerification"/>.
 /// </summary>
 public sealed class ResaleVatCalculator : IResaleVatCalculator
 {
@@ -26,10 +29,23 @@ public sealed class ResaleVatCalculator : IResaleVatCalculator
         return treatment switch
         {
             VatTreatment.Principal => BuildPrincipal(currency, buyInclusive, sellInclusive, vatRate),
-            VatTreatment.Agent => BuildAgent(currency, buyInclusive, sellInclusive, vatRate),
+            // AF3 — Agent is not a valid production treatment in KSA; reject rather than compute.
+            VatTreatment.Agent => throw new BusinessException(SettlementVatErrorCodes.AgentTreatmentNotSupportedInKsa)
+                .WithData("Treatment", treatment.ToString()),
             _ => throw new BusinessException(SettlementVatErrorCodes.UnknownVatTreatment)
                 .WithData("Treatment", treatment.ToString())
         };
+    }
+
+    /// <summary>
+    /// TEST-ONLY entry preserving the Agent VAT math (never called from production — <see cref="Compute"/>
+    /// rejects Agent). Kept so the quarantined branch's arithmetic stays regression-covered.
+    /// </summary>
+    public static ResaleVatResult ComputeAgentForVerification(CostMarkupLine line, decimal vatRate)
+    {
+        Check.NotNull(line, nameof(line));
+        VatMath.EnsureValidRate(vatRate);
+        return BuildAgent(line.Currency, line.BuyPrice.Amount, line.SellPrice.Amount, vatRate);
     }
 
     private static ResaleVatResult BuildPrincipal(string currency, decimal buyInclusive, decimal sellInclusive, decimal rate)

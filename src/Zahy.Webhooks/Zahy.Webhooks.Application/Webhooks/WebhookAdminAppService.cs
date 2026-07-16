@@ -13,7 +13,14 @@ using Zahy.Identity.Permissions;
 
 namespace Zahy.Webhooks;
 
-[Authorize(ZahyPermissions.Webhooks.Manage)]
+/// <summary>
+/// Platform-admin cross-partner webhook surface: reads EVERY partner's subscriptions/deliveries/
+/// dead-letters (partner data filter disabled, caller may pass any partnerId) and replays any dead
+/// letter. Therefore gated on <see cref="ZahyPermissions.Admin"/> (Platform.Finance + SuperAdmin only),
+/// NOT Webhooks.Manage — partner roles hold Webhooks.Manage and must reach ONLY their own rows via the
+/// partner-filtered <see cref="WebhookSubscriptionAppService"/> (filter kept ON, access-guarded).
+/// </summary>
+[Authorize(ZahyPermissions.Admin)]
 public class WebhookAdminAppService : ApplicationService, IWebhookAdminAppService
 {
     private readonly IRepository<WebhookSubscription, Guid> _subscriptionRepository;

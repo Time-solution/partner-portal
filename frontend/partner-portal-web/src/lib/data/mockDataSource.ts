@@ -72,6 +72,9 @@ import type { BankAccountInput, BankAccountStatus } from "@/lib/banks/bankAccoun
 import { resetUsageRecords } from "@/lib/usage/usageStore";
 import { resetUsagePackages } from "@/lib/usage/usagePackageStore";
 import { resetUsagePackageSelections } from "@/lib/usage/usagePackageSelectionStore";
+import { resetListings } from "@/lib/catalog/listingStore";
+import { resetServiceOrders } from "@/lib/orders/serviceOrders";
+import { resetAggregatorStatements } from "@/lib/reconcile/aggregatorStatements";
 
 const delay = (ms = 80) => new Promise((r) => setTimeout(r, ms));
 
@@ -1108,6 +1111,11 @@ export class MockPortalDataSource implements IPortalDataSource {
     resetUsageRecords();
     resetUsagePackages();
     resetUsagePackageSelections();
+    // AF5 — the three sibling localStorage stores whose reset fns existed but were never wired in, so
+    // they survived "Reset demo data" with stale state. Cleared here so reset reverts EVERYTHING.
+    resetListings();
+    resetServiceOrders();
+    resetAggregatorStatements();
     recalcKpis(this.data);
     notifyPortalDataChanged();
   }

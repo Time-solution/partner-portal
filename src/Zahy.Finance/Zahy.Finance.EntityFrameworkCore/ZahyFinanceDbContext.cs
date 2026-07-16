@@ -196,6 +196,10 @@ public class ZahyFinanceDbContext : AbpDbContext<ZahyFinanceDbContext>
 
             b.HasIndex(x => x.IdempotencyKey).IsUnique();
             b.HasIndex(x => new { x.AccountKind, x.AccountId });
+            // AF3 — atomic backstop for the P5 :085 duplicate-reference check (global on InvoiceNumber,
+            // matching the gate's `x.InvoiceNumber == document.InvoiceNumber` scope; MAN- and ZAHY-INV
+            // pools never collide by prefix). Non-nullable required column → plain unique, no filter.
+            b.HasIndex(x => x.InvoiceNumber).IsUnique();
 
             b.HasQueryFilter(x =>
                 (!IsPartnerFilterEnabled ||

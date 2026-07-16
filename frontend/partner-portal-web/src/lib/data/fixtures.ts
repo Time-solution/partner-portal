@@ -3,9 +3,19 @@ import { buildCollectionJournal, buildResaleJournal, invertJournal } from "./typ
 import { OrgPermissions, presetPermissions } from "@/lib/org/orgModel";
 import { computeManualInvoiceLines, computeManualInvoiceTotals } from "@/lib/invoice/manualInvoice";
 
-/** ISO timestamp N days before now — used to seed recent reversal scenarios. */
+/**
+ * Seed clock anchor — `Date.now()` at module load. ALL status-interacting seed dates are relative to
+ * it so they can never be overtaken by the calendar (the moneyExport/dueDate lesson): a due date that
+ * must keep an invoice "not yet overdue" is always `daysFromNow(+N)`; a settled/historical date is
+ * always `daysAgo(N)`. Absolute literals are reserved for display-only fields that never feed
+ * `deriveInvoicePayment` or the gate date checks.
+ */
 const daysAgo = (days: number): string =>
   new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+/** ISO timestamp N days AFTER the seed anchor — keeps future-dated invoices genuinely not-yet-due. */
+const daysFromNow = (days: number): string =>
+  new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 
 const sar = (amount: number, vatInclusive = true) => ({
   amount,
@@ -610,7 +620,7 @@ export const mockPortalData: PortalData = {
       invoiceNumber: "INV-2026-06-0042",
       journalBalanced: true,
       status: "Invoiced",
-      dueDate: "2026-07-15T00:00:00Z",
+      dueDate: daysFromNow(20),
       paymentStatus: "Partial",
       payments: [
         {
@@ -634,7 +644,7 @@ export const mockPortalData: PortalData = {
       billingChargeId: "chg-pizza-2026-07",
       journalBalanced: true,
       status: "Charged",
-      dueDate: "2026-08-01T00:00:00Z",
+      dueDate: daysFromNow(20),
       paymentStatus: "Pending",
       payments: [],
     },
@@ -651,7 +661,7 @@ export const mockPortalData: PortalData = {
       invoiceNumber: "INV-COFFEE-2026-06",
       journalBalanced: true,
       status: "Invoiced",
-      dueDate: "2026-07-15T00:00:00Z",
+      dueDate: daysAgo(20),
       paymentStatus: "Paid",
       payments: [
         {
@@ -675,7 +685,7 @@ export const mockPortalData: PortalData = {
       billingChargeId: "chg-coffee-2026-07",
       journalBalanced: true,
       status: "Charged",
-      dueDate: "2026-08-01T00:00:00Z",
+      dueDate: daysFromNow(20),
       paymentStatus: "Pending",
       payments: [],
     },
@@ -692,7 +702,7 @@ export const mockPortalData: PortalData = {
       invoiceNumber: "INV-COFFEE-PRO-PRORATE",
       journalBalanced: true,
       status: "Invoiced",
-      dueDate: "2026-07-15T00:00:00Z",
+      dueDate: daysAgo(20),
       paymentStatus: "Paid",
       payments: [
         {
@@ -717,7 +727,7 @@ export const mockPortalData: PortalData = {
       invoiceNumber: "INV-WTHERE-2026-06",
       journalBalanced: true,
       status: "Invoiced",
-      dueDate: "2026-07-15T00:00:00Z",
+      dueDate: daysAgo(20),
       paymentStatus: "Paid",
       payments: [
         {
